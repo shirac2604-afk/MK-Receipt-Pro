@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0-rc.8",
+  "supportedPaymentMethods": [
+    {"internal": "cash", "label": "מזומן", "d120Code": "1"},
+    {"internal": "bank_transfer", "label": "העברה בנקאית", "d120Code": "4"},
+    {"internal": "bit", "label": "ביט", "d120Code": "9", "requiresProfessionalConfirmation": true},
+    {"internal": "paybox", "label": "פייבוקס", "d120Code": "9", "requiresProfessionalConfirmation": true}
+  ],
+  "unsupportedPaymentMethods": ["check", "credit_card", "other"],
+  "newReceiptValidationLocked": true,
+  "unsupportedHistoricalValuesBlockOpenFormatExport": true,
+  "notes": "אין אפשרות כללית אחר בממשק. קוד 9 משמש רק במבנה האחיד עבור Bit ו-PayBox, בכפוף לאימות מקצועי לפני הגשה."
+}

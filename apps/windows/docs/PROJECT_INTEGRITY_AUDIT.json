@@ -1,0 +1,85 @@
+{
+  "generatedAt": "2026-08-09T11:02:24.887Z",
+  "version": "1.1.0",
+  "status": "PASSED",
+  "checks": [
+    {
+      "name": "required:apps/desktop/electron/main/main.ts",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "required:apps/desktop/electron/preload/preload.ts",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "required:apps/desktop/electron/tsconfig.json",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "required:apps/desktop/renderer/vite.config.ts",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "required:apps/desktop/renderer/src/main.tsx",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "required:packages/database/src/DatabaseConnection.ts",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "required:packages/application/src/receipts/IssueReceiptService.ts",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "required:packages/pdf/src/ReceiptPdfService.ts",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "required:resources/installer/app-icon.ico",
+      "status": "PASS",
+      "details": ""
+    },
+    {
+      "name": "package scripts",
+      "status": "PASS",
+      "details": "91 commands; 82 node script references resolved"
+    },
+    {
+      "name": "dependency versions",
+      "status": "PASS",
+      "details": "all versions pinned"
+    },
+    {
+      "name": "electron TypeScript module configuration",
+      "status": "PASS",
+      "details": "Node16 / Node16"
+    },
+    {
+      "name": "Electron main output",
+      "status": "PASS",
+      "details": "dist-electron/apps/desktop/electron/main/main.js"
+    },
+    {
+      "name": "stable appId",
+      "status": "PASS",
+      "details": "il.co.mkreceipt.desktop"
+    },
+    {
+      "name": "Node engine",
+      "status": "PASS",
+      "details": ">=22.14.0"
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "environmentNote": "A full npm install/build must be run on Windows because the current build environment cannot download @types/node from its internal package registry."
+}

@@ -1,0 +1,21 @@
+import fs from "node:fs";
+import path from "node:path";
+
+const root=path.resolve("test-output/tax-open-simulator-fixture");
+const decode=(b)=>{let s="";for(const x of b){s+=x<=0x7f?String.fromCharCode(x):(x>=0xe0&&x<=0xfa?String.fromCharCode(0x05d0+x-0xe0):" ")}return s};
+const ini=decode(fs.readFileSync(path.join(root,"INI.TXT"))).split("\r\n").filter(Boolean);
+const data=decode(fs.readFileSync(path.join(root,"BKMVDATA.TXT"))).split("\r\n").filter(Boolean);
+const a000=ini[0],a100=data[0],z900=data.at(-1);
+const issues=[];
+const eq=(actual,expected,label)=>{if(actual!==expected)issues.push(`${label}: ${actual} != ${expected}`)};
+eq(a000.length,466,"A000 length");eq(a100.length,95,"A100 length");eq(z900.length,110,"Z900 length");
+eq(a000.slice(0,4),"A000","A000 code");eq(a100.slice(0,4),"A100","A100 code");eq(z900.slice(0,4),"Z900","Z900 code");
+eq(Number(a000.slice(9,24)),data.length,"A000 total");eq(Number(z900.slice(45,60)),data.length,"Z900 total");
+eq(a000.slice(24,33),a100.slice(13,22),"business A000/A100");eq(a000.slice(24,33),z900.slice(13,22),"business A000/Z900");
+eq(a000.slice(33,48),a100.slice(22,37),"export id A000/A100");eq(a000.slice(33,48),z900.slice(22,37),"export id A000/Z900");
+eq(a000.slice(48,56),"&OF1.31&","A000 constant");eq(a100.slice(37,45),"&OF1.31&","A100 constant");eq(z900.slice(37,45),"&OF1.31&","Z900 constant");
+eq(a000.slice(133,134),"2","software type");eq(a000.slice(184,185),"2","bookkeeping type");eq(a000.slice(185,186),"1","balance level");eq(a000.slice(394,395),"0","language");eq(a000.slice(395,396),"1","charset");eq(a000.slice(416,419),"ILS","currency");
+if(issues.length)throw new Error(issues.join("\n"));
+console.log(`✓ Header audit passed: A000/A100/Z900, ${data.length} records`);
+console.log(`  Software registration: ${a000.slice(56,64)} (temporary until confirmed)`);
+console.log(`  Manufacturer number: ${a000.slice(104,113)}`);

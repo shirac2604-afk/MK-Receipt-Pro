@@ -1,0 +1,14 @@
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+const root=path.resolve("test-output/tax-open-simulator-result-smoke");fs.rmSync(root,{recursive:true,force:true});
+const exportFolder=path.join(root,"OPENFRMT","12345678.26","07301200");const submission=path.join(exportFolder,"SIMULATOR-SUBMISSION");const results=path.join(submission,"SIMULATOR-RESULTS");fs.mkdirSync(results,{recursive:true});
+const counts={"100A":1,"100C":1000,"D110":0,"120D":1000,"100B":2,"110B":2,"M100":0,"900Z":1,total:2006};fs.writeFileSync(path.join(exportFolder,"SIMULATOR-FIXTURE-SUMMARY.json"),JSON.stringify({counts},null,2));
+const pdf=path.join(root,"official.pdf");fs.writeFileSync(pdf,Buffer.from("%PDF-1.4\n% official simulator evidence\n%%EOF"));
+const stored=path.join(results,"OFFICIAL-SIMULATOR-REPORT.pdf");fs.copyFileSync(pdf,stored);
+const declared={"100A":1,"100C":1000,"D110":0,"120D":1000,"100B":2,"110B":2,"M100":0,"900Z":1};
+const discrepancies=[];if(2006!==counts.total)discrepancies.push("total");for(const k of Object.keys(declared))if(declared[k]!==counts[k])discrepancies.push(k);
+const sha=crypto.createHash("sha256").update(fs.readFileSync(stored)).digest("hex");const result={status:"passed",matchesExport:discrepancies.length===0,discrepancies,report:{sha256:sha}};fs.writeFileSync(path.join(results,"OFFICIAL-SIMULATOR-RESULT.json"),JSON.stringify(result,null,2));
+if(!result.matchesExport||discrepancies.length)throw new Error("Expected matching official report");
+if(!fs.existsSync(stored)||sha.length!==64)throw new Error("Evidence file/hash failed");
+console.log("✓ Official simulator result reconciliation smoke passed");

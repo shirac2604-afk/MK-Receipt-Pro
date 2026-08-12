@@ -1,0 +1,10 @@
+import { initialSchemaMigration } from "./001_initial_schema";
+import { receiptCoreMigration } from "./002_receipt_core";
+import { pdfEngineMigration } from "./003_pdf_engine";
+import { onboardingSettingsMigration } from "./004_onboarding_settings";
+import { historyAndCancellationMigration } from "./005_history_and_cancellation";
+import { migration006 } from "./006_backup_recovery";
+import { migration007 } from "./007_health_security";
+import { migration008 } from "./008_expenses";
+import { migration009 } from "./009_receipt_templates";
+export const migrations=[initialSchemaMigration,receiptCoreMigration,pdfEngineMigration,onboardingSettingsMigration,historyAndCancellationMigration,migration006,migration007,migration008,migration009];

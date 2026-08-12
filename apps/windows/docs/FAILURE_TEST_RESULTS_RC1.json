@@ -1,0 +1,139 @@
+{
+  "suite": "Sprint 2 - Failure Tests",
+  "version": "1.0.0-rc.1",
+  "generatedAt": "2026-08-03T13:24:19.915Z",
+  "environment": {
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v22.16.0"
+  },
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "criticalFailed": 0,
+    "releaseBlocked": false
+  },
+  "results": [
+    {
+      "id": "FT-001",
+      "name": "קריסה לפני Commit מבצעת Rollback מלא",
+      "critical": true,
+      "status": "passed",
+      "details": "לא נשמרה קבלה והמספר 1001 נשאר פנוי",
+      "durationMs": 1.25
+    },
+    {
+      "id": "FT-002",
+      "name": "כשל PDF לאחר Commit אינו מאבד קבלה",
+      "critical": true,
+      "status": "passed",
+      "details": "הקבלה 1001 נשמרה, המספר הבא 1002, ו־PDF ניתן ליצירה מחדש",
+      "durationMs": 0.32
+    },
+    {
+      "id": "FT-003",
+      "name": "PDF חלקי אינו הופך לקובץ מקור",
+      "critical": true,
+      "status": "passed",
+      "details": "הקובץ הזמני נוקה ולא נוצר PDF מקור פגום",
+      "durationMs": 0.42
+    },
+    {
+      "id": "FT-004",
+      "name": "שינוי בקובץ PDF מזוהה באמצעות SHA-256",
+      "critical": true,
+      "status": "passed",
+      "details": "Hash שונה לאחר שינוי תוכן הקובץ",
+      "durationMs": 0.21
+    },
+    {
+      "id": "FT-005",
+      "name": "גיבוי עם Hash שגוי נדחה",
+      "critical": true,
+      "status": "passed",
+      "details": "אי־התאמת Hash זוהתה לפני שחזור",
+      "durationMs": 0.63
+    },
+    {
+      "id": "FT-006",
+      "name": "קובץ גיבוי שאינו ניתן לפתיחה נדחה",
+      "critical": true,
+      "status": "passed",
+      "details": "החבילה נפסלה לפני חילוץ או שינוי נתונים",
+      "durationMs": 0.64
+    },
+    {
+      "id": "FT-007",
+      "name": "כשל שחזור משאיר את המסד הנוכחי ללא שינוי",
+      "critical": true,
+      "status": "passed",
+      "details": "החלפה אטומית לא בוצעה כאשר בדיקת ה־Staging נכשלה",
+      "durationMs": 0.2
+    },
+    {
+      "id": "FT-008",
+      "name": "נעילת SQLite חוסמת כתיבה מתחרה בלי כפילות",
+      "critical": true,
+      "status": "passed",
+      "details": "הכתיבה המתחרה נחסמה, ולאחר שחרור הנעילה הופקה קבלה 1001 ללא כפילות",
+      "durationMs": 164.06
+    },
+    {
+      "id": "FT-009",
+      "name": "אילוץ UNIQUE חוסם מספר קבלה כפול",
+      "critical": true,
+      "status": "passed",
+      "details": "SQLite דחה מספר קבלה 1001 כפול",
+      "durationMs": 0.48
+    },
+    {
+      "id": "FT-010",
+      "name": "PDF חסר מזוהה בלי לשנות את הקבלה",
+      "critical": true,
+      "status": "passed",
+      "details": "הקבלה נשארה במסד וסומנה כזקוקה ליצירת PDF",
+      "durationMs": 0.31
+    },
+    {
+      "id": "FT-011",
+      "name": "שרשרת Audit שבורה מזוהה",
+      "critical": true,
+      "status": "passed",
+      "details": "שינוי ברשומת Audit זוהה בבדיקת השרשרת",
+      "durationMs": 0.37
+    },
+    {
+      "id": "FT-012",
+      "name": "יעד כתיבה לא תקין מחזיר כשל בלי קובץ חלקי",
+      "critical": false,
+      "status": "passed",
+      "details": "הכתיבה נכשלה ולא נוצר קובץ גיבוי חלקי",
+      "durationMs": 0.14
+    },
+    {
+      "id": "FT-013",
+      "name": "בדיקת שטח דיסק חוסמת פעולה לפני כתיבה",
+      "critical": false,
+      "status": "passed",
+      "details": "הפעולה נחסמה לפני יצירת PDF/גיבוי",
+      "durationMs": 0.05
+    },
+    {
+      "id": "FT-014",
+      "name": "גיבוי Pre-Restore נשמר לפני ניסיון החלפה",
+      "critical": true,
+      "status": "passed",
+      "details": "המצב המקורי שוחזר לאחר כשל מדומה",
+      "durationMs": 0.43
+    }
+  ],
+  "manualWindowsTestsRequired": [
+    "ניתוק חשמל או כיבוי כפוי בזמן Transaction ובזמן יצירת PDF",
+    "מילוי אמיתי של הכונן ובדיקת התנהגות Windows",
+    "ניתוק כונן USB או תיקיית Google Drive באמצע גיבוי",
+    "סגירת תהליך Electron דרך Task Manager בזמן גיבוי ושחזור",
+    "שחזור מלא על התקנת Windows נקייה ובדיקת המשך המספור",
+    "הרשאות Windows אמיתיות לתיקיות מוגנות"
+  ]
+}

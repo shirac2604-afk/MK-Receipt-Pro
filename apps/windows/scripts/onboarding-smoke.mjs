@@ -1,0 +1,14 @@
+import { DatabaseSync } from "node:sqlite";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import crypto from "node:crypto";
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),"mk-onboarding-")); const db=new DatabaseSync(path.join(dir,"test.sqlite"));
+db.exec(`CREATE TABLE business_settings(id TEXT PRIMARY KEY,business_name TEXT NOT NULL,owner_name TEXT NOT NULL,business_number TEXT NOT NULL,tax_status TEXT NOT NULL,phone TEXT,email TEXT,address TEXT,slogan TEXT,setup_completed INTEGER NOT NULL DEFAULT 0,logo_path TEXT,signature_path TEXT,brand_color TEXT NOT NULL DEFAULT '#4F46E5',backup_folder TEXT,google_drive_folder TEXT,pin_salt TEXT,pin_hash TEXT,auto_lock_minutes INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL,updated_at TEXT NOT NULL) STRICT; CREATE TABLE receipt_sequences(sequence_key TEXT PRIMARY KEY,next_number INTEGER NOT NULL,last_issued_number INTEGER NOT NULL,updated_at TEXT NOT NULL) STRICT;`);
+const salt=crypto.randomBytes(16); const hash=crypto.scryptSync("1234",salt,32).toString("hex"); const now=new Date().toISOString();
+db.prepare(`INSERT INTO business_settings VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run("primary","מפתחות להצלחה","שירה כהן","123456789","עוסק פטור","0500000000","test@example.com","באר שבע","ללמוד • לגדול • להצליח",1,null,null,"#4F46E5","C:/Backups",null,salt.toString("hex"),hash,10,now,now);
+db.prepare(`INSERT INTO receipt_sequences VALUES('receipt',1001,1000,?)`).run(now);
+const settings=db.prepare(`SELECT business_name,setup_completed,pin_hash,pin_salt,backup_folder FROM business_settings`).get(); const sequence=db.prepare(`SELECT next_number FROM receipt_sequences`).get();
+if(settings.business_name!=="מפתחות להצלחה"||settings.setup_completed!==1||!settings.pin_hash||!settings.pin_salt||settings.backup_folder!=="C:/Backups"||sequence.next_number!==1001) throw new Error("Onboarding persistence failed");
+if(crypto.scryptSync("1234",Buffer.from(settings.pin_salt,"hex"),32).toString("hex")!==settings.pin_hash) throw new Error("PIN verification failed");
+db.close(); fs.rmSync(dir,{recursive:true,force:true}); console.log("✓ Onboarding settings and PIN hash smoke passed");

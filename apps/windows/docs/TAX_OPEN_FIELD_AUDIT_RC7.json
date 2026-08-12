@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-07-30T07:27:02.804Z",
+  "counts": {
+    "A100": 1,
+    "C100": 1000,
+    "D120": 1000,
+    "Z900": 1
+  },
+  "total": 2002,
+  "issues": [],
+  "passed": true,
+  "checks": [
+    "C100 fixed fields",
+    "D120 fixed fields",
+    "receipt type 400",
+    "dates YYYYMMDD",
+    "signed amounts",
+    "check mandatory bank fields",
+    "C100/D120 link consistency"
+  ]
+}

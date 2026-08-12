@@ -1,0 +1,12 @@
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+const root=process.cwd();
+execFileSync(process.execPath,[path.join(root,"scripts","tax-open-simulator-fixture.mjs")],{stdio:"inherit"});
+const summary=JSON.parse(fs.readFileSync(path.join(root,"test-output","tax-open-simulator-fixture","SIMULATOR-FIXTURE-SUMMARY.json"),"utf8"));
+const counts=summary.counts;
+if((counts["D110"]??0)!==0) throw new Error(`expected D110=0, got ${counts["D110"]}`);
+if(counts["100C"]!==1000||counts["120D"]!==1000) throw new Error("expected 1000 100C and 1000 120D");
+if(summary.totalRecords!==2006) throw new Error(`expected total 2006, got ${summary.totalRecords}`);
+if(summary.counts?.["100B"]!==2||summary.counts?.["110B"]!==2) throw new Error("expected two 100B and two 110B accounting samples");
+console.log("✓ Certification fixture: 100A=1, 100B=2, 110B=2, 100C=1000, 120D=1000, 900Z=1");

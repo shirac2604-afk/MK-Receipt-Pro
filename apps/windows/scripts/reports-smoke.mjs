@@ -1,0 +1,17 @@
+import { DatabaseSync } from 'node:sqlite';
+const db=new DatabaseSync(':memory:');
+db.exec(`CREATE TABLE receipts(payment_date TEXT NOT NULL,amount_agorot INTEGER NOT NULL,status TEXT NOT NULL) STRICT;`);
+const insert=db.prepare('INSERT INTO receipts VALUES(?,?,?)');
+insert.run('2026-07-01',18000,'active');
+insert.run('2026-07-02',22050,'active');
+insert.run('2026-07-03',9000,'cancelled');
+insert.run('2026-08-01',10000,'active');
+const summary=db.prepare(`SELECT COALESCE(SUM(CASE WHEN status='active' THEN amount_agorot ELSE 0 END),0) income, SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) active_count, SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END) cancelled_count FROM receipts WHERE payment_date BETWEEN ? AND ?`).get('2026-07-01','2026-07-31');
+if(summary.income!==40050)throw new Error(`Wrong income ${summary.income}`);
+if(summary.active_count!==2||summary.cancelled_count!==1)throw new Error('Wrong receipt counts');
+const months=db.prepare(`SELECT substr(payment_date,1,7) month, SUM(CASE WHEN status='active' THEN amount_agorot ELSE 0 END) income FROM receipts GROUP BY substr(payment_date,1,7) ORDER BY month`).all();
+if(months.length!==2||months[0].income!==40050||months[1].income!==10000)throw new Error('Wrong monthly breakdown');
+console.log('✓ Active income excludes cancelled receipts');
+console.log('✓ Range totals and averages can be calculated');
+console.log('✓ Monthly breakdown is correct');
+db.close();

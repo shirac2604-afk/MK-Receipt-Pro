@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-08-03T13:24:20.210Z",
+  "counts": {
+    "A100": 1,
+    "C100": 1000,
+    "D120": 1000,
+    "Z900": 1,
+    "B100": 2,
+    "B110": 2
+  },
+  "total": 2006,
+  "issues": [],
+  "passed": true,
+  "checks": [
+    "C100 fixed fields",
+    "D120 fixed fields",
+    "receipt type 400",
+    "dates YYYYMMDD",
+    "signed amounts",
+    "Version 1.0 payment codes 1/4/9 only",
+    "C100/D120 link consistency"
+  ]
+}

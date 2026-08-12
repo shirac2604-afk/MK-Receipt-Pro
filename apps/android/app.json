@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "MK Receipt Pro",
+    "slug": "mk-receipt-pro-android",
+    "version": "1.0.5",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "il.mkreceiptpro.android",
+      "versionCode": 7,
+      "permissions": [
+        "CAMERA"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#F6F7F9"
+      }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MK Receipt Pro זקוקה לגישה לתמונות כדי לצרף אסמכתאות להוצאות.",
+          "cameraPermission": "MK Receipt Pro זקוקה למצלמה כדי לצלם אסמכתאות להוצאות."
+        }
+      ]
+    ],
+    "androidNavigationBar": {
+      "visible": "leanback",
+      "barStyle": "dark-content",
+      "backgroundColor": "#F6F7F9"
+    },
+    "icon": "./assets/app-icon.png"
+  }
+}

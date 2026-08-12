@@ -1,0 +1,27 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "outDir": "../../../dist-electron",
+    "rootDir": "../../..",
+    "types": [
+      "node",
+      "electron"
+    ]
+  },
+  "include": [
+    "main/**/*.ts",
+    "preload/**/*.ts",
+    "ipc/**/*.ts",
+    "../../../packages/database/src/**/*.ts",
+    "../../../packages/shared/src/**/*.ts",
+    "../../../packages/application/src/**/*.ts",
+    "../../../packages/domain/src/**/*.ts",
+    "../../../packages/pdf/src/**/*.ts",
+    "../../../packages/backup/src/**/*.ts",
+    "../../../packages/diagnostics/src/**/*.ts",
+    "../../../packages/qa/src/**/*.ts",
+    "../../../packages/tax-open/src/**/*.ts"
+  ]
+}

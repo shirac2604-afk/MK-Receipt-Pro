@@ -1,0 +1,10 @@
+import { DatabaseSync } from "node:sqlite";
+import fs from "node:fs";import os from "node:os";import path from "node:path";
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),"mk-history-"));const db=new DatabaseSync(path.join(dir,"test.sqlite"));
+db.exec(`CREATE TABLE receipts(id TEXT PRIMARY KEY,receipt_number INTEGER UNIQUE,payment_date TEXT,issued_at TEXT,client_name TEXT,client_phone TEXT,client_email TEXT,description TEXT,amount_agorot INTEGER,payment_method TEXT,reference_number TEXT,status TEXT,cancelled_at TEXT,cancellation_reason TEXT,content_hash TEXT,original_pdf_path TEXT,original_pdf_hash TEXT,cancellation_pdf_path TEXT,cancellation_pdf_hash TEXT) STRICT;`);
+const insert=db.prepare(`INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+insert.run("a",1001,"2026-07-01","2026-07-01T10:00:00Z","משפחת כהן","050","a@b.com","שיעור עברית",18000,"bit","BIT-1","active",null,null,"h",null,null,null,null);
+insert.run("b",1002,"2026-08-01","2026-08-01T10:00:00Z","משפחת לוי","051","c@d.com","שיעור אנגלית",25000,"cash",null,"active",null,null,"h2",null,null,null,null);
+const found=db.prepare(`SELECT COUNT(*) count FROM receipts WHERE client_name LIKE ? AND payment_date LIKE ? AND CAST(amount_agorot/100.0 AS TEXT) LIKE ? AND payment_method=?`).get("%כהן%","%07%","%180%","bit");if(found.count!==1)throw new Error("combined search failed");
+db.prepare(`UPDATE receipts SET status='cancelled',cancelled_at=?,cancellation_reason=? WHERE id=? AND status='active'`).run(new Date().toISOString(),"טעות בסכום","a");const cancelled=db.prepare(`SELECT status,cancellation_reason FROM receipts WHERE id='a'`).get();if(cancelled.status!=="cancelled"||cancelled.cancellation_reason!=="טעות בסכום")throw new Error("cancel failed");
+console.log("✓ Combined search found one receipt");console.log("✓ Cancellation preserved the receipt and reason");db.close();fs.rmSync(dir,{recursive:true,force:true});
