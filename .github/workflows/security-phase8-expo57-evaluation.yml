@@ -32,6 +32,15 @@ jobs:
         run: |
           npm install expo@^57.0.0 --ignore-scripts --no-fund --no-audit
           npx expo install --fix --npm
+      - name: Remove SDK 54-only config in temporary workspace
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='app.json';
+          const app=JSON.parse(fs.readFileSync(p,'utf8'));
+          delete app.expo.androidNavigationBar;
+          fs.writeFileSync(p,JSON.stringify(app,null,2)+'\n');
+          NODE
       - name: Expo Doctor after temporary upgrade
         run: npx expo-doctor
       - name: TypeScript after temporary upgrade
