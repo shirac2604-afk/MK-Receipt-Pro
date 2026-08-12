@@ -25,7 +25,7 @@ jobs:
 
       - name: Install Windows dependencies
         working-directory: apps/windows
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Run file capability regression test
         working-directory: apps/windows
@@ -46,6 +46,7 @@ jobs:
           git add apps/windows/apps/desktop/electron/ipc/security.ts \
                   apps/windows/apps/desktop/electron/ipc/databaseHandlers.ts \
                   apps/windows/package.json \
+                  apps/windows/package-lock.json \
                   apps/windows/scripts/verify-file-capability-hardening-115.mjs
           if git diff --cached --quiet; then
             echo "No source changes to commit"
