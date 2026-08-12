@@ -1,8 +1,11 @@
 import * as ImagePicker from "expo-image-picker";
-import {decode,encode} from "base64-arraybuffer";
+import {encode} from "base64-arraybuffer";
 import {supabase} from "../lib/supabase";
+import {assertTrustedSupabaseSignedUrl} from "../security/TrustedExternalUrl";
+import {ALLOWED_IMAGE_MIMES,decodeAndValidateImage,validateDecodedImage} from "../security/SafeImage";
 
 const BUCKET="business-branding";
+const MAX_LOGO_BYTES=5*1024*1024;
 
 export interface PickedBusinessLogo{
   base64:string;
@@ -23,14 +26,31 @@ export async function pickBusinessLogo():Promise<PickedBusinessLogo|null>{
   if(result.canceled)return null;
   const asset=result.assets[0];
   if(!asset?.base64)throw new Error("BUSINESS_LOGO_DATA_MISSING");
-  return {base64:asset.base64,mimeType:asset.mimeType||"image/png"};
+  const mime=asset.mimeType||"";
+  if(!ALLOWED_IMAGE_MIMES.has(mime))throw new Error("UNSUPPORTED_BUSINESS_LOGO_TYPE");
+  try{decodeAndValidateImage(asset.base64,mime,MAX_LOGO_BYTES)}
+  catch(error){
+    const code=error instanceof Error?error.message:"BUSINESS_LOGO_INVALID";
+    if(code==="IMAGE_TOO_LARGE")throw new Error("BUSINESS_LOGO_TOO_LARGE");
+    if(code==="UNSUPPORTED_IMAGE_TYPE")throw new Error("UNSUPPORTED_BUSINESS_LOGO_TYPE");
+    throw new Error("BUSINESS_LOGO_CONTENT_INVALID");
+  }
+  return {base64:asset.base64,mimeType:mime};
 }
 
 export async function uploadBusinessLogo(businessId:string,logo:PickedBusinessLogo){
+  let buffer:ArrayBuffer;
+  try{buffer=decodeAndValidateImage(logo.base64,logo.mimeType,MAX_LOGO_BYTES)}
+  catch(error){
+    const code=error instanceof Error?error.message:"BUSINESS_LOGO_INVALID";
+    if(code==="IMAGE_TOO_LARGE")throw new Error("BUSINESS_LOGO_TOO_LARGE");
+    if(code==="UNSUPPORTED_IMAGE_TYPE")throw new Error("UNSUPPORTED_BUSINESS_LOGO_TYPE");
+    throw new Error("BUSINESS_LOGO_CONTENT_INVALID");
+  }
   const storageKey=`${businessId}/logo`;
   const {error}=await supabase.storage.from(BUCKET).upload(
     storageKey,
-    decode(logo.base64),
+    buffer,
     {contentType:logo.mimeType,cacheControl:"3600",upsert:true}
   );
   if(error)throw error;
@@ -46,9 +66,21 @@ export async function getBusinessLogoDataUrl(storageKey:string|null|undefined):P
   if(!storageKey)return null;
   const {data,error}=await supabase.storage.from(BUCKET).createSignedUrl(storageKey,300);
   if(error)throw error;
-  const response=await fetch(data.signedUrl);
+  const trustedUrl=assertTrustedSupabaseSignedUrl(data.signedUrl);
+  const response=await fetch(trustedUrl,{redirect:"error"});
   if(!response.ok)throw new Error(`BUSINESS_LOGO_DOWNLOAD_HTTP_${response.status}`);
-  const contentType=response.headers.get("content-type")||"image/png";
+  const rawContentType=response.headers.get("content-type")||"";
+  const contentType=(rawContentType.split(";",1)[0]??"").trim().toLowerCase();
+  if(!ALLOWED_IMAGE_MIMES.has(contentType))throw new Error("UNSUPPORTED_BUSINESS_LOGO_TYPE");
+  const declaredLength=Number(response.headers.get("content-length")||0);
+  if(Number.isFinite(declaredLength)&&declaredLength>MAX_LOGO_BYTES)throw new Error("BUSINESS_LOGO_TOO_LARGE");
   const buffer=await response.arrayBuffer();
+  try{validateDecodedImage(buffer,contentType,MAX_LOGO_BYTES)}
+  catch(error){
+    const code=error instanceof Error?error.message:"BUSINESS_LOGO_INVALID";
+    if(code==="IMAGE_TOO_LARGE")throw new Error("BUSINESS_LOGO_TOO_LARGE");
+    if(code==="UNSUPPORTED_IMAGE_TYPE")throw new Error("UNSUPPORTED_BUSINESS_LOGO_TYPE");
+    throw new Error("BUSINESS_LOGO_CONTENT_INVALID");
+  }
   return `data:${contentType};base64,${encode(buffer)}`;
 }
