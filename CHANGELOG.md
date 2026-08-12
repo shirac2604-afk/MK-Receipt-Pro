@@ -1,0 +1,102 @@
+# Changelog — MK Receipt Pro
+
+כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
+
+## 2026-08-12 — Security Phase 4 / Device Management
+### Windows 1.1.4
+- נוסף מסך/רשימת מכשירים מחוברים.
+- מוצגים platform, תאריך רישום ו-last seen.
+- נוסף כפתור ניתוק למכשירים אחרים.
+- המכשיר הפעיל מוגן מניתוק עצמי.
+- החיבור לניתוק עובר דרך RPC מאובטח ולא DELETE ישיר.
+- Device Management checks: 10/10.
+
+### Android 1.0.5
+- נוסף ניהול מכשירים מאובטח.
+- owner/admin בלבד יכולים לנתק מכשיר.
+- המכשיר הנוכחי מוגן.
+- Device Management checks: 8/8.
+
+### Supabase
+- נוסף `revoke_device(p_business_id, p_device_id, p_current_device_id)`.
+- SECURITY DEFINER עם `search_path=public`.
+- דורש `auth.uid()`.
+- דורש role של owner/admin באותו business.
+- anon EXECUTE חסום; authenticated EXECUTE מותר.
+- תוקנה policy כפולה של `businesses UPDATE`; עדכון פרטי עסק מוגבל ל-owner/admin.
+
+### Pending
+- להסיר דרך הממשק את Android שנרשם ב-9.8.2026 ולוודא שהמונה יורד מ-4 ל-3.
+- להקים Supabase Staging ולבצע Tenant Isolation Test.
+
+## 2026-08-12 — Security Phase 3 / Intrusion Hardening
+### Windows 1.1.3
+- IPC sender validation הוקשח.
+- DevTools והרשאות browser נחסמו ב-Production.
+- dev server נחסם באפליקציה ארוזה.
+- external URLs צומצמו ל-hosts מורשים.
+- `open-folder` הוקשח כדי שלא ישמש לפתיחת executable file.
+- PDF/external links עוברים validation.
+- Intrusion Hardening: 10/10.
+
+### Android 1.0.4
+- HTTPS + host validation לקישורי Supabase חתומים.
+- whitelist ל-JPEG/PNG/WebP uploads.
+- מגבלת גודל לאסמכתאות.
+- Auth session נשאר ב-SecureStore.
+- Intrusion Hardening: 10/10.
+
+## 2026-08-12 — Security Phase 2 / Input & Database Validation
+### Supabase
+- נוספו PostgreSQL constraints לשדות רגישים.
+- טלפון, אימייל, סכומים, מספר עוסק, שדות חובה, payment methods/statuses ואורכי שדות נאכפים ב-DB.
+- לפני הוספת constraints נבדק שהנתונים הקיימים עוברים את הכללים.
+
+### Android 1.0.3
+- Input validation ב-UI.
+- Supabase Auth session הועבר מ-AsyncStorage ל-expo-secure-store.
+- נוסף migration של session קיים ומחיקתו מהאחסון הישן.
+- Security 8/8; Regression 15/15; Production 9/9; App Icon 7/7; EAS deps 5/5.
+
+### Windows 1.1.2
+- Input validation מקביל.
+- payment method בהוצאה הוגבל לרשימה סגורה.
+- Production 8/8; Sidebar 8/8; Security Input 8/8.
+
+### Customer Create Fix
+- התברר שאין Create אמיתי תחת לשונית לקוחות.
+- נוסף UI -> preload -> IPC -> service -> Supabase.
+- validation + duplicate check.
+- Customer Create 11/11.
+- המשתמש בדק ואישר שעובד.
+
+## 2026-08-12 — Security Phase 1 / Supabase RPC
+- `consume_receipt_reservation` נמצאה כ-SECURITY DEFINER עם הרשאות רחבות מדי.
+- נוספה בדיקת auth + business access.
+- `search_path=public`.
+- בוטל anon EXECUTE ל-`consume_receipt_reservation`, `cancel_receipt_cloud`, `user_has_business_access`.
+- Security Advisor נבדק מחדש והאזהרות האנונימיות הרלוונטיות נעלמו.
+- Leaked Password Protection עדיין מומלץ להפעלה.
+
+## Android 1.0.2
+- תיקון בחירת לקוח קיים במסך קבלה חדשה.
+- ניסיון קודם עם Modal לא עבד בטלפון.
+- המנגנון הוחלף לרשימת לקוחות inline בתוך מסך הקבלה.
+- Release 8/8 לאחר תיקון regression scripts ישנים.
+
+## Android build setup
+- EAS Build הוגדר.
+- נוצר Android Keystore בענן Expo/EAS.
+- בעת Git לא זמין נעשה שימוש ב-`EAS_NO_VCS=1`.
+- APK production נבנה והותקן בהצלחה.
+
+## Windows fixes מוקדמים
+- תוקן TypeScript `duplicates[0]` possibly undefined.
+- תוקנה בעיית `expenses.attachment_path` / schema cache.
+- נוספה/תוקנה גישה לפרטי העסק ב-Windows.
+- ביטול קבלה נוסף ל-Windows ונבדק משני המכשירים.
+- Sidebar תוקן כך שרק הפריט הפעיל נראה selected.
+- בדיקת איפוס: אין קבלות/הוצאות/לקוחות, פרטי עסק ולוגו נשמרים, next receipt number = 1001.
+
+## כלל תחזוקה
+בכל release חדש יש להוסיף כאן: version, מה השתנה, migrations, בדיקות אוטומטיות, בדיקות ידניות, known issues והשלב הבא.
