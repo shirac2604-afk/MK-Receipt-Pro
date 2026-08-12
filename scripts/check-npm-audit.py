@@ -20,7 +20,13 @@ for name, item in sorted(vulns.items()):
                 summaries.append(str(entry.get('title') or entry.get('name') or 'advisory'))
             elif isinstance(entry, str):
                 summaries.append(entry)
-        print(f"BLOCK {severity.upper()} {name}: {'; '.join(summaries[:3])}")
+        fix = item.get('fixAvailable', False)
+        if isinstance(fix, dict):
+            fix_text = f"{fix.get('name','?')}@{fix.get('version','?')} major={bool(fix.get('isSemVerMajor'))}"
+        else:
+            fix_text = str(fix)
+        nodes = ','.join(item.get('nodes', [])[:3])
+        print(f"BLOCK {severity.upper()} {name}: {'; '.join(summaries[:3])} | fix={fix_text} | nodes={nodes}")
 
 if int(counts.get('high', 0)) or int(counts.get('critical', 0)):
     sys.exit(1)
