@@ -1,0 +1,19 @@
+{
+  "reviewed_at": "2026-08-12",
+  "critical_max": 0,
+  "high_max": 11,
+  "known_high_packages": [
+    "@expo/cli",
+    "@expo/metro",
+    "@expo/metro-config",
+    "@react-native/community-cli-plugin",
+    "expo",
+    "image-size",
+    "metro",
+    "metro-config",
+    "metro-transform-worker",
+    "postcss",
+    "react-native"
+  ],
+  "note": "Known-risk exception for Expo SDK 54 dependency graph. This does not mean remediated. Any new high package, high count above 11, or any critical finding fails CI and requires review."
+}
