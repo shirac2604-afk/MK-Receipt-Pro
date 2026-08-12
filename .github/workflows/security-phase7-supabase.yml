@@ -20,7 +20,7 @@ jobs:
   tenant-storage-static-gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Phase 7 static tenant/storage security gate
         run: python3 scripts/verify-security-phase7.py
       - name: SQL files must not contain merge markers
