@@ -10,6 +10,7 @@ on:
     paths:
       - apps/windows/package.json
       - apps/android/package.json
+      - security/android-npm-audit-baseline.json
       - scripts/check-npm-audit.py
       - .github/workflows/security-phase8-dependencies.yml
 
@@ -24,8 +25,10 @@ jobs:
         include:
           - app: Windows
             path: apps/windows
+            baseline: ''
           - app: Android
             path: apps/android
+            baseline: ../../security/android-npm-audit-baseline.json
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,5 +39,11 @@ jobs:
         run: npm install --ignore-scripts --no-fund --no-audit
       - name: Capture runtime npm audit
         run: npm audit --omit=dev --json > npm-audit.json || true
-      - name: Block high or critical runtime advisories
-        run: python3 ../../scripts/check-npm-audit.py npm-audit.json "${{ matrix.app }}"
+      - name: Enforce dependency security gate
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.baseline }}" ]; then
+            python3 ../../scripts/check-npm-audit.py npm-audit.json "${{ matrix.app }}" --baseline "${{ matrix.baseline }}"
+          else
+            python3 ../../scripts/check-npm-audit.py npm-audit.json "${{ matrix.app }}"
+          fi
