@@ -1,4 +1,4 @@
-import type { IpcMainInvokeEvent } from "electron";
+import { app, type IpcMainInvokeEvent } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,10 +8,13 @@ const DEV_ORIGIN = "http://127.0.0.1:5173";
 function isTrustedRendererUrl(rawUrl: string): boolean {
   try {
     const url = new URL(rawUrl);
-    if (url.origin === DEV_ORIGIN) return process.env.VITE_DEV_SERVER_URL === DEV_ORIGIN;
+    if (!app.isPackaged && url.origin === DEV_ORIGIN) {
+      return process.env.VITE_DEV_SERVER_URL === DEV_ORIGIN;
+    }
     if (url.protocol !== "file:") return false;
     const filePath = path.normalize(fileURLToPath(url));
-    return path.basename(filePath).toLowerCase() === "index.html" && filePath.includes(`${path.sep}dist${path.sep}`);
+    const expectedIndex = path.normalize(path.join(app.getAppPath(), "dist", "index.html"));
+    return filePath === expectedIndex;
   } catch {
     return false;
   }
