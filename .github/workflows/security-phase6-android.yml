@@ -1,0 +1,34 @@
+name: Security Phase 6 Android
+
+on:
+  push:
+    branches:
+      - security/phase6-android-boundaries
+  pull_request:
+    branches:
+      - main
+    paths:
+      - apps/android/**
+      - .github/workflows/security-phase6-android.yml
+
+permissions:
+  contents: read
+
+jobs:
+  android-boundaries:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Phase 6 boundary regression gate
+        run: npm run verify:android-boundary-hardening
+      - name: Existing intrusion hardening
+        run: npm run verify:intrusion-hardening
+      - name: Existing device management
+        run: npm run verify:device-management
+      - name: TypeScript
+        run: npm run check
