@@ -2,6 +2,30 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-12 — Security Phase 6 / Android Image & Session Boundaries
+### Android 1.0.5 source hardening
+- Android נשאר בגרסה 1.0.5; לא בוצע bump לגרסת Production בשלב זה.
+- נוסף validator משותף לתמונות עם whitelist ל-JPEG/PNG/WebP.
+- נוספה בדיקת גודל לאחר decode ולא רק לפי אורך base64.
+- נוספה בדיקת magic bytes ל-PNG, JPEG ו-WebP כדי למנוע הסתמכות על MIME מדווח בלבד.
+- אסמכתאות הוצאות נבדקות בעת בחירה ושוב לפני upload.
+- מסלול לוגו העסק הוקשח באותן בדיקות MIME/size/content.
+- הורדת לוגו מ-Supabase משתמשת כעת ב-host/path pinning הקיים של signed URLs.
+- redirects נחסמים בהורדת לוגו, וה-response נבדק לפי content-type, גודל ותוכן לפני יצירת data URL.
+- Session נשאר ב-SecureStore עם `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` ו-`detectSessionInUrl:false`.
+- אומת שאין כרגע `scheme` או `android.intentFilters`, ולכן אין נקודת כניסה מותאמת של Android deep link.
+- סקריפט Intrusion Hardening הישן עודכן כדי לבדוק baseline אבטחה ולא להיכשל על version hardcoded ישן.
+- Android Boundary Hardening: 11/11.
+- Intrusion Hardening regression: 10/10.
+- Device Management regression: 8/8.
+- TypeScript: PASS.
+- GitHub Actions workflow: SUCCESS.
+- השינוי מוזג ל-`main` דרך PR #3.
+
+### Release status
+- Android 1.0.5 נשארת גרסת ה-Production הנוכחית.
+- Phase 6 הוא hardening נוסף של קוד המקור ב-`main`; לפני build/release חדש יש לבצע בדיקה ידנית של צילום/גלריה, העלאת אסמכתאה, בחירת לוגו וטעינת לוגו מהענן.
+
 ## 2026-08-12 — Security Phase 5 / Windows Local File Capabilities
 ### Windows 1.1.5-security.5
 - הוקשח גבול האמון בין Electron renderer ל-main process עבור קבצים מקומיים.
