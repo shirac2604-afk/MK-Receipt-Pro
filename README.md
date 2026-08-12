@@ -2,106 +2,86 @@
 
 מערכת פרטית לניהול עסק, קבלות, לקוחות, הוצאות, מסמכי PDF וסנכרון ענן בין Windows ל-Android.
 
-> **מסמך זה הוא נקודת הכניסה לפרויקט.** בכל חזרה לפרויקט יש לקרוא קודם את README, אחר כך `CHANGELOG.md`, `WORKFLOW.md`, `SECURITY.md` ו-`SOURCE_BACKUP_MANIFEST.md`.
+> **זהו דף הבית של הפרויקט.** בכל חזרה לפרויקט יש לקרוא קודם את README, אחר כך `CHANGELOG.md`, `WORKFLOW.md`, `SECURITY.md`, `SECURITY_PHASE7.md`, `SECURITY_PHASE8.md` ו-`SOURCE_BACKUP_MANIFEST.md`.
 
 ## מצב נוכחי — 12.08.2026
 
-### גרסאות אחרונות
-- **Windows Production שנבדק ידנית: 1.1.4 — Security Device Management**
-- **Windows source/security baseline: 1.1.5-security.5 — Local File Capabilities**
-- **Android Production: 1.0.5 — Security Device Management**
-- **Android source hardening: 1.0.5 + Phase 6 — Image & Session Boundaries**
-- Backend: **Supabase** — Auth + PostgreSQL + RLS + RPC + Storage
+### גרסאות
+- **Windows Production שנבדק ידנית:** 1.1.4 — Security Device Management.
+- **Windows source/security baseline:** 1.1.5-security.5 — Phase 5 Local File Capabilities. מוזג ל-`main`, עבר CI, עדיין דורש build/install ובדיקה ידנית לפני קידום ל-Production.
+- **Android Production:** 1.0.5 — Security Device Management.
+- **Android source hardening:** 1.0.5 + Phase 6 Image & Session Boundaries. Phase 6 הוא hardening של המקור ולא release חדש.
+- **Backend:** Supabase — Auth + PostgreSQL + RLS + RPC + Storage.
+- **GitHub `main` הוא source of truth** לקוד העדכני. ארכיוני ZIP הם נקודות שחזור לגרסאות בסיס בלבד.
 
-Windows 1.1.5-security.5 כבר מוזג ל-`main` ועבר בדיקות אוטומטיות, אך טרם הוכרז כ-Production עד להשלמת בדיקה ידנית, build והתקנה. Android נשאר בגרסה 1.0.5; Phase 6 הוא hardening נוסף של קוד המקור ולא release חדש.
-
-### סטטוס פונקציונלי
+## מצב פונקציונלי מאומת
 - סנכרון Windows ↔ Android עובד לשני הכיוונים.
 - פרטי עסק ולוגו מסונכרנים.
-- קבלות והוצאות מסונכרנות.
-- ביטול קבלה עובד משני המכשירים.
-- יצירת לקוח חדש ב-Windows עובדת.
+- קבלות, הוצאות, ביטול קבלה ו-PDF cloud flow עובדים.
+- יצירת לקוח חדש ב-Windows תוקנה ונבדקה.
 - בחירת לקוח קיים ב-Android תוקנה באמצעות רשימה inline.
-- איפוס נתונים נבדק: קבלות/הוצאות/לקוחות נמחקים, פרטי העסק והלוגו נשמרים, המספר הבא חוזר ל-1001.
-- ניהול מכשירים מאובטח נוסף ב-Phase 4.
-- Phase 5 הקשיח את בחירת הקבצים המקומיים ב-Windows באמצעות one-time capabilities, canonical paths, מגבלת גודל ו-magic bytes.
-- Phase 6 הקשיח תמונות/לוגו ב-Android באמצעות MIME allowlist, decoded-size limits, magic bytes, signed URL pinning והגנת redirect.
-- Auth ב-Android נשאר ב-SecureStore עם `detectSessionInUrl:false`; אין כרגע custom scheme או Android intent filter ל-deep links.
+- איפוס נתונים נבדק: אין קבלות/הוצאות/לקוחות, פרטי העסק והלוגו נשמרים, המספר הבא חוזר ל-1001.
+- ניהול מכשירים מאובטח קיים בשתי האפליקציות דרך RPC `revoke_device`.
 
-## ארכיטקטורה
-
+## מבנה הפרויקט
 ```text
 MK-Receipt-Pro/
 ├── apps/
-│   ├── windows/     # Electron + TypeScript + Vite
-│   └── android/     # Expo + React Native
+│   ├── windows/              # Electron + TypeScript + Vite
+│   └── android/              # Expo + React Native
 ├── supabase/
-│   └── migrations/  # migrations / RLS / RPC / security hardening
-├── incoming/        # one-time verified source import only
+│   ├── migrations/           # migrations/security hardening
+│   └── SECURITY_PHASE7_STAGING_AUDIT.sql
+├── scripts/
+├── .github/workflows/
 ├── README.md
 ├── CHANGELOG.md
 ├── WORKFLOW.md
 ├── SECURITY.md
+├── SECURITY_PHASE7.md
+├── SECURITY_PHASE8.md
 └── SOURCE_BACKUP_MANIFEST.md
 ```
 
-שתי האפליקציות משתמשות באותו Supabase. הפרדת הנתונים בין עסקים מבוססת על `business_id`, RLS ו-`user_has_business_access()`.
-
-## גיבוי קוד המקור ויכולת שחזור
-
-גרסאות המקור המדויקות שנבדקו ונשמרו כארכיוני בסיס הן:
-
-- Android 1.0.5: `MK-Receipt-Pro-Android-1.0.5-SECURITY-DEVICE-MGMT-FULL.zip`
+## גיבוי ושחזור
+נקודות השחזור הארכיוניות שאומתו בעבר:
+- Android 1.0.5 — `MK-Receipt-Pro-Android-1.0.5-SECURITY-DEVICE-MGMT-FULL.zip`
   - SHA-256: `8a2847b7aab7bb7608bc4ff2e72464fb953d12aac2cdfa216d1e6923e3732485`
-  - 120 קבצים בארכיון המאומת.
-- Windows 1.1.4: `MK-Receipt-Pro-Windows-1.1.4-SECURITY-DEVICE-MGMT-FULL.zip`
+- Windows 1.1.4 — `MK-Receipt-Pro-Windows-1.1.4-SECURITY-DEVICE-MGMT-FULL.zip`
   - SHA-256: `01091a8e359fd905b2c1a8ef467136298e1ad34765ae17ad2828f8a3b53583e7`
-  - 362 קבצים בארכיון המאומת.
 
-הפרטים נשמרים גם ב-`SOURCE_BACKUP_MANIFEST.md`. קוד המקור של שתי האפליקציות כבר נמצא בפועל תחת `apps/android` ו-`apps/windows`; `main` כולל hardening נוסף מעבר לארכיוני הבסיס: Windows Phase 5 ו-Android Phase 6.
+הקוד כבר יובא ל-GitHub. **Workflow הייבוא החד-פעמי הוסר ב-Phase 8** כדי למנוע החזרה בטעות של `apps/windows` ו-`apps/android` לגרסאות הארכיון הישנות ולמחוק hardening חדש. גם workflow הכתיבה החד-פעמי של Phase 5 הוסר לאחר שסיים את תפקידו.
 
-קיים workflow בשם `.github/workflows/import-source-archives.yml` לשחזור מבוקר מהארכיונים המאומתים. כאשר שני הארכיונים המדויקים מועלים לתיקיית `incoming/`, GitHub Actions מאמת SHA-256, מחלץ אותם ל-`apps/android` ו-`apps/windows`, מסיר build/cache/secrets, מוחק את קובצי ה-ZIP ומבצע commit של קוד המקור הניתן לעיון.
+## אבטחה — שלבים שבוצעו
+1. **Phase 1 — Supabase/RPC:** ביטול anonymous EXECUTE לפונקציות רגישות, `auth.uid()`, הרשאות עסק ו-`search_path` קבוע.
+2. **Phase 2 — Input & Database Validation:** טלפון, אימייל, סכומים, מספר עוסק, תאריכים, אורכי שדות וערכים מורשים נאכפים גם ב-UI וגם ב-PostgreSQL.
+3. **Phase 3 — Intrusion Hardening:** Electron IPC/preload/navigation/URLs/files; Android SecureStore, signed URL host validation ו-upload restrictions.
+4. **Phase 4 — Device Management:** `revoke_device` מאובטח, owner/admin בלבד, הגנה מפני ניתוק המכשיר הפעיל; `businesses UPDATE` מוגבל ל-owner/admin.
+5. **Phase 5 — Windows Local File Capabilities:** renderer אינו סמכות לנתיב קובץ; one-time file capabilities, `realpath`, מגבלת 10MB, extension + magic bytes, sender pinning ל-renderer הארוז.
+6. **Phase 6 — Android Image & Session Boundaries:** JPEG/PNG/WebP allowlist, decoded-size + magic bytes, לוגו ואסמכתאות עוברים validation, signed URL pinning, no redirects; session נשאר SecureStore ו-`detectSessionInUrl:false`.
+7. **Phase 7 — Tenant / Storage Boundary:** RLS נבדק ב-Production בקריאה בלבד; הטבלאות העסקיות המרכזיות עם RLS; Storage buckets private וה-policies בודקות business prefix. הוכן migration נוסף שקושר DB storage keys ל-`business_id`, אך הוא **לא הוחל על Production** ומיועד Staging-first. בדיקת A/B אמיתית עדיין דורשת Staging.
+8. **Phase 8 — Secrets & Supply Chain:** `.gitignore` מגן על `.env`, keys, keystores, APK/AAB/EXE וכו'; `.env.example` מכיל placeholders בלבד; הוסף static secrets gate; כל GitHub Actions הפעילים נעוצים ל-commit SHA; workflows ישנים בעלי `contents: write` הוסרו; נוספה סריקת `npm audit` נפרדת ל-Windows ול-Android.
 
-**כלל יושרה:** ארכיוני ZIP הם נקודת שחזור חתומה לגרסאות המוצהרות בלבד. `main` הוא source of truth לקוד העדכני יותר לאחר hardening נוסף.
-
-## אבטחה — מצב נוכחי
-
-בוצעו שישה שלבי hardening:
-
-1. **Supabase/RPC hardening** — ביטול anonymous EXECUTE לפונקציות רגישות, `auth.uid()` והרשאות עסק, `search_path` קשיח.
-2. **Input & Database Validation** — אימות טלפון, אימייל, סכומים, מספר עוסק, תאריכים, אורכי שדות וערכים מותרים גם ב-UI וגם ב-PostgreSQL.
-3. **Intrusion Hardening** — Electron IPC/preload/navigation/URLs/files, Android SecureStore, signed URL host validation ו-upload restrictions.
-4. **Device Management / Tenant Isolation readiness** — `revoke_device` מאובטח, owner/admin בלבד, הגנת המכשיר הפעיל, הכנה ל-Staging ולבדיקת A מול B.
-5. **Windows Local File Capabilities** — sender pinning ל-renderer הארוז המדויק, one-time approvals לקובצי משתמש, canonical path validation, מגבלת 10MB ובדיקת magic bytes לפני שימוש בקובץ.
-6. **Android Image & Session Boundaries** — shared image validator ל-JPEG/PNG/WebP, בדיקת decoded size ו-magic bytes, hardening של לוגו/אסמכתאות, signed URL pinning ו-no-redirect downloads; session נשאר SecureStore ללא URL token detection.
-
-### כללי אבטחה שאסור להפר
-- לעולם לא להכניס `service_role`, secret key, password, production token, keystore או signing credential ל-GitHub.
-- publishable/anon key בצד לקוח מותר רק עם RLS תקין.
-- לא להסתמך על UI validation בלבד; validation משמעותי חייב להתקיים גם בשרת/DB או ב-trusted process לפי סוג הפעולה.
-- renderer אינו סמכות לנתיב קובץ מקומי; קבצים רגישים חייבים לעבור dialog ו-validation ב-main process.
-- MIME מדווח אינו מספיק כדי לאשר תמונה; ב-Android יש לבדוק גם גודל לאחר decode ו-magic bytes.
-- signed storage URL שנפתח מחוץ ל-Supabase SDK חייב לעבור host/path validation.
-- אין להוסיף Android deep-link scheme/intent filter בלי threat model ובדיקות ייעודיות.
-- כל `SECURITY DEFINER` חייב לכלול authentication, authorization ו-`search_path` קשיח.
-- אין לבצע penetration test הרסני על Production.
-- אין למחוק קבלות/לקוחות/מכשירים אמיתיים באמצעות SQL ידני כאשר קיימת פעולה אפליקטיבית מאובטחת.
+## Phase 8 — תוצאות Supply Chain עדכניות
+- Static secrets / blocked files / action pinning: **PASS**.
+- לא נמצאו בקוד הנוכחי קובצי `.env`, private keys, keystore, APK/AAB/EXE או דפוסי secret שהסריקה מזהה.
+- `.env.example` מכיל רק `YOUR_PROJECT` ו-`YOUR_PUBLISHABLE_KEY` placeholders.
+- GitHub Actions פעילים משתמשים ב-`actions/checkout` נעוץ ל-SHA `11d5960a326750d5838078e36cf38b85af677262` ולא ב-floating `@v4`.
+- **Windows production dependency audit: PASS / 0 vulnerabilities** ב-`npm audit --omit=dev --audit-level=high`. במהלך `npm install` קיימות אזהרות על dev/build transitive packages ישנים, אך production audit עבר 0.
+- **Android production dependency audit: FAIL — 18 vulnerabilities: 11 High, 7 Moderate.** הממצאים מגיעים בעיקר דרך Expo/Metro transitive dependencies כגון `image-size`, `postcss` ו-`uuid`. npm מציע `npm audit fix --force`, אך ההצעה קופצת ל-Expo 57 ולכן היא שינוי breaking ולא מבוצעת אוטומטית.
+- **אין להריץ `npm audit fix --force` על Android ללא branch, Expo compatibility migration, full release checks, EAS build והתקנה ידנית.**
 
 ## Supabase — מצב Security
-- RLS פעיל בטבלאות העסקיות המרכזיות.
-- Policies של customers, receipts, expenses, devices, sequences/reservations משתמשות בהרשאת business.
-- Storage מופרד לפי `business_id` ומוגן ב-policies.
-- `consume_receipt_reservation` הוקשחה ודורשת auth + business access.
-- `cancel_receipt_cloud`, `consume_receipt_reservation` ו-`user_has_business_access` אינם זמינים ל-anon.
+- RLS פעיל ב-`businesses`, `business_members`, `customers`, `receipts`, `expenses`, `devices`, `receipt_sequences`, `receipt_number_reservations`.
+- Policies עסקיים משתמשים ב-`user_has_business_access(business_id)`; INSERT/UPDATE כוללים `WITH CHECK` במקומות המרכזיים.
 - `businesses UPDATE` מוגבל ל-owner/admin.
-- נוסף RPC `revoke_device` — authenticated owner/admin בלבד; לא ניתן לנתק את המכשיר הפעיל כאשר `current_device_id` נמסר.
-- migrations שהוחלו ב-Production מגובות תחת `supabase/migrations/`.
-- עדיין מומלץ להפעיל **Leaked Password Protection** ב-Supabase Auth לאחר בדיקת השפעה.
+- Storage buckets המרכזיים private; policies בודקות business UUID מתוך נתיב האובייקט.
+- בדיקת קריאה בלבד מצאה 0 storage-key references שחוצים business prefix עבור לוגו, אסמכתאות ו-PDF קבלות/ביטולים.
+- `consume_receipt_reservation`, `cancel_receipt_cloud` ו-`revoke_device` הוקשחו לפי auth/authorization; anon EXECUTE בוטל לפונקציות הרגישות שנבדקו.
+- Phase 7 migration הוא Staging-first ואינו מסומן Applied to Production.
+- Leaked Password Protection עדיין מומלץ להפעלה לאחר בדיקת השפעה.
 
-## ניהול מכשירים — משימה ידנית עתידית
-ב-Production נמצאו 4 רשומות devices למרות שבפועל קיימים 3 מכשירים. יש להסיר דרך מסך "מכשירים מחוברים" את **Android שנרשם ב-9.8.2026** באמצעות RPC `revoke_device`, ולא באמצעות DELETE ידני. לאחר הניתוק המונה אמור לרדת מ-4 ל-3. פעולה זו אינה חלק מבדיקות ה-static hardening ואינה תבוצע אוטומטית.
-
-## בדיקות שכבר עברו
+## בדיקות אוטומטיות שכבר עברו
 ### Windows
 - Production Hardening
 - Sidebar UI
@@ -111,18 +91,16 @@ MK-Receipt-Pro/
 - Device Management — 10/10
 - File Capability Hardening — 10/10
 - Electron + Renderer TypeScript — PASS
-- `git diff --check` — PASS
+- Supply-chain production dependency audit — 0 vulnerabilities
 
 ### Android
-- Security / Release checks
-- Regression audit
-- Production hardening
-- App icon
-- EAS bundle dependencies
+- Release / Regression / Production checks
+- App Icon / EAS bundle dependencies
 - Intrusion Hardening — 10/10
 - Device Management — 8/8
 - Android Boundary Hardening — 11/11
 - TypeScript — PASS
+- Supply-chain audit — **known dependency finding: 18 vulnerabilities (11 High, 7 Moderate)**; remediation pending controlled Expo upgrade investigation.
 
 ## פקודות בדיקה
 ### Windows
@@ -143,9 +121,8 @@ npm run start
 ```powershell
 npm install
 npm run release:check
+npm audit --omit=dev --audit-level=high
 ```
-
-`release:check` כולל גם `verify:android-boundary-hardening`.
 
 Build APK:
 ```powershell
@@ -153,30 +130,27 @@ $env:EAS_NO_VCS="1"
 npx eas-cli@latest build -p android --profile production-apk
 ```
 
-## Google Play
-- APK משמש להתקנה ישירה; ל-Google Play יש לבנות AAB.
-- יש לשמור על package ID ועל signing/Keystore יציבים.
-- לפני פרסום: להשלים Staging, Tenant Isolation tests, Data Safety, Privacy Policy ו-Play release readiness.
+## כללי עבודה שלא שוברים
+- לא משנים Production stable ישירות כאשר מדובר בשינוי אפליקטיבי משמעותי: branch/version → tests → regression/security → build → בדיקה ידנית → release.
+- GitHub `main` הוא מקור האמת; ZIPים אינם תחליף לקוד המקור.
+- לעולם לא commit: `.env`, service-role/secret keys, passwords/tokens, keystores/signing credentials, production DB dumps, customer data, private attachments או installers.
+- publishable/anon key בצד לקוח מותר רק עם RLS תקין.
+- UI validation אינו מספיק; validation משמעותי חייב להיות גם ב-DB/trusted process.
+- `SECURITY DEFINER`: auth + authorization + fixed `search_path`.
+- לא מבצעים penetration tests הרסניים על Production.
+- לא מריצים dependency `--force` upgrade בלי branch ובדיקות מלאות.
 
-## המשימות הבאות — לפי סדר
-1. לבצע static audit נוסף ל-Supabase tenant/storage boundaries ללא שינוי בנתוני Production.
-2. להקים Supabase Development/Staging Branch ללא נתוני Production לפני בדיקות cross-tenant אקטיביות.
-3. ליצור User A/Business A ו-User B/Business B ולבצע Tenant Isolation Test אמיתי ב-Staging.
-4. לבדוק cross-tenant customers/receipts/expenses/storage/RPC, business_id tampering, invalid sessions ו-reservation misuse ב-Staging.
-5. לבצע בדיקה ידנית של Windows 1.1.5-security.5: צירוף/החלפת אסמכתה, בחירת לוגו חדש ושמירת לוגו קיים.
-6. לבצע Windows build/install verification ורק לאחר PASS לקדם את 1.1.5 לגרסת Production.
-7. לבצע בדיקה ידנית של Android Phase 6: צילום/גלריה, upload אסמכתאה, בחירת לוגו וטעינת לוגו מהענן.
-8. לבצע ידנית Device Management ולנתק את Android של 9.8 כאשר מוכנים לכך.
-9. להפעיל Leaked Password Protection לאחר בדיקה.
-10. לאחר PASS מלא להכין Google Play release ו-Windows production release.
+## משימות פעילות — לפי סדר
+1. **Phase 8 Android dependency remediation:** לבדוק מסלול עדכון Expo/Metro בטוח שמסיר את High findings בלי לפגוע באפליקציה; לבצע רק ב-branch חדש, עם `release:check`, TypeScript, EAS APK build והתקנה ידנית.
+2. לבצע בדיקה ידנית של Windows 1.1.5-security.5: אסמכתה, החלפת אסמכתה, לוגו חדש ולוגו קיים; לאחר מכן build/install verification.
+3. לבצע ידנית Device Management ולנתק את Android שנרשם ב-9.8; לוודא count=3.
+4. כאשר קיימת אפשרות Staging ללא עלות מתאימה — לבצע Tenant Isolation A/B מלא. אין לבצע cross-tenant destructive test ב-Production.
+5. לאחר השלמת Security/Release readiness להכין Google Play AAB, Data Safety, Privacy Policy ו-Windows Production release.
 
-## כלל עבודה לגרסאות
-- לא עורכים את גרסת ה-Production היציבה ישירות.
-- שינוי → branch/version חדש → בדיקות → regression → security checks → build → בדיקה ידנית → release.
-- כל שינוי משמעותי חייב להיכנס גם ל-`CHANGELOG.md`.
-- כל שינוי בתהליך העבודה/פקודות חייב להיכנס ל-`WORKFLOW.md`.
-- כל שינוי אבטחה חייב להיכנס ל-`SECURITY.md`.
-- כל גרסת מקור שמוכרזת כבסיס ארכיוני חייבת להיות מזוהה ב-SHA-256 ב-`SOURCE_BACKUP_MANIFEST.md`.
-
-## קבצים שאסור להעלות
-`.env`, secrets, service-role keys, keystores, signing credentials, production tokens, APK/AAB/EXE installers, logs עם מידע רגיש, customer data או production database dumps.
+## מסמכי המשך
+- `CHANGELOG.md` — היסטוריית שינויים.
+- `WORKFLOW.md` — כללי פיתוח/בדיקות/Release.
+- `SECURITY.md` — baseline אבטחה.
+- `SECURITY_PHASE7.md` — Tenant/Storage isolation plan.
+- `SECURITY_PHASE8.md` — Secrets & Supply Chain rules.
+- `SOURCE_BACKUP_MANIFEST.md` — hashes של ארכיוני השחזור.
