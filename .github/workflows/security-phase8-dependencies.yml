@@ -1,0 +1,40 @@
+name: Security Phase 8 Dependencies
+
+on:
+  push:
+    branches:
+      - security/phase8-dependency-audit
+  pull_request:
+    branches:
+      - main
+    paths:
+      - apps/windows/package.json
+      - apps/android/package.json
+      - scripts/check-npm-audit.py
+      - .github/workflows/security-phase8-dependencies.yml
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-dependency-audit:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: Windows
+            path: apps/windows
+          - app: Android
+            path: apps/android
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ matrix.path }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependency graph without package scripts
+        run: npm install --ignore-scripts --no-fund --no-audit
+      - name: Capture runtime npm audit
+        run: npm audit --omit=dev --json > npm-audit.json || true
+      - name: Block high or critical runtime advisories
+        run: python3 ../../scripts/check-npm-audit.py npm-audit.json "${{ matrix.app }}"
