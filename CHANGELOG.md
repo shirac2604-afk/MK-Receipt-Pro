@@ -2,6 +2,27 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-12 — Security Phase 5 / Windows Local File Capabilities
+### Windows 1.1.5-security.5
+- הוקשח גבול האמון בין Electron renderer ל-main process עבור קבצים מקומיים.
+- sender validation ב-Production מוצמד כעת לקובץ ה-renderer הארוז המדויק (`dist/index.html`) ולא לכל `file://` דומה.
+- בחירת אסמכתאות להוצאות ולוגו יוצרת הרשאת קובץ חד-פעמית (one-time capability) שנצרכת בעת הפעולה.
+- נתיב קובץ שלא נבחר דרך dialog של האפליקציה נדחה גם אם renderer מנסה להעבירו ישירות.
+- נוסף canonical path validation באמצעות `realpath` כדי למנוע עקיפות נתיב.
+- נוספה מגבלת גודל של 10MB לקבצים שנכנסים דרך flows אלה.
+- נוספה בדיקת extension + magic bytes עבור PDF, PNG, JPEG ו-WebP.
+- תוקנו שגיאות TypeScript קיימות ב-renderer שנחשפו בבדיקת typecheck המלאה, ללא שינוי לוגיקה עסקית מכוון.
+- נוסף `check:file-capability-hardening` ל-release gate של Windows.
+- File Capability Hardening: 10/10.
+- Electron + Renderer TypeScript: PASS.
+- `git diff --check`: PASS.
+- GitHub Actions workflow: SUCCESS.
+- השינוי מוזג ל-`main` דרך PR #2.
+
+### Release status
+- 1.1.5-security.5 הוא baseline קוד מאובטח לאחר Phase 5.
+- Windows 1.1.4 נשארת גרסת ה-Production האחרונה שנבדקה ידנית עד לבדיקת flow, build והתקנה של 1.1.5.
+
 ## 2026-08-12 — Security Phase 4 / Device Management
 ### Windows 1.1.4
 - נוסף מסך/רשימת מכשירים מחוברים.
