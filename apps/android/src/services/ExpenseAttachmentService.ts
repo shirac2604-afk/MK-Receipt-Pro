@@ -1,15 +1,20 @@
 import * as ImagePicker from "expo-image-picker";
-import {decode} from "base64-arraybuffer";
 import {supabase} from "../lib/supabase";
+import {ALLOWED_IMAGE_MIMES,decodeAndValidateImage} from "../security/SafeImage";
 
 const BUCKET="expense-attachments";
-const ALLOWED_IMAGE_MIMES=new Set(["image/jpeg","image/png","image/webp"]);
-const MAX_ATTACHMENT_BASE64_CHARS=12_000_000;
+const MAX_ATTACHMENT_BYTES=9*1024*1024;
 
-function assertSafeAttachment(attachment:PickedAttachment):void{
+function assertSafeAttachment(attachment:PickedAttachment):ArrayBuffer{
   if(!ALLOWED_IMAGE_MIMES.has(attachment.mimeType))throw new Error("UNSUPPORTED_ATTACHMENT_TYPE");
-  if(!attachment.base64||attachment.base64.length>MAX_ATTACHMENT_BASE64_CHARS)throw new Error("ATTACHMENT_TOO_LARGE");
   if(attachment.originalName.length>180)throw new Error("ATTACHMENT_NAME_TOO_LONG");
+  try{return decodeAndValidateImage(attachment.base64,attachment.mimeType,MAX_ATTACHMENT_BYTES)}
+  catch(error){
+    const code=error instanceof Error?error.message:"ATTACHMENT_INVALID";
+    if(code==="UNSUPPORTED_IMAGE_TYPE")throw new Error("UNSUPPORTED_ATTACHMENT_TYPE");
+    if(code==="IMAGE_TOO_LARGE")throw new Error("ATTACHMENT_TOO_LARGE");
+    throw new Error("ATTACHMENT_CONTENT_INVALID");
+  }
 }
 
 function extensionForMime(mime:string|undefined){
@@ -45,11 +50,13 @@ export async function takeExpensePhoto():Promise<PickedAttachment|null>{
 
   const mime=asset.mimeType||"image/jpeg";
   if(!ALLOWED_IMAGE_MIMES.has(mime))throw new Error("UNSUPPORTED_ATTACHMENT_TYPE");
-  return {
+  const picked={
     base64:asset.base64,
     mimeType:mime,
     originalName:asset.fileName||`camera.${extensionForMime(mime)}`
   };
+  assertSafeAttachment(picked);
+  return picked;
 }
 
 export async function pickExpensePhoto():Promise<PickedAttachment|null>{
@@ -68,11 +75,13 @@ export async function pickExpensePhoto():Promise<PickedAttachment|null>{
 
   const mime=asset.mimeType||"image/jpeg";
   if(!ALLOWED_IMAGE_MIMES.has(mime))throw new Error("UNSUPPORTED_ATTACHMENT_TYPE");
-  return {
+  const picked={
     base64:asset.base64,
     mimeType:mime,
     originalName:asset.fileName||`gallery.${extensionForMime(mime)}`
   };
+  assertSafeAttachment(picked);
+  return picked;
 }
 
 export async function uploadExpenseAttachment(
@@ -80,13 +89,13 @@ export async function uploadExpenseAttachment(
   expenseId:string,
   attachment:PickedAttachment
 ){
-  assertSafeAttachment(attachment);
+  const buffer=assertSafeAttachment(attachment);
   const ext=extensionForMime(attachment.mimeType);
   const storageKey=`${businessId}/${expenseId}/${randomName()}.${ext}`;
 
   const {error}=await supabase.storage
     .from(BUCKET)
-    .upload(storageKey,decode(attachment.base64),{
+    .upload(storageKey,buffer,{
       contentType:attachment.mimeType,
       cacheControl:"3600",
       upsert:false
