@@ -12,8 +12,59 @@ import crypto from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { spawn } from "node:child_process";
 
+const MAX_USER_FILE_BYTES = 10 * 1024 * 1024;
+const approvedExpenseAttachmentPaths = new Set<string>();
+const approvedImagePaths = new Set<string>();
 
+type UserFileKind = "expense" | "image";
 
+function canonicalExistingFile(rawPath:string):string {
+  if(typeof rawPath!=="string"||!rawPath.trim())throw new Error("INVALID_INPUT");
+  const resolved=fs.realpathSync.native(path.resolve(rawPath));
+  const stat=fs.statSync(resolved);
+  if(!stat.isFile()||stat.size<=0||stat.size>MAX_USER_FILE_BYTES)throw new Error("INVALID_INPUT");
+  return resolved;
+}
+
+function hasExpectedMagic(filePath:string,ext:string):boolean {
+  const fd=fs.openSync(filePath,"r");
+  try{
+    const header=Buffer.alloc(16);
+    const bytesRead=fs.readSync(fd,header,0,header.length,0);
+    const h=header.subarray(0,bytesRead);
+    if(ext===".pdf")return h.length>=5&&h.subarray(0,5).toString("ascii")==="%PDF-";
+    if(ext===".png")return h.length>=8&&h.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]));
+    if(ext===".jpg"||ext===".jpeg")return h.length>=3&&h[0]===0xff&&h[1]===0xd8&&h[2]===0xff;
+    if(ext===".webp")return h.length>=12&&h.subarray(0,4).toString("ascii")==="RIFF"&&h.subarray(8,12).toString("ascii")==="WEBP";
+    return false;
+  }finally{fs.closeSync(fd);}
+}
+
+function validateUserFile(rawPath:string,kind:UserFileKind):string {
+  const filePath=canonicalExistingFile(rawPath);
+  const ext=path.extname(filePath).toLowerCase();
+  const allowed=kind==="image"?new Set([".png",".jpg",".jpeg",".webp"]):new Set([".pdf",".png",".jpg",".jpeg",".webp"]);
+  if(!allowed.has(ext)||!hasExpectedMagic(filePath,ext))throw new Error("INVALID_INPUT");
+  return filePath;
+}
+
+function approveUserFile(rawPath:string,kind:UserFileKind):string {
+  const filePath=validateUserFile(rawPath,kind);
+  (kind==="image"?approvedImagePaths:approvedExpenseAttachmentPaths).add(filePath);
+  return filePath;
+}
+
+function consumeApprovedUserFile(rawPath:string,kind:UserFileKind):string {
+  const filePath=validateUserFile(rawPath,kind);
+  const set=kind==="image"?approvedImagePaths:approvedExpenseAttachmentPaths;
+  if(!set.delete(filePath))throw new Error("UNAPPROVED_FILE_PATH");
+  return filePath;
+}
+
+function sameCanonicalFile(a:string|undefined|null,b:string|undefined|null):boolean {
+  if(!a||!b)return false;
+  try{return fs.realpathSync.native(path.resolve(a))===fs.realpathSync.native(path.resolve(b));}catch{return false;}
+}
 
 function normalizeWhatsAppPhone(rawPhone: string): string | null {
   let digits = rawPhone.replace(/\D/g, "");
@@ -88,7 +139,7 @@ let errorSink: ((module:string,error:unknown)=>void) | null = null;
 function errorResult(error: unknown): ApiResult<never> {
   const code = error instanceof Error ? error.message : "UNKNOWN_ERROR";
   if (code === "UNTRUSTED_IPC_SENDER") return apiFailure("UNTRUSTED_IPC_SENDER", "הבקשה נחסמה מטעמי אבטחה.", false);
-  if (code === "INVALID_INPUT") return apiFailure("INVALID_INPUT", "אחד הפרטים אינו תקין. בדוק את השדות ונסה שוב.");
+  if (code === "INVALID_INPUT" || code === "UNAPPROVED_FILE_PATH") return apiFailure("INVALID_INPUT", "אחד הפרטים או הקבצים אינו תקין. בחר את הקובץ מחדש דרך התוכנה ונסה שוב.");
   if (code === "OPERATION_TIMEOUT") return apiFailure("OPERATION_TIMEOUT", "הפעולה ארכה זמן רב מדי והופסקה בבטחה.");
   if (code === "RECEIPT_NOT_FOUND") return apiFailure("RECEIPT_NOT_FOUND", "הקבלה לא נמצאה.", false);
   if (code === "CUSTOMER_NOT_FOUND") return apiFailure("CUSTOMER_NOT_FOUND", "הלקוח לא נמצא.", false);
@@ -261,9 +312,18 @@ export function registerDatabaseHandlers(databaseService: DatabaseService, cloud
   ipcMain.handle("errors:list", (event) => handle(event, () => databaseService.listErrorLogs()));
   ipcMain.handle("database:get-business-settings", (event) => handle(event, () => supabaseCloud.getStatus().connected?supabaseCloud.getBusinessSettings(databaseService.getBusinessSettings()):databaseService.getBusinessSettings()));
   ipcMain.handle("settings:get-onboarding-status", (event) => handle(event, () => databaseService.getOnboardingStatus()));
-  ipcMain.handle("settings:complete-setup", (event,input) => handle(event, async () => { const parsed=parseBusinessSettingsInput(input); const local=databaseService.completeSetup(parsed); if(supabaseCloud.getStatus().connected){await supabaseCloud.saveBusinessSettings(parsed); return await supabaseCloud.getBusinessSettings(local)??local;} return local; }, input));
+  ipcMain.handle("settings:complete-setup", (event,input) => handle(event, async () => {
+    const parsed=parseBusinessSettingsInput(input);
+    const current=databaseService.getBusinessSettings();
+    let safeLogoPath=parsed.logoPath;
+    if(safeLogoPath&&!sameCanonicalFile(safeLogoPath,current?.logoPath)){safeLogoPath=consumeApprovedUserFile(safeLogoPath,"image");}
+    const secured={...parsed,...(safeLogoPath?{logoPath:safeLogoPath}:{})};
+    const local=databaseService.completeSetup(secured);
+    if(supabaseCloud.getStatus().connected){await supabaseCloud.saveBusinessSettings(secured); return await supabaseCloud.getBusinessSettings(local)??local;}
+    return local;
+  }, input));
   ipcMain.handle("settings:verify-pin", (event,input) => handle(event, () => databaseService.verifyPin(typeof input?.pin === "string" ? input.pin : ""), input));
-  ipcMain.handle("dialogs:select-image", (event) => handle(event, async () => { const result=await dialog.showOpenDialog({ properties:["openFile"], filters:[{name:"תמונות",extensions:["png","jpg","jpeg","webp"]}] }); return result.canceled ? null : result.filePaths[0] ?? null; }));
+  ipcMain.handle("dialogs:select-image", (event) => handle(event, async () => { const result=await dialog.showOpenDialog({ properties:["openFile"], filters:[{name:"תמונות",extensions:["png","jpg","jpeg","webp"]}] }); if(result.canceled||!result.filePaths[0])return null; return approveUserFile(result.filePaths[0],"image"); }));
   ipcMain.handle("dialogs:select-folder", (event) => handle(event, async () => { const result=await dialog.showOpenDialog({ properties:["openDirectory","createDirectory"] }); return result.canceled ? null : result.filePaths[0] ?? null; }));
   ipcMain.handle("customers:list", (event) => handle(event, () => supabaseCloud.getStatus().connected?supabaseCloud.listCustomers():databaseService.listCustomers()));
   ipcMain.handle("customers:create", (event,input) => handle(event, () => {const customer={displayName:String(input?.displayName||""),phone:typeof input?.phone==="string"?input.phone:undefined,email:typeof input?.email==="string"?input.email:undefined,notes:typeof input?.notes==="string"?input.notes:undefined};return supabaseCloud.getStatus().connected?supabaseCloud.createCustomer(customer):databaseService.createCustomer(customer)}, input));
@@ -310,11 +370,15 @@ export function registerDatabaseHandlers(databaseService: DatabaseService, cloud
   ipcMain.handle("reports:export-csv", (event,input) => handle(event, async () => { const result=await dialog.showSaveDialog({title:"ייצוא דוח CSV",defaultPath:`MK-Receipt-Pro-Report-${new Date().toISOString().slice(0,10)}.csv`,filters:[{name:"CSV",extensions:["csv"]}]}); if(result.canceled||!result.filePath)return null; return databaseService.exportReportCsv({fromDate:typeof input?.fromDate==="string"?input.fromDate:undefined,toDate:typeof input?.toDate==="string"?input.toDate:undefined},result.filePath); }, input));
   ipcMain.handle("reports:export-accountant", (event,input) => handle(event, async () => { const result=await dialog.showOpenDialog({title:"בחר תיקייה לחבילת רואה החשבון",properties:["openDirectory","createDirectory"]}); if(result.canceled||!result.filePaths[0])return null; const folder=await databaseService.exportAccountantPackage(Number(input?.year)||new Date().getFullYear(),result.filePaths[0]); const message=await shell.openPath(folder); if(message)throw new Error("ACCOUNTANT_PACKAGE_OPEN_FAILED"); return folder; }, input));
 
-  ipcMain.handle("expenses:add", (event,input) => handle(event, () => (supabaseCloud.getStatus().connected?supabaseCloud.addExpense({expenseDate:String(input?.expenseDate||""),supplierName:String(input?.supplierName||""),amountAgorot:Number(input?.amountAgorot)||0,category:String(input?.category||""),paymentMethod:typeof input?.paymentMethod==="string"?input.paymentMethod:undefined,notes:typeof input?.notes==="string"?input.notes:undefined,attachmentSourcePath:typeof input?.attachmentSourcePath==="string"?input.attachmentSourcePath:undefined}):databaseService.addExpense({expenseDate:String(input?.expenseDate||""),supplierName:String(input?.supplierName||""),amountAgorot:Number(input?.amountAgorot)||0,category:String(input?.category||""),paymentMethod:typeof input?.paymentMethod==="string"?input.paymentMethod:undefined,notes:typeof input?.notes==="string"?input.notes:undefined,attachmentSourcePath:typeof input?.attachmentSourcePath==="string"?input.attachmentSourcePath:undefined})), input));
+  ipcMain.handle("expenses:add", (event,input) => handle(event, () => {
+    const attachmentSourcePath=typeof input?.attachmentSourcePath==="string"?consumeApprovedUserFile(input.attachmentSourcePath,"expense"):undefined;
+    const expense={expenseDate:String(input?.expenseDate||""),supplierName:String(input?.supplierName||""),amountAgorot:Number(input?.amountAgorot)||0,category:String(input?.category||""),paymentMethod:typeof input?.paymentMethod==="string"?input.paymentMethod:undefined,notes:typeof input?.notes==="string"?input.notes:undefined,...(attachmentSourcePath?{attachmentSourcePath}:{})};
+    return supabaseCloud.getStatus().connected?supabaseCloud.addExpense(expense):databaseService.addExpense(expense);
+  }, input));
   ipcMain.handle("expenses:list", (event,input) => handle(event, () => {const filters={fromDate:typeof input?.fromDate==="string"?input.fromDate:undefined,toDate:typeof input?.toDate==="string"?input.toDate:undefined,category:typeof input?.category==="string"?input.category:undefined,query:typeof input?.query==="string"?input.query:undefined};return supabaseCloud.getStatus().connected?supabaseCloud.listExpenses(filters):databaseService.listExpenses(filters)}, input));
-  ipcMain.handle("expenses:update", (event,input) => handle(event, () => {const expense={id:String(input?.id||""),expenseDate:String(input?.expenseDate||""),supplierName:String(input?.supplierName||""),amountAgorot:Number(input?.amountAgorot)||0,category:String(input?.category||""),paymentMethod:typeof input?.paymentMethod==="string"?input.paymentMethod:undefined,notes:typeof input?.notes==="string"?input.notes:undefined,attachmentSourcePath:typeof input?.attachmentSourcePath==="string"?input.attachmentSourcePath:undefined,removeAttachment:Boolean(input?.removeAttachment)};return supabaseCloud.getStatus().connected?supabaseCloud.updateExpense(expense):databaseService.updateExpense(expense)}, input));
+  ipcMain.handle("expenses:update", (event,input) => handle(event, () => {const attachmentSourcePath=typeof input?.attachmentSourcePath==="string"?consumeApprovedUserFile(input.attachmentSourcePath,"expense"):undefined;const expense={id:String(input?.id||""),expenseDate:String(input?.expenseDate||""),supplierName:String(input?.supplierName||""),amountAgorot:Number(input?.amountAgorot)||0,category:String(input?.category||""),paymentMethod:typeof input?.paymentMethod==="string"?input.paymentMethod:undefined,notes:typeof input?.notes==="string"?input.notes:undefined,...(attachmentSourcePath?{attachmentSourcePath}:{}),removeAttachment:Boolean(input?.removeAttachment)};return supabaseCloud.getStatus().connected?supabaseCloud.updateExpense(expense):databaseService.updateExpense(expense)}, input));
   ipcMain.handle("expenses:delete", (event,input) => handle(event, () => supabaseCloud.getStatus().connected?supabaseCloud.deleteExpense(String(input?.id||"")):databaseService.deleteExpense(String(input?.id||"")), input));
-  ipcMain.handle("expenses:select-attachment", (event) => handle(event, async () => { const result=await dialog.showOpenDialog({title:"בחירת קבלה או חשבונית הוצאה",properties:["openFile"],filters:[{name:"מסמכי הוצאה",extensions:["pdf","png","jpg","jpeg","webp"]}]}); return result.canceled?null:result.filePaths[0]??null; }));
+  ipcMain.handle("expenses:select-attachment", (event) => handle(event, async () => { const result=await dialog.showOpenDialog({title:"בחירת קבלה או חשבונית הוצאה",properties:["openFile"],filters:[{name:"מסמכי הוצאה",extensions:["pdf","png","jpg","jpeg","webp"]}]}); if(result.canceled||!result.filePaths[0])return null; return approveUserFile(result.filePaths[0],"expense"); }));
   ipcMain.handle("expenses:open-attachment", (event,input) => handle(event, async () => { const id=String(input?.id||""); const filePath=supabaseCloud.getStatus().connected?await supabaseCloud.openExpenseAttachment(id):databaseService.getExpenseAttachmentPath(id); if(!filePath||!fs.existsSync(filePath))throw new Error("INVALID_INPUT"); const message=await shell.openPath(filePath); if(message)throw new Error("DATABASE_OPERATION_FAILED"); return true; }, input));
 
   ipcMain.handle("cloud-account:get-status", (event) => handle(event, () => supabaseCloud.getStatus()));
