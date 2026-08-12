@@ -23,7 +23,7 @@ SECURITY.md
 
 ## 3. כללי גרסאות
 - Windows: להעלות version בכל release משמעותי.
-- Android: להעלות גם `version` וגם `versionCode`.
+- Android: להעלות גם `version` וגם `versionCode` כאשר נוצר release חדש.
 - Android package ID לא משתנה.
 - signing/Keystore נשמרים מחוץ ל-repository.
 - אין להסיר אפליקציה קיימת לצורך update אם אותו signing/package מאפשר התקנה מעליה.
@@ -65,6 +65,16 @@ npm install
 npm run release:check
 ```
 
+`release:check` חייב לכלול בין היתר:
+- `verify:intrusion-hardening`
+- `verify:device-management`
+- `verify:android-boundary-hardening`
+- TypeScript (`npm run check`)
+
+בשינוי שנוגע לתמונה/אסמכתה/לוגו, אין להסתמך על MIME של ה-picker או השרת בלבד. יש לבדוק MIME allowlist, גודל לאחר decode ו-magic bytes לפני upload/render. signed URL שנפתח או נמשך מחוץ ל-Supabase SDK חייב לעבור trusted host/path validation; הורדה רגישה לא אמורה לעקוב אחרי redirect ללא בדיקה.
+
+אין להוסיף `scheme` או `android.intentFilters` בלי threat model ובדיקת deep-link מפורשת. Auth נשאר עם `detectSessionInUrl:false` כל עוד אין flow מתוכנן ומאובטח לקבלת token מ-URL.
+
 Build APK:
 ```powershell
 $env:EAS_NO_VCS="1"
@@ -80,6 +90,7 @@ npx eas-cli@latest build -p android --profile production-apk
 - לבדיקות Tenant Isolation להשתמש ב-Staging/Development Branch.
 - SECURITY DEFINER: auth + authorization + fixed search_path.
 - RLS חייב להישאר פעיל בכל טבלה חשופה עם נתונים עסקיים.
+- Storage policies חייבות לאכוף business ownership לפי path/object metadata ולא להסתמך רק על נתיב שהלקוח שולח.
 
 ## 8. Validation
 כל validation משמעותי צריך להיות לפחות בשתי שכבות:
@@ -116,17 +127,18 @@ GitHub הוא source of truth לקוד ולתיעוד. ZIPים הם גיבוי/�
 - Issue receipt.
 - Cancel receipt.
 - Expense + attachment, כולל בחירה מחדש של קובץ לאחר כישלון/ביטול.
-- Business details/logo, כולל בחירת לוגו חדש ושמירת לוגו קיים.
+- Business details/logo, כולל בחירת לוגו חדש ושמירת/טעינת לוגו קיים.
 - PDF persistence/opening.
 - Device list/revoke.
 - Receipt numbering/reservation.
 - Offline/network friendly errors.
 
 ## 12. המשימה הפעילה נכון ל-12.08.2026
-1. לבצע בדיקה ידנית של Windows 1.1.5-security.5 עבור Expense attachment, logo selection ושמירת לוגו קיים.
-2. לבצע Windows build/install verification ורק לאחר PASS לשקול קידום 1.1.5 ל-Production.
-3. לבדוק Device Management ב-Windows / Android 1.0.5.
-4. לנתק דרך הממשק את Android של 9.8 ולוודא count=3.
-5. להקים Supabase Staging.
-6. לבצע Tenant Isolation A מול B.
-7. להמשיך penetration tests מבוקרים, כולל Android uploads/deep-links/session ו-Windows IPC/URL/files שלא כוסו עדיין.
+1. לבצע static audit נוסף ל-Supabase tenant/storage boundaries בלי לגעת בנתוני Production.
+2. להקים Supabase Staging לפני בדיקות cross-tenant אקטיביות.
+3. ליצור User A/Business A ו-User B/Business B ולבצע Tenant Isolation Test אמיתי ב-Staging.
+4. לבצע בדיקה ידנית של Windows 1.1.5-security.5 עבור Expense attachment, logo selection ושמירת לוגו קיים.
+5. לבצע Windows build/install verification ורק לאחר PASS לשקול קידום 1.1.5 ל-Production.
+6. לבצע בדיקה ידנית ל-Android Phase 6: מצלמה/גלריה, אסמכתאה, לוגו וטעינת לוגו מהענן.
+7. לבדוק Device Management ולנתק דרך הממשק את Android של 9.8 רק בפעולה יזומה ולא באמצעות SQL ידני.
+8. להמשיך penetration tests מבוקרים על Staging, לא על Production.
