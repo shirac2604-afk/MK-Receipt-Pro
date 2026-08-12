@@ -13,17 +13,27 @@ permissions:
   contents: read
 
 jobs:
-  supply-chain-audit:
+  static-gate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Static secrets and workflow pinning gate
         run: python3 scripts/verify-security-phase8.py
+
+  android-dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Android production dependency audit
         working-directory: apps/android
         run: |
           npm install --ignore-scripts --no-fund
           npm audit --omit=dev --audit-level=high
+
+  windows-dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Windows production dependency audit
         working-directory: apps/windows
         run: |
