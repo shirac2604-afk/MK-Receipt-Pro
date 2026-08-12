@@ -1,0 +1,31 @@
+name: Security Phase 8 Supply Chain
+
+on:
+  push:
+    branches:
+      - main
+      - security/phase8-supply-chain
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  supply-chain-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Static secrets and workflow pinning gate
+        run: python3 scripts/verify-security-phase8.py
+      - name: Android production dependency audit
+        working-directory: apps/android
+        run: |
+          npm install --ignore-scripts --no-fund
+          npm audit --omit=dev --audit-level=high
+      - name: Windows production dependency audit
+        working-directory: apps/windows
+        run: |
+          npm install --ignore-scripts --no-fund
+          npm audit --omit=dev --audit-level=high
