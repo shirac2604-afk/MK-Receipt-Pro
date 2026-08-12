@@ -1,0 +1,48 @@
+name: Security Phase 8 Expo 57 Evaluation
+
+on:
+  push:
+    branches:
+      - security/phase8-dependency-audit
+    paths:
+      - .github/workflows/security-phase8-expo57-evaluation.yml
+      - apps/android/package.json
+      - apps/android/app.json
+      - apps/android/src/**
+      - apps/android/scripts/**
+
+permissions:
+  contents: read
+
+jobs:
+  expo57-ephemeral-upgrade:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use supported Node for Expo SDK 57
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+      - name: Install current dependency graph
+        run: npm install --ignore-scripts --no-fund --no-audit
+      - name: Upgrade temporary workspace to Expo SDK 57
+        run: |
+          npm install expo@^57.0.0 --ignore-scripts --no-fund --no-audit
+          npx expo install --fix --npm
+      - name: Expo Doctor after temporary upgrade
+        run: npx expo-doctor
+      - name: TypeScript after temporary upgrade
+        run: npm run check
+      - name: Existing Android security gates after temporary upgrade
+        run: |
+          npm run verify:security-hardening
+          npm run verify:intrusion-hardening
+          npm run verify:device-management
+          npm run verify:android-boundary-hardening
+      - name: Runtime dependency audit after temporary upgrade
+        run: |
+          npm audit --omit=dev --json > npm-audit-sdk57.json || true
+          python3 ../../scripts/check-npm-audit.py npm-audit-sdk57.json "Android SDK57 evaluation"
