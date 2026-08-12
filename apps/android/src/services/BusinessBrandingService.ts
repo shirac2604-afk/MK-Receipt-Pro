@@ -69,7 +69,8 @@ export async function getBusinessLogoDataUrl(storageKey:string|null|undefined):P
   const trustedUrl=assertTrustedSupabaseSignedUrl(data.signedUrl);
   const response=await fetch(trustedUrl,{redirect:"error"});
   if(!response.ok)throw new Error(`BUSINESS_LOGO_DOWNLOAD_HTTP_${response.status}`);
-  const contentType=(response.headers.get("content-type")||"").split(";",1)[0].trim().toLowerCase();
+  const rawContentType=response.headers.get("content-type")||"";
+  const contentType=(rawContentType.split(";",1)[0]??"").trim().toLowerCase();
   if(!ALLOWED_IMAGE_MIMES.has(contentType))throw new Error("UNSUPPORTED_BUSINESS_LOGO_TYPE");
   const declaredLength=Number(response.headers.get("content-length")||0);
   if(Number.isFinite(declaredLength)&&declaredLength>MAX_LOGO_BYTES)throw new Error("BUSINESS_LOGO_TOO_LARGE");
