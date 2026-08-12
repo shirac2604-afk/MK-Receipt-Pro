@@ -6,6 +6,7 @@ on:
       - security/phase5-file-capabilities
     paths:
       - scripts/apply-security-phase5.py
+      - scripts/fix-security-phase5-types.py
       - .github/workflows/apply-security-phase5.yml
 
 permissions:
@@ -21,7 +22,9 @@ jobs:
           fetch-depth: 0
 
       - name: Apply hardening patch
-        run: python scripts/apply-security-phase5.py
+        run: |
+          python scripts/apply-security-phase5.py
+          python scripts/fix-security-phase5-types.py
 
       - name: Install Windows dependencies
         working-directory: apps/windows
