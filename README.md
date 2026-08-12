@@ -2,7 +2,7 @@
 
 מערכת פרטית לניהול עסק, קבלות, לקוחות, הוצאות, מסמכי PDF וסנכרון ענן בין Windows ל-Android.
 
-> **מסמך זה הוא נקודת הכניסה לפרויקט.** בכל חזרה לפרויקט יש לקרוא קודם את README, אחר כך `CHANGELOG.md`, `WORKFLOW.md` ו-`SECURITY.md`.
+> **מסמך זה הוא נקודת הכניסה לפרויקט.** בכל חזרה לפרויקט יש לקרוא קודם את README, אחר כך `CHANGELOG.md`, `WORKFLOW.md`, `SECURITY.md` ו-`SOURCE_BACKUP_MANIFEST.md`.
 
 ## מצב נוכחי — 12.08.2026
 
@@ -28,14 +28,34 @@ MK-Receipt-Pro/
 ├── apps/
 │   ├── windows/     # Electron + TypeScript + Vite
 │   └── android/     # Expo + React Native
-├── supabase/        # migrations / RLS / RPC / security hardening
+├── supabase/
+│   └── migrations/  # migrations / RLS / RPC / security hardening
+├── incoming/        # one-time verified source import only
 ├── README.md
 ├── CHANGELOG.md
 ├── WORKFLOW.md
-└── SECURITY.md
+├── SECURITY.md
+└── SOURCE_BACKUP_MANIFEST.md
 ```
 
 שתי האפליקציות משתמשות באותו Supabase. הפרדת הנתונים בין עסקים מבוססת על `business_id`, RLS ו-`user_has_business_access()`.
+
+## גיבוי קוד המקור ויכולת שחזור
+
+גרסאות המקור המדויקות שנבדקו הן:
+
+- Android 1.0.5: `MK-Receipt-Pro-Android-1.0.5-SECURITY-DEVICE-MGMT-FULL.zip`
+  - SHA-256: `8a2847b7aab7bb7608bc4ff2e72464fb953d12aac2cdfa216d1e6923e3732485`
+  - 120 קבצים בארכיון המאומת.
+- Windows 1.1.4: `MK-Receipt-Pro-Windows-1.1.4-SECURITY-DEVICE-MGMT-FULL.zip`
+  - SHA-256: `01091a8e359fd905b2c1a8ef467136298e1ad34765ae17ad2828f8a3b53583e7`
+  - 362 קבצים בארכיון המאומת.
+
+הפרטים נשמרים גם ב-`SOURCE_BACKUP_MANIFEST.md`.
+
+נוסף workflow בשם `.github/workflows/import-source-archives.yml`. כאשר שני הארכיונים המדויקים מועלים לתיקיית `incoming/`, GitHub Actions מאמת SHA-256, מחלץ אותם ל-`apps/android` ו-`apps/windows`, מסיר build/cache/secrets, מוחק את קובצי ה-ZIP ומבצע commit של קוד המקור הניתן לעיון.
+
+**כלל יושרה:** אין להכריז שה-repository הוא נקודת שחזור מלאה עד ש-`apps/android` ו-`apps/windows` מאוכלסות בפועל. אין להחליף את הארכיונים בגרסאות ישנות יותר.
 
 ## אבטחה — מצב נוכחי
 
@@ -62,6 +82,7 @@ MK-Receipt-Pro/
 - `cancel_receipt_cloud`, `consume_receipt_reservation` ו-`user_has_business_access` אינם זמינים ל-anon.
 - `businesses UPDATE` מוגבל ל-owner/admin.
 - נוסף RPC `revoke_device` — authenticated owner/admin בלבד; לא ניתן לנתק את המכשיר הפעיל כאשר `current_device_id` נמסר.
+- migrations שהוחלו ב-Production מגובות תחת `supabase/migrations/`.
 - עדיין מומלץ להפעיל **Leaked Password Protection** ב-Supabase Auth לאחר בדיקת השפעה.
 
 ## ניהול מכשירים — המשימה הפעילה
@@ -116,9 +137,9 @@ npx eas-cli@latest build -p android --profile production-apk
 - לפני פרסום: להשלים Staging, Tenant Isolation tests, Data Safety, Privacy Policy ו-Play release readiness.
 
 ## המשימות הבאות — לפי סדר
-1. לבדוק בפועל Windows 1.1.4 / Android 1.0.5 Device Management.
-2. לנתק דרך הממשק את Android שנרשם ב-9.8 ולוודא שהמונה יורד ל-3.
-3. לוודא שכל קוד המקור של שתי הגרסאות האחרונות נמצא ב-GitHub ולא רק מסמכי הפרויקט.
+1. להשלים את import קוד המקור ל-`apps/android` ו-`apps/windows` באמצעות שני הארכיונים המאומתים.
+2. לבדוק בפועל Windows 1.1.4 / Android 1.0.5 Device Management.
+3. לנתק דרך הממשק את Android שנרשם ב-9.8 ולוודא שהמונה יורד ל-3.
 4. להקים Supabase Development/Staging Branch ללא נתוני Production.
 5. ליצור User A/Business A ו-User B/Business B ולבצע Tenant Isolation Test אמיתי.
 6. לבדוק cross-tenant customers/receipts/expenses/storage/RPC, business_id tampering, invalid sessions ו-reservation misuse.
@@ -132,6 +153,7 @@ npx eas-cli@latest build -p android --profile production-apk
 - כל שינוי משמעותי חייב להיכנס גם ל-`CHANGELOG.md`.
 - כל שינוי בתהליך העבודה/פקודות חייב להיכנס ל-`WORKFLOW.md`.
 - כל שינוי אבטחה חייב להיכנס ל-`SECURITY.md`.
+- כל גרסת מקור שמוכרזת כבסיס חייבת להיות מזוהה ב-SHA-256 ב-`SOURCE_BACKUP_MANIFEST.md`.
 
 ## קבצים שאסור להעלות
 `.env`, secrets, service-role keys, keystores, signing credentials, production tokens, APK/AAB/EXE installers, logs עם מידע רגיש, customer data או production database dumps.
