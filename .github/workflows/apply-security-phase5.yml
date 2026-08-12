@@ -1,0 +1,55 @@
+name: Apply Security Phase 5
+
+on:
+  push:
+    branches:
+      - security/phase5-file-capabilities
+    paths:
+      - scripts/apply-security-phase5.py
+      - .github/workflows/apply-security-phase5.yml
+
+permissions:
+  contents: write
+
+jobs:
+  harden-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/phase5-file-capabilities
+          fetch-depth: 0
+
+      - name: Apply hardening patch
+        run: python scripts/apply-security-phase5.py
+
+      - name: Install Windows dependencies
+        working-directory: apps/windows
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run file capability regression test
+        working-directory: apps/windows
+        run: npm run check:file-capability-hardening
+
+      - name: Typecheck Electron and renderer
+        working-directory: apps/windows
+        run: npm run typecheck
+
+      - name: Check patch integrity
+        run: git diff --check
+
+      - name: Commit hardened source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/windows/apps/desktop/electron/ipc/security.ts \
+                  apps/windows/apps/desktop/electron/ipc/databaseHandlers.ts \
+                  apps/windows/package.json \
+                  apps/windows/scripts/verify-file-capability-hardening-115.mjs
+          if git diff --cached --quiet; then
+            echo "No source changes to commit"
+            exit 0
+          fi
+          git commit -m "Harden Windows local file capabilities [skip ci]"
+          git push origin HEAD:security/phase5-file-capabilities
