@@ -6,7 +6,7 @@
 1. לקרוא `README.md`.
 2. לקרוא את החלק האחרון ב-`CHANGELOG.md`.
 3. לקרוא `SECURITY.md` אם השינוי נוגע ל-Auth, Supabase, IPC, files, URLs, Storage או נתוני לקוחות.
-4. לוודא מהי גרסת Production/Stable האחרונה.
+4. לוודא מהי גרסת Production/Stable האחרונה ומהו source baseline החדש יותר, אם קיים.
 5. לא לערוך ישירות גרסה יציבה בלי יצירת version/branch מתאים.
 
 ## 2. מבנה רצוי
@@ -27,6 +27,7 @@ SECURITY.md
 - Android package ID לא משתנה.
 - signing/Keystore נשמרים מחוץ ל-repository.
 - אין להסיר אפליקציה קיימת לצורך update אם אותו signing/package מאפשר התקנה מעליה.
+- source/security baseline חדש אינו Production עד שעבר בדיקה ידנית, build והתקנה.
 
 ## 4. תהליך שינוי
 1. להבין את התקלה/דרישה.
@@ -49,10 +50,14 @@ npm run check:security-input
 npm run check:customer-create
 npm run check:intrusion-hardening
 npm run check:device-management
+npm run check:file-capability-hardening
+npm run typecheck
 npm run start
 ```
 
 אין להסתפק ב-build. יש לבדוק ידנית את המסך/פעולה ששונו.
+
+בשינוי שנוגע לבחירת קבצים, אסמכתאות, לוגו או נתיבי filesystem, חובה לוודא שה-renderer אינו סמכות לנתיב מקומי: הקובץ חייב להגיע דרך Electron dialog, לעבור validation ב-main process ולהיות מוגן ב-one-time capability כאשר ה-flow דורש זאת.
 
 ## 6. Android checks
 ```powershell
@@ -79,9 +84,9 @@ npx eas-cli@latest build -p android --profile production-apk
 ## 8. Validation
 כל validation משמעותי צריך להיות לפחות בשתי שכבות:
 - UI: למנוע קלט שגוי ולתת הודעה ידידותית.
-- Server/DB: לדחות payload לא תקין גם אם ה-UI נעקף.
+- Server/DB או trusted main process: לדחות payload לא תקין גם אם ה-UI נעקף.
 
-דוגמאות: טלפון, אימייל, סכום, מספר עוסק, תאריך, payment method, status, file type/size.
+דוגמאות: טלפון, אימייל, סכום, מספר עוסק, תאריך, payment method, status, file type/size/path/content signature.
 
 ## 9. Secrets
 לעולם לא commit:
@@ -101,7 +106,8 @@ GitHub הוא source of truth לקוד ולתיעוד. ZIPים הם גיבוי/�
 - לוודא שהקוד העדכני נמצא ב-repo.
 - לעדכן README אם השתנה המצב הנוכחי.
 - לעדכן CHANGELOG.
-- לשמור migration תחת `supabase/migrations`.
+- לעדכן SECURITY כאשר מודל האבטחה השתנה.
+- לשמור migration תחת `supabase/migrations` כאשר יש שינוי DB.
 
 ## 11. בדיקות ידניות קריטיות לפני Release
 - Login/session.
@@ -109,17 +115,18 @@ GitHub הוא source of truth לקוד ולתיעוד. ZIPים הם גיבוי/�
 - Create/select/update customer.
 - Issue receipt.
 - Cancel receipt.
-- Expense + attachment.
-- Business details/logo.
+- Expense + attachment, כולל בחירה מחדש של קובץ לאחר כישלון/ביטול.
+- Business details/logo, כולל בחירת לוגו חדש ושמירת לוגו קיים.
 - PDF persistence/opening.
 - Device list/revoke.
 - Receipt numbering/reservation.
 - Offline/network friendly errors.
 
 ## 12. המשימה הפעילה נכון ל-12.08.2026
-1. לבדוק Device Management ב-Windows 1.1.4 / Android 1.0.5.
-2. לנתק דרך הממשק את Android של 9.8 ולוודא count=3.
-3. לוודא שכל source code של שתי הגרסאות האחרונות נמצא ב-GitHub.
-4. להקים Supabase Staging.
-5. לבצע Tenant Isolation A מול B.
-6. להמשיך penetration tests מבוקרים.
+1. לבצע בדיקה ידנית של Windows 1.1.5-security.5 עבור Expense attachment, logo selection ושמירת לוגו קיים.
+2. לבצע Windows build/install verification ורק לאחר PASS לשקול קידום 1.1.5 ל-Production.
+3. לבדוק Device Management ב-Windows / Android 1.0.5.
+4. לנתק דרך הממשק את Android של 9.8 ולוודא count=3.
+5. להקים Supabase Staging.
+6. לבצע Tenant Isolation A מול B.
+7. להמשיך penetration tests מבוקרים, כולל Android uploads/deep-links/session ו-Windows IPC/URL/files שלא כוסו עדיין.
