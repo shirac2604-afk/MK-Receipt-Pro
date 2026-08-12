@@ -1,0 +1,72 @@
+name: Import release source archives
+
+on:
+  push:
+    paths:
+      - 'incoming/MK-Receipt-Pro-Android-1.0.5-SECURITY-DEVICE-MGMT-FULL.zip'
+      - 'incoming/MK-Receipt-Pro-Windows-1.1.4-SECURITY-DEVICE-MGMT-FULL.zip'
+
+permissions:
+  contents: write
+
+jobs:
+  import-sources:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify both source archives exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f incoming/MK-Receipt-Pro-Android-1.0.5-SECURITY-DEVICE-MGMT-FULL.zip
+          test -f incoming/MK-Receipt-Pro-Windows-1.1.4-SECURITY-DEVICE-MGMT-FULL.zip
+
+      - name: Verify archive hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '8a2847b7aab7bb7608bc4ff2e72464fb953d12aac2cdfa216d1e6923e3732485  incoming/MK-Receipt-Pro-Android-1.0.5-SECURITY-DEVICE-MGMT-FULL.zip' | sha256sum -c -
+          echo '01091a8e359fd905b2c1a8ef467136298e1ad34765ae17ad2828f8a3b53583e7  incoming/MK-Receipt-Pro-Windows-1.1.4-SECURITY-DEVICE-MGMT-FULL.zip' | sha256sum -c -
+
+      - name: Extract latest source trees
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf apps/android apps/windows
+          mkdir -p apps/android apps/windows
+          unzip -q incoming/MK-Receipt-Pro-Android-1.0.5-SECURITY-DEVICE-MGMT-FULL.zip -d apps/android
+          unzip -q incoming/MK-Receipt-Pro-Windows-1.1.4-SECURITY-DEVICE-MGMT-FULL.zip -d apps/windows
+
+          # Never retain build/cache/private local files in source control.
+          find apps -type d \( -name node_modules -o -name dist -o -name dist-electron -o -name .expo -o -name test-output \) -prune -exec rm -rf {} + || true
+          find apps -type f \( -name '.env' -o -name '*.keystore' -o -name '*.jks' -o -name '*.p12' -o -name '*.pem' -o -name '*.key' -o -name '*.apk' -o -name '*.aab' -o -name '*.exe' -o -name '*.msi' -o -name '*.log' \) -delete || true
+
+          rm -f incoming/MK-Receipt-Pro-Android-1.0.5-SECURITY-DEVICE-MGMT-FULL.zip
+          rm -f incoming/MK-Receipt-Pro-Windows-1.1.4-SECURITY-DEVICE-MGMT-FULL.zip
+
+      - name: Confirm expected project files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f apps/android/package.json
+          test -f apps/android/App.tsx
+          test -f apps/windows/package.json
+          test -f apps/windows/apps/desktop/renderer/src/main.tsx
+
+      - name: Commit imported source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A apps incoming
+          if git diff --cached --quiet; then
+            echo 'No source changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Import Windows 1.1.4 and Android 1.0.5 source trees [skip ci]'
+          git push
