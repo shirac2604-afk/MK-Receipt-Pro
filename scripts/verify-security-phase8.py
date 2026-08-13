@@ -24,6 +24,8 @@ patterns=[
     re.compile(r'SUPABASE_SERVICE_ROLE_KEY\s*=\s*\S+',re.I),
     re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
     re.compile(r'\bsk-[A-Za-z0-9_-]{20,}\b'),
+    re.compile(r'\bGOCSPX-[A-Za-z0-9_-]{20,}\b'),
+    re.compile(r'["\']clientSecret["\']\s*:\s*["\'](?!YOUR_|REDACTED|<)[^"\']{8,}["\']',re.I),
 ]
 scan_ext={'.ts','.tsx','.js','.mjs','.cjs','.json','.yml','.yaml','.md','.sql','.ps1','.sh','.txt'}
 for p in ROOT.rglob('*'):
