@@ -47,6 +47,26 @@ export interface StudentGuardianRecord {
   updatedAt: string;
 }
 
+export interface StudentWithGuardian extends StudentRecord {
+  primaryGuardian: StudentGuardianRecord | null;
+}
+
+export interface StudentSaveInput {
+  id?: string;
+  displayName: string;
+  schoolName?: string;
+  schoolGrade?: string;
+  focusNotes?: string;
+  defaultPriceAgorot: number;
+  payerCustomerId?: string;
+  reminderEnabled: boolean;
+  guardianName?: string;
+  guardianRelationship?: string;
+  guardianPhone?: string;
+  guardianEmail?: string;
+  guardianReceivesReminders: boolean;
+}
+
 export interface StudentGroupRecord {
   id: string;
   businessId: string;
