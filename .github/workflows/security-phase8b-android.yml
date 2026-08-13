@@ -1,0 +1,32 @@
+name: Security Phase 8B Android Expo Upgrade
+
+on:
+  push:
+    branches:
+      - security/phase8b-android-expo-upgrade
+  pull_request:
+    branches:
+      - main
+    paths:
+      - apps/android/**
+      - .github/workflows/security-phase8b-android.yml
+
+permissions:
+  contents: read
+
+jobs:
+  android-phase8b:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Expo doctor
+        run: npx expo-doctor
+      - name: Full release gate
+        run: npm run release:check
+      - name: Audit snapshot
+        run: npm audit || true
