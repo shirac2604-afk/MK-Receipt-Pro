@@ -28,7 +28,7 @@
     "verify:final-parity": "node scripts/verify-final-parity-v84.mjs",
     "verify:final-parity-fix": "node scripts/verify-final-parity-fix-v841.mjs",
     "verify:production-hardening": "node scripts/verify-production-hardening-v85.mjs",
-    "release:check": "npm run verify:release-1.0.5 && npm run verify:security-hardening && npm run verify:production-regression-audit && npm run verify:production-hardening && npm run verify:app-icon && npm run verify:eas-bundle-deps && npm run verify:intrusion-hardening && npm run verify:device-management && npm run verify:android-boundary-hardening && npm run check",
+    "release:check": "npm run verify:release-1.0.5 && npm run verify:security-hardening && npm run verify:production-regression-audit && npm run verify:production-hardening && npm run verify:app-icon && npm run verify:eas-bundle-deps && npm run verify:intrusion-hardening && npm run verify:device-management && npm run verify:android-boundary-hardening && npm run verify:build-asset-safety && npm run check",
     "verify:production-regression-audit": "node scripts/verify-production-regression-audit.mjs",
     "verify:app-icon": "node scripts/verify-app-icon.mjs",
     "verify:eas-bundle-deps": "node scripts/verify-eas-bundle-deps.mjs",
@@ -40,7 +40,8 @@
     "verify:release-1.0.4": "node scripts/verify-release-1.0.4.mjs",
     "verify:device-management": "node scripts/verify-device-management-105.mjs",
     "verify:release-1.0.5": "node scripts/verify-release-1.0.5.mjs",
-    "verify:android-boundary-hardening": "node scripts/verify-android-boundary-hardening-106.mjs"
+    "verify:android-boundary-hardening": "node scripts/verify-android-boundary-hardening-106.mjs",
+    "verify:build-asset-safety": "node scripts/verify-build-asset-safety.mjs"
   },
   "dependencies": {
     "@react-navigation/bottom-tabs": "^7.2.0",
