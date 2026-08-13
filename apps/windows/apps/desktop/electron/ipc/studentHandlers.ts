@@ -1,6 +1,7 @@
 import { ipcMain, type IpcMainInvokeEvent } from "electron";
 import type { SupabaseCloudService } from "../main/SupabaseCloudService";
-import { StudentManagementCloudService, type StudentSaveInput } from "../main/StudentManagementCloudService";
+import { StudentManagementCloudService } from "../main/StudentManagementCloudService";
+import type { StudentSaveInput } from "../../../../packages/database/src/studentTypes";
 import { apiFailure, apiSuccess, type ApiResult } from "../../../../packages/shared/src/api";
 import { assertPayloadSize, assertTrustedSender, withTimeout } from "./security";
 
