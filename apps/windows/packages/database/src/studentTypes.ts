@@ -96,6 +96,20 @@ export interface LessonSeriesRecord {
   active: boolean;
 }
 
+export interface LessonSeriesSaveInput {
+  studentId: string;
+  title: string;
+  weekday: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  localStartTime: string;
+  durationMinutes: number;
+  recurrenceIntervalWeeks: number;
+  startsOn: string;
+  endsOn?: string;
+  defaultPriceAgorot: number;
+  parentReminderMinutes: number;
+  studentReminderMinutes: number;
+}
+
 export interface LessonRecord {
   id: string;
   businessId: string;
@@ -133,6 +147,21 @@ export interface LessonParticipantUpdateInput {
   amountAgorot?: number;
   paymentMethod?: PaymentMethod | null;
   paidAt?: string | null;
+}
+
+export interface LessonCalendarItem {
+  lesson: LessonRecord;
+  participant: LessonParticipantRecord;
+  student: StudentRecord;
+  guardian: StudentGuardianRecord | null;
+}
+
+export interface LessonParticipantActionInput {
+  participantId: string;
+  attendanceStatus: AttendanceStatus;
+  paymentStatus: LessonPaymentStatus;
+  paymentMethod?: PaymentMethod | null;
+  amountAgorot: number;
 }
 
 export interface LessonReminderRecord {
