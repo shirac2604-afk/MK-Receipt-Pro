@@ -13,16 +13,16 @@ const nav=read("src/navigation/AppNavigator.tsx");
 const pdfFlow=read("src/services/ReceiptDocumentWorkflow.ts");
 const pdfSvc=read("src/services/ReceiptPdfService.ts");
 
-const isProductionPackage=pkg.version==="1.0.5";
-const isPhase8bPackage=pkg.version==="1.0.6-security.8b";
-const packageContextOk=(isProductionPackage||isPhase8bPackage)&&app.expo.version==="1.0.5";
-const expoRnCompatibilityOk=
-  (isProductionPackage&&pkg.dependencies["react-native"]==="0.81.5")||
-  (isPhase8bPackage&&pkg.dependencies.expo==="~56.0.0"&&pkg.dependencies["react-native"]==="0.85.3");
+const productionContext=
+  pkg.version==="1.0.6"&&
+  app.expo.version==="1.0.6"&&
+  app.expo.android?.versionCode===8&&
+  pkg.dependencies.expo==="~56.0.0"&&
+  pkg.dependencies["react-native"]==="0.85.3";
 
 const checks=[
- [packageContextOk,"production release version/context"],
- [expoRnCompatibilityOk,isPhase8bPackage?"Expo 56 React Native compatibility":"Expo 54 React Native compatibility"],
+ [productionContext,"production release version/context"],
+ [pkg.dependencies.expo==="~56.0.0"&&pkg.dependencies["react-native"]==="0.85.3","Expo 56 React Native compatibility"],
  [app.expo.android?.package==="il.mkreceiptpro.android","stable Android package id"],
  [eas.build?.["production-apk"]?.android?.buildType==="apk","standalone APK profile"],
  [eas.build?.production?.android?.buildType==="app-bundle","Play Store AAB profile"],

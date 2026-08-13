@@ -3,7 +3,7 @@ const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 const css=fs.readFileSync("apps/desktop/renderer/src/styles.css","utf8");
 const ui=fs.readFileSync("apps/desktop/renderer/src/main.tsx","utf8");
 const checks=[
- [pkg.version.startsWith("1.1.") && pkg.version.includes("security"),"security release version"],
+ [pkg.version==="1.1.5","production release version"],
  [css.includes("user-select: none"),"sidebar text selection disabled"],
  [css.includes(".sidebar .nav-item.active"),"active-only selector"],
  [css.includes("background: #eef8f6"),"mint active background"],

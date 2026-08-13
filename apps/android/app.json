@@ -2,12 +2,12 @@
   "expo": {
     "name": "MK Receipt Pro",
     "slug": "mk-receipt-pro-android",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "android": {
       "package": "il.mkreceiptpro.android",
-      "versionCode": 7,
+      "versionCode": 8,
       "permissions": [
         "CAMERA"
       ],

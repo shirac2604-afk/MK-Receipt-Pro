@@ -4,13 +4,14 @@ const main=read("apps/desktop/electron/main/main.ts");
 const sec=read("apps/desktop/electron/ipc/security.ts");
 const handlers=read("apps/desktop/electron/ipc/databaseHandlers.ts");
 const pkg=JSON.parse(read("package.json"));
+const exactPackagedRenderer=sec.includes('path.join(app.getAppPath(), "dist", "index.html")')&&sec.includes('return filePath === expectedIndex')&&!sec.includes('senderUrl.startsWith("file://")');
 const tests=[
- ["version",pkg.version==="1.1.3-security.2"],
+ ["version",pkg.version==="1.1.5"],
  ["packaged build ignores dev server",main.includes('!app.isPackaged ? process.env.VITE_DEV_SERVER_URL : undefined')],
  ["production devtools disabled",main.includes('devTools: !app.isPackaged')],
  ["permissions denied",main.includes('setPermissionRequestHandler')&&main.includes('setPermissionCheckHandler')],
  ["drag navigation disabled",main.includes('navigateOnDragDrop: false')],
- ["IPC file sender narrowed",sec.includes('path.basename(filePath).toLowerCase() === "index.html"')&&!sec.includes('senderUrl.startsWith("file://")')],
+ ["IPC file sender narrowed",exactPackagedRenderer],
  ["external hosts allowlisted",main.includes('"wa.me"')&&main.includes('"accounts.google.com"')&&main.includes('"noimclnzzuxcszdotmby.supabase.co"')],
  ["signed PDF host validated",handlers.includes('url.pathname.startsWith("/storage/v1/object/sign/")')],
  ["external opens centralized",handlers.includes('async function openTrustedExternal')],
