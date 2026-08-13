@@ -9,137 +9,18 @@ function cleanOptional(value: unknown, max: number): string | null {
   if (cleaned.length > max) throw new Error("INVALID_STUDENT_INPUT");
   return cleaned;
 }
-
-function validatePhone(value: string | null): void {
-  if (value && !/^[0-9+()\- ]{6,20}$/.test(value)) throw new Error("INVALID_STUDENT_GUARDIAN_PHONE");
-}
-function validateEmail(value: string | null): void {
-  if (value && (value.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))) throw new Error("INVALID_STUDENT_GUARDIAN_EMAIL");
-}
+function validatePhone(value: string | null): void { if (value && !/^[0-9+()\- ]{6,20}$/.test(value)) throw new Error("INVALID_STUDENT_PHONE"); }
+function validateEmail(value: string | null): void { if (value && (value.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))) throw new Error("INVALID_STUDENT_EMAIL"); }
 
 export class StudentManagementCloudService {
   private readonly cloud: SupabaseCloudService;
   private readonly client: SupabaseClient;
-
-  constructor(cloud: SupabaseCloudService) {
-    this.cloud = cloud;
-    this.client = cloud.getClient();
-  }
-
-  private requireBusinessId(): string {
-    const status = this.cloud.getStatus();
-    if (!status.connected || !status.businessId) throw new Error("CLOUD_CONNECTION_REQUIRED_FOR_STUDENTS");
-    return status.businessId;
-  }
-
-  private mapStudent(row: any): StudentRecord {
-    return {
-      id: String(row.id), businessId: String(row.business_id), displayName: String(row.display_name ?? ""),
-      schoolName: row.school_name ? String(row.school_name) : null,
-      schoolGrade: row.school_grade ? String(row.school_grade) : null,
-      focusNotes: row.focus_notes ? String(row.focus_notes) : null,
-      defaultPriceAgorot: Number(row.default_price_agorot ?? 0),
-      payerCustomerId: row.payer_customer_id ? String(row.payer_customer_id) : null,
-      reminderEnabled: Boolean(row.reminder_enabled), active: Boolean(row.active),
-      createdAt: String(row.created_at ?? ""), updatedAt: String(row.updated_at ?? "")
-    };
-  }
-
-  private mapGuardian(row: any): StudentGuardianRecord {
-    return {
-      id: String(row.id), businessId: String(row.business_id), studentId: String(row.student_id),
-      displayName: String(row.display_name ?? ""), relationship: row.relationship ? String(row.relationship) : null,
-      phone: row.phone ? String(row.phone) : null, email: row.email ? String(row.email) : null,
-      isPrimary: Boolean(row.is_primary), receivesReminders: Boolean(row.receives_reminders),
-      createdAt: String(row.created_at ?? ""), updatedAt: String(row.updated_at ?? "")
-    };
-  }
-
-  async list(): Promise<StudentWithGuardian[]> {
-    const businessId = this.requireBusinessId();
-    const { data: students, error } = await this.client.from("students")
-      .select("id,business_id,display_name,school_name,school_grade,focus_notes,default_price_agorot,payer_customer_id,reminder_enabled,active,created_at,updated_at")
-      .eq("business_id", businessId).eq("active", true).order("display_name", { ascending: true });
-    if (error) throw new Error(`CLOUD_STUDENTS_LIST_FAILED:${error.message}`);
-    const ids = (students ?? []).map(row => String(row.id));
-    const guardiansByStudent = new Map<string, StudentGuardianRecord>();
-    if (ids.length) {
-      const { data: guardians, error: guardianError } = await this.client.from("student_guardians")
-        .select("id,business_id,student_id,display_name,relationship,phone,email,is_primary,receives_reminders,created_at,updated_at")
-        .eq("business_id", businessId).eq("is_primary", true).in("student_id", ids);
-      if (guardianError) throw new Error(`CLOUD_STUDENT_GUARDIANS_LIST_FAILED:${guardianError.message}`);
-      for (const row of guardians ?? []) guardiansByStudent.set(String(row.student_id), this.mapGuardian(row));
-    }
-    return (students ?? []).map(row => {
-      const student = this.mapStudent(row);
-      return { ...student, primaryGuardian: guardiansByStudent.get(student.id) ?? null };
-    });
-  }
-
-  private async assertPayerBelongsToBusiness(businessId: string, payerCustomerId: string | null): Promise<void> {
-    if (!payerCustomerId) return;
-    const { data, error } = await this.client.from("customers").select("id")
-      .eq("business_id", businessId).eq("id", payerCustomerId).eq("is_archived", false).maybeSingle();
-    if (error || !data?.id) throw new Error("STUDENT_PAYER_NOT_FOUND_IN_BUSINESS");
-  }
-
-  async save(input: StudentSaveInput): Promise<StudentWithGuardian> {
-    const businessId = this.requireBusinessId();
-    const displayName = String(input.displayName ?? "").trim();
-    if (displayName.length < 2 || displayName.length > 160) throw new Error("INVALID_STUDENT_INPUT");
-    if (!Number.isInteger(input.defaultPriceAgorot) || input.defaultPriceAgorot < 0 || input.defaultPriceAgorot > 100_000_000) throw new Error("INVALID_STUDENT_PRICE");
-    const schoolName = cleanOptional(input.schoolName, 160);
-    const schoolGrade = cleanOptional(input.schoolGrade, 80);
-    const focusNotes = cleanOptional(input.focusNotes, 4000);
-    const payerCustomerId = cleanOptional(input.payerCustomerId, 64);
-    await this.assertPayerBelongsToBusiness(businessId, payerCustomerId);
-    const payload = {
-      business_id: businessId, display_name: displayName, school_name: schoolName, school_grade: schoolGrade,
-      focus_notes: focusNotes, default_price_agorot: input.defaultPriceAgorot,
-      payer_customer_id: payerCustomerId, reminder_enabled: Boolean(input.reminderEnabled), active: true,
-      updated_at: new Date().toISOString()
-    };
-    let row: any;
-    if (input.id) {
-      const { data, error } = await this.client.from("students").update(payload)
-        .eq("business_id", businessId).eq("id", input.id)
-        .select("id,business_id,display_name,school_name,school_grade,focus_notes,default_price_agorot,payer_customer_id,reminder_enabled,active,created_at,updated_at").single();
-      if (error || !data) throw new Error(`CLOUD_STUDENT_UPDATE_FAILED:${error?.message ?? "EMPTY"}`);
-      row = data;
-    } else {
-      const { data, error } = await this.client.from("students").insert(payload)
-        .select("id,business_id,display_name,school_name,school_grade,focus_notes,default_price_agorot,payer_customer_id,reminder_enabled,active,created_at,updated_at").single();
-      if (error || !data) throw new Error(`CLOUD_STUDENT_CREATE_FAILED:${error?.message ?? "EMPTY"}`);
-      row = data;
-    }
-    const student = this.mapStudent(row);
-    const guardianName = cleanOptional(input.guardianName, 160);
-    let primaryGuardian: StudentGuardianRecord | null = null;
-    if (guardianName) {
-      const relationship = cleanOptional(input.guardianRelationship, 80);
-      const phone = cleanOptional(input.guardianPhone, 20);
-      const emailRaw = cleanOptional(input.guardianEmail, 254);
-      const email = emailRaw?.toLowerCase() ?? null;
-      validatePhone(phone); validateEmail(email);
-      const { data: existing, error: existingError } = await this.client.from("student_guardians").select("id")
-        .eq("business_id", businessId).eq("student_id", student.id).eq("is_primary", true).maybeSingle();
-      if (existingError) throw new Error(`CLOUD_STUDENT_GUARDIAN_LOOKUP_FAILED:${existingError.message}`);
-      const guardianPayload = { business_id: businessId, student_id: student.id, display_name: guardianName, relationship, phone, email, is_primary: true, receives_reminders: Boolean(input.guardianReceivesReminders), updated_at: new Date().toISOString() };
-      const query = existing?.id
-        ? this.client.from("student_guardians").update(guardianPayload).eq("business_id", businessId).eq("id", existing.id)
-        : this.client.from("student_guardians").insert(guardianPayload);
-      const { data, error } = await query.select("id,business_id,student_id,display_name,relationship,phone,email,is_primary,receives_reminders,created_at,updated_at").single();
-      if (error || !data) throw new Error(`CLOUD_STUDENT_GUARDIAN_SAVE_FAILED:${error?.message ?? "EMPTY"}`);
-      primaryGuardian = this.mapGuardian(data);
-    }
-    return { ...student, primaryGuardian };
-  }
-
-  async deactivate(studentId: string): Promise<void> {
-    const businessId = this.requireBusinessId();
-    if (!studentId) throw new Error("INVALID_STUDENT_INPUT");
-    const { data, error } = await this.client.from("students").update({ active: false, updated_at: new Date().toISOString() })
-      .eq("business_id", businessId).eq("id", studentId).select("id").maybeSingle();
-    if (error || !data?.id) throw new Error(`CLOUD_STUDENT_DEACTIVATE_FAILED:${error?.message ?? "NOT_FOUND"}`);
-  }
+  constructor(cloud: SupabaseCloudService) { this.cloud = cloud; this.client = cloud.getClient(); }
+  private requireBusinessId(): string { const status=this.cloud.getStatus(); if(!status.connected||!status.businessId)throw new Error("CLOUD_CONNECTION_REQUIRED_FOR_STUDENTS"); return status.businessId; }
+  private mapStudent(row:any):StudentRecord{return {id:String(row.id),businessId:String(row.business_id),displayName:String(row.display_name??""),phone:row.phone?String(row.phone):null,email:row.email?String(row.email):null,schoolName:row.school_name?String(row.school_name):null,schoolGrade:row.school_grade?String(row.school_grade):null,focusNotes:row.focus_notes?String(row.focus_notes):null,defaultPriceAgorot:Number(row.default_price_agorot??0),payerCustomerId:row.payer_customer_id?String(row.payer_customer_id):null,reminderEnabled:Boolean(row.reminder_enabled),active:Boolean(row.active),createdAt:String(row.created_at??""),updatedAt:String(row.updated_at??"")};}
+  private mapGuardian(row:any):StudentGuardianRecord{return {id:String(row.id),businessId:String(row.business_id),studentId:String(row.student_id),displayName:String(row.display_name??""),relationship:row.relationship?String(row.relationship):null,phone:row.phone?String(row.phone):null,email:row.email?String(row.email):null,isPrimary:Boolean(row.is_primary),receivesReminders:Boolean(row.receives_reminders),createdAt:String(row.created_at??""),updatedAt:String(row.updated_at??"")};}
+  async list():Promise<StudentWithGuardian[]>{const businessId=this.requireBusinessId();const{data:students,error}=await this.client.from("students").select("id,business_id,display_name,phone,email,school_name,school_grade,focus_notes,default_price_agorot,payer_customer_id,reminder_enabled,active,created_at,updated_at").eq("business_id",businessId).eq("active",true).order("display_name",{ascending:true});if(error)throw new Error(`CLOUD_STUDENTS_LIST_FAILED:${error.message}`);const ids=(students??[]).map(row=>String(row.id));const guardiansByStudent=new Map<string,StudentGuardianRecord>();if(ids.length){const{data:guardians,error:guardianError}=await this.client.from("student_guardians").select("id,business_id,student_id,display_name,relationship,phone,email,is_primary,receives_reminders,created_at,updated_at").eq("business_id",businessId).eq("is_primary",true).in("student_id",ids);if(guardianError)throw new Error(`CLOUD_STUDENT_GUARDIANS_LIST_FAILED:${guardianError.message}`);for(const row of guardians??[])guardiansByStudent.set(String(row.student_id),this.mapGuardian(row));}return(students??[]).map(row=>{const student=this.mapStudent(row);return{...student,primaryGuardian:guardiansByStudent.get(student.id)??null};});}
+  private async assertPayerBelongsToBusiness(businessId:string,payerCustomerId:string|null):Promise<void>{if(!payerCustomerId)return;const{data,error}=await this.client.from("customers").select("id").eq("business_id",businessId).eq("id",payerCustomerId).eq("is_archived",false).maybeSingle();if(error||!data?.id)throw new Error("STUDENT_PAYER_NOT_FOUND_IN_BUSINESS");}
+  async save(input:StudentSaveInput):Promise<StudentWithGuardian>{const businessId=this.requireBusinessId();const displayName=String(input.displayName??"").trim();if(displayName.length<2||displayName.length>160)throw new Error("INVALID_STUDENT_INPUT");if(!Number.isInteger(input.defaultPriceAgorot)||input.defaultPriceAgorot<0||input.defaultPriceAgorot>100_000_000)throw new Error("INVALID_STUDENT_PRICE");const phone=cleanOptional(input.phone,20);const emailRaw=cleanOptional(input.email,254);const email=emailRaw?.toLowerCase()??null;validatePhone(phone);validateEmail(email);const schoolName=cleanOptional(input.schoolName,160),schoolGrade=cleanOptional(input.schoolGrade,80),focusNotes=cleanOptional(input.focusNotes,4000),payerCustomerId=cleanOptional(input.payerCustomerId,64);await this.assertPayerBelongsToBusiness(businessId,payerCustomerId);const payload={business_id:businessId,display_name:displayName,phone,email,school_name:schoolName,school_grade:schoolGrade,focus_notes:focusNotes,default_price_agorot:input.defaultPriceAgorot,payer_customer_id:payerCustomerId,reminder_enabled:Boolean(input.reminderEnabled),active:true,updated_at:new Date().toISOString()};let row:any;if(input.id){const{data,error}=await this.client.from("students").update(payload).eq("business_id",businessId).eq("id",input.id).select("id,business_id,display_name,phone,email,school_name,school_grade,focus_notes,default_price_agorot,payer_customer_id,reminder_enabled,active,created_at,updated_at").single();if(error||!data)throw new Error(`CLOUD_STUDENT_UPDATE_FAILED:${error?.message??"EMPTY"}`);row=data;}else{const{data,error}=await this.client.from("students").insert(payload).select("id,business_id,display_name,phone,email,school_name,school_grade,focus_notes,default_price_agorot,payer_customer_id,reminder_enabled,active,created_at,updated_at").single();if(error||!data)throw new Error(`CLOUD_STUDENT_CREATE_FAILED:${error?.message??"EMPTY"}`);row=data;}const student=this.mapStudent(row);const guardianName=cleanOptional(input.guardianName,160);let primaryGuardian:StudentGuardianRecord|null=null;if(guardianName){const relationship=cleanOptional(input.guardianRelationship,80),guardianPhone=cleanOptional(input.guardianPhone,20),guardianEmailRaw=cleanOptional(input.guardianEmail,254),guardianEmail=guardianEmailRaw?.toLowerCase()??null;validatePhone(guardianPhone);validateEmail(guardianEmail);const{data:existing,error:existingError}=await this.client.from("student_guardians").select("id").eq("business_id",businessId).eq("student_id",student.id).eq("is_primary",true).maybeSingle();if(existingError)throw new Error(`CLOUD_STUDENT_GUARDIAN_LOOKUP_FAILED:${existingError.message}`);const guardianPayload={business_id:businessId,student_id:student.id,display_name:guardianName,relationship,phone:guardianPhone,email:guardianEmail,is_primary:true,receives_reminders:Boolean(input.guardianReceivesReminders),updated_at:new Date().toISOString()};const query=existing?.id?this.client.from("student_guardians").update(guardianPayload).eq("business_id",businessId).eq("id",existing.id):this.client.from("student_guardians").insert(guardianPayload);const{data,error}=await query.select("id,business_id,student_id,display_name,relationship,phone,email,is_primary,receives_reminders,created_at,updated_at").single();if(error||!data)throw new Error(`CLOUD_STUDENT_GUARDIAN_SAVE_FAILED:${error?.message??"EMPTY"}`);primaryGuardian=this.mapGuardian(data);}return{...student,primaryGuardian};}
+  async deactivate(studentId:string):Promise<void>{const businessId=this.requireBusinessId();if(!studentId)throw new Error("INVALID_STUDENT_INPUT");const{data,error}=await this.client.from("students").update({active:false,updated_at:new Date().toISOString()}).eq("business_id",businessId).eq("id",studentId).select("id").maybeSingle();if(error||!data?.id)throw new Error(`CLOUD_STUDENT_DEACTIVATE_FAILED:${error?.message??"NOT_FOUND"}`);}
 }
