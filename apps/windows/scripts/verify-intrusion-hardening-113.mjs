@@ -5,7 +5,7 @@ const sec=read("apps/desktop/electron/ipc/security.ts");
 const handlers=read("apps/desktop/electron/ipc/databaseHandlers.ts");
 const pkg=JSON.parse(read("package.json"));
 const tests=[
- ["version",pkg.version==="1.1.3-security.2"],
+ ["version",pkg.version==="1.1.5"],
  ["packaged build ignores dev server",main.includes('!app.isPackaged ? process.env.VITE_DEV_SERVER_URL : undefined')],
  ["production devtools disabled",main.includes('devTools: !app.isPackaged')],
  ["permissions denied",main.includes('setPermissionRequestHandler')&&main.includes('setPermissionCheckHandler')],
