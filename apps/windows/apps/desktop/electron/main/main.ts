@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, shell } from "electron";
 import path from "node:path";
 import { DatabaseService } from "../../../../packages/database/src/DatabaseService";
 import { registerDatabaseHandlers } from "../ipc/databaseHandlers";
+import { registerStudentHandlers } from "../ipc/studentHandlers";
 import { GoogleDriveSyncService } from "./GoogleDriveSyncService";
 import { SupabaseCloudService } from "./SupabaseCloudService";
 
@@ -82,6 +83,7 @@ app.whenReady().then(async () => {
   const supabaseCloud=new SupabaseCloudService(app.getPath("userData"));
   await supabaseCloud.initialize();
   registerDatabaseHandlers(databaseService,cloudSync,supabaseCloud);
+  registerStudentHandlers(supabaseCloud);
   await cloudSync.initializeAndSync();
   createMainWindow();
   app.on("activate", () => {
