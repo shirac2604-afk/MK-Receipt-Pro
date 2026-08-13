@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - security/phase8b-android-expo-upgrade
+      - security/phase8b-uuid-override-test
   pull_request:
     branches:
       - main
