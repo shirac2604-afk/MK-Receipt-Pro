@@ -8,6 +8,11 @@ const files={
  repo:fs.readFileSync("packages/database/src/repositories/ReceiptRepository.ts","utf8"),
  types:fs.readFileSync("packages/database/src/types.ts","utf8")
 };
+const duplicateProtection=
+ files.renderer.includes("window.mkApi.customers.findDuplicates")&&
+ files.renderer.includes("if(!forceSave)")&&
+ files.renderer.includes("if(found.length){setDuplicates(found);setForceSave(true);return}")&&
+ files.renderer.includes('forceSave&&duplicates.length?"שמור בכל זאת":"שמור לקוח"');
 const checks=[
  [files.renderer.includes("＋ לקוח חדש"),"new customer button"],
  [files.renderer.includes("saveNewCustomer"),"new customer save flow"],
@@ -18,7 +23,7 @@ const checks=[
  [files.service.includes('createCustomer(input:CustomerCreateInput)'),"local service create method"],
  [files.repo.includes('createCustomer(input:CustomerCreateInput)'),"local repository create method"],
  [files.types.includes('interface CustomerCreateInput'),"create input type"],
- [files.renderer.includes('findDuplicates({phone:draft.phone.trim()||undefined,email:draft.email.trim()||undefined})'),"duplicate protection"],
+ [duplicateProtection,"duplicate protection"],
  [files.cloud.includes('INVALID_CUSTOMER_PHONE')&&files.cloud.includes('INVALID_CUSTOMER_EMAIL'),"backend validation"]
 ];
 let pass=0;for(const [ok,name] of checks){console.log(`${ok?"PASS":"FAIL"} ${name}`);if(ok)pass++;}
