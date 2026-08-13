@@ -1,33 +1,31 @@
-# הגדרת Google OAuth Client Secret
+# Google OAuth ב-Windows — Public Client + PKCE
 
-גרסה 1.1.0-dev.22
+Phase 9A
 
-Google החזירה `client_secret is missing`, ולכן MK Receipt Pro שולחת כעת גם את ה־Client Secret בבקשת הטוקן וברענון הטוקן.
+MK Receipt Pro משתמשת ב-OAuth מסוג Desktop/Installed App. בזרימה זו האפליקציה פועלת כ-public client ולכן אינה שומרת ואינה אורזת `client_secret` בתוך קוד המקור או המתקין.
 
-## חשוב
-ה־Client Secret שהופיע קודם בצילום מסך נחשב חשוף. אין להשתמש בו בגרסה הסופית.
+## ההגדרה הנוכחית
 
-מומלץ ליצור או להוריד Credential חדש ב־Google Cloud, ואז להגדיר את ה־Client Secret החדש **רק במחשב שלך**.
+- ה-`clientId` הציבורי נמצא ב-`resources/google/oauth-client.json`.
+- ההתחברות משתמשת ב-PKCE (`S256`) וב-loopback redirect על `127.0.0.1`.
+- החלפת authorization code ו-refresh token מתבצעת ללא `client_secret`.
+- refresh token של המשתמש נשמר מוצפן באמצעות Electron `safeStorage`.
 
-לאחר חילוץ הפרויקט לתיקייה:
+## אסור להוסיף Client Secret
 
-```powershell
-npm run google:configure
-```
+אין להוסיף `clientSecret` ל-`resources/google/oauth-client.json`, לקוד, ל-`.env`, ל-GitHub או לחבילת ההפצה.
 
-הדביקי את ה־Client Secret החדש כאשר PowerShell מבקש אותו.
+הפקודה הישנה `npm run google:configure` אינה משמשת עוד להגדרת secret ותיכשל בכוונה אם תרוץ.
 
-הערך נשמר בקובץ המקומי:
+אם קיים credential ישן שנחשף בעבר, אפשר לבטל/לסובב אותו ב-Google Cloud בלי לפגוע בזרימה החדשה, משום שהאפליקציה אינה תלויה בו עוד.
 
-`resources/google/oauth-client.json`
-
-אין לשלוח את ה־Client Secret בצ'אט ואין לפרסם אותו במאגר קוד ציבורי.
-
-לאחר מכן:
+## בדיקה לפני Release
 
 ```powershell
 npm install
+npm run typecheck
+npm run check:file-capability-hardening
 npm start
 ```
 
-ולנסות שוב התחברות עם Google.
+לאחר מכן יש לבדוק התחברות חדשה ל-Google Drive, סנכרון, סגירה ופתיחה מחדש של האפליקציה, וסנכרון נוסף באמצעות ה-refresh token המוצפן.
