@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - security/phase8-supply-chain
+      - security/post-merge-audit-policy
   pull_request:
     branches:
       - main
@@ -28,7 +29,8 @@ jobs:
         working-directory: apps/android
         run: |
           npm install --ignore-scripts --no-fund
-          npm audit --omit=dev --audit-level=high
+          node scripts/verify-npm-audit-policy.mjs
+          npm run verify:build-asset-safety
 
   windows-dependency-audit:
     runs-on: ubuntu-latest
