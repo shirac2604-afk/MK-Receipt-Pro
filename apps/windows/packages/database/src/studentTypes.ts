@@ -12,6 +12,8 @@ export interface StudentRecord {
   id: string;
   businessId: string;
   displayName: string;
+  phone: string | null;
+  email: string | null;
   schoolName: string | null;
   schoolGrade: string | null;
   focusNotes: string | null;
@@ -25,6 +27,8 @@ export interface StudentRecord {
 
 export interface StudentCreateInput {
   displayName: string;
+  phone?: string;
+  email?: string;
   schoolName?: string;
   schoolGrade?: string;
   focusNotes?: string;
@@ -54,6 +58,8 @@ export interface StudentWithGuardian extends StudentRecord {
 export interface StudentSaveInput {
   id?: string;
   displayName: string;
+  phone?: string;
+  email?: string;
   schoolName?: string;
   schoolGrade?: string;
   focusNotes?: string;
