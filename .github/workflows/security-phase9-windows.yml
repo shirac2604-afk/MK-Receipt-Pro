@@ -1,0 +1,33 @@
+name: Security Phase 9 Windows Release Hardening
+
+on:
+  push:
+    branches:
+      - security/phase9-production-release-hardening
+  pull_request:
+    branches:
+      - main
+    paths:
+      - apps/windows/**
+      - scripts/verify-security-phase8.py
+      - .github/workflows/security-phase9-windows.yml
+
+permissions:
+  contents: read
+
+jobs:
+  windows-phase9:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: File capability hardening
+        run: npm run check:file-capability-hardening
+      - name: Windows production build
+        run: npm run build
