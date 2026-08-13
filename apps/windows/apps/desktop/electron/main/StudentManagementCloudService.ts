@@ -1,26 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SupabaseCloudService } from "./SupabaseCloudService";
-import type { StudentGuardianRecord, StudentRecord } from "../../../../packages/database/src/studentTypes";
-
-export interface StudentWithGuardian extends StudentRecord {
-  primaryGuardian: StudentGuardianRecord | null;
-}
-
-export interface StudentSaveInput {
-  id?: string;
-  displayName: string;
-  schoolName?: string;
-  schoolGrade?: string;
-  focusNotes?: string;
-  defaultPriceAgorot: number;
-  payerCustomerId?: string;
-  reminderEnabled: boolean;
-  guardianName?: string;
-  guardianRelationship?: string;
-  guardianPhone?: string;
-  guardianEmail?: string;
-  guardianReceivesReminders: boolean;
-}
+import type { StudentGuardianRecord, StudentRecord, StudentSaveInput, StudentWithGuardian } from "../../../../packages/database/src/studentTypes";
 
 function cleanOptional(value: unknown, max: number): string | null {
   if (typeof value !== "string") return null;
