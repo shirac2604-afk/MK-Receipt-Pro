@@ -1,6 +1,6 @@
 import React,{useMemo,useState} from "react";
 import type {CustomerRecord} from "../../../../../packages/database/src/types";
-import type {StudentRecord,StudentGuardianRecord} from "../../../../../packages/shared/src/studentManagement";
+import type {StudentRecord,StudentGuardianRecord} from "../../../../../packages/database/src/studentTypes";
 
 type StudentDraft={
  id?:string;
