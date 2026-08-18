@@ -43,8 +43,8 @@ patch(
 patch(
  "apps/windows/apps/desktop/renderer/src/students/LessonsScreen.tsx",
  "lesson history state",
- 'const[notesItem,setNotesItem]=useState<LessonCalendarItem|null>(null),[lessonSummary,setLessonSummary]=useState(""),[homework,setHomework]=useState(""),[savingNotes,setSavingNotes]=useState(false);',
- 'const[notesItem,setNotesItem]=useState<LessonCalendarItem|null>(null),[lessonSummary,setLessonSummary]=useState(""),[homework,setHomework]=useState(""),[savingNotes,setSavingNotes]=useState(false),[reminderHistory,setReminderHistory]=useState<LessonReminderHistoryItem[]|null>(null),[loadingHistory,setLoadingHistory]=useState(false),[retryingReminder,setRetryingReminder]=useState<string|null>(null);'
+ '[notesItem,setNotesItem]=useState<LessonCalendarItem|null>(null),[lessonSummary,setLessonSummary]=useState(""),[homework,setHomework]=useState(""),[savingNotes,setSavingNotes]=useState(false);',
+ '[notesItem,setNotesItem]=useState<LessonCalendarItem|null>(null),[lessonSummary,setLessonSummary]=useState(""),[homework,setHomework]=useState(""),[savingNotes,setSavingNotes]=useState(false),[reminderHistory,setReminderHistory]=useState<LessonReminderHistoryItem[]|null>(null),[loadingHistory,setLoadingHistory]=useState(false),[retryingReminder,setRetryingReminder]=useState<string|null>(null);'
 );
 patch(
  "apps/windows/apps/desktop/renderer/src/students/LessonsScreen.tsx",
