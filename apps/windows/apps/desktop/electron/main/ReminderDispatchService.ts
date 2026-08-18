@@ -1,6 +1,8 @@
 import type {SupabaseClient} from "@supabase/supabase-js";
 import type {SupabaseCloudService} from "./SupabaseCloudService";
+import {LessonReminderCloudService} from "./LessonReminderCloudService";
 import type {ClaimedLessonReminder,ReminderChannel} from "../../../../packages/database/src/studentTypes";
+import type {LessonReminderHistoryItem} from "../../../../packages/database/src/reminderHistoryTypes";
 import {buildLessonReminderMessage} from "../../../../packages/database/src/lessonReminderMessage";
 
 export interface ReminderDeliveryRequest {
@@ -41,17 +43,21 @@ export interface ReminderDispatchSummary {
 export class ReminderDispatchService {
   private readonly cloud:SupabaseCloudService;
   private readonly client:SupabaseClient;
+  private readonly history:LessonReminderCloudService;
   private provider:ReminderProvider;
   private running=false;
 
   constructor(cloud:SupabaseCloudService,provider:ReminderProvider=new DisabledReminderProvider()){
     this.cloud=cloud;
     this.client=cloud.getClient();
+    this.history=new LessonReminderCloudService(cloud);
     this.provider=provider;
   }
 
   setProvider(provider:ReminderProvider):void{this.provider=provider;}
   getStatus(){return{providerId:this.provider.id,configured:this.provider.configured,running:this.running};}
+  listRecent(limit=50):Promise<LessonReminderHistoryItem[]>{return this.history.listRecent(limit);}
+  retryFailed(reminderId:string):Promise<void>{return this.history.retryFailed(reminderId);}
 
   private requireBusinessId():string{
     const status=this.cloud.getStatus();
