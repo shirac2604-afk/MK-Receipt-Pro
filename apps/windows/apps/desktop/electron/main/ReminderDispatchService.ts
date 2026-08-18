@@ -65,9 +65,10 @@ export class ReminderDispatchService {
     if(this.running)return{providerId:provider.id,configured:true,claimed:0,sent:0,failed:0,skipped:0};
     this.running=true;
     try{
-      const businessId=this.requireBusinessId();
-      await this.client.rpc("release_stale_lesson_reminders",{p_business_id:businessId,p_stale_minutes:10});
-      const{data,error}=await this.client.rpc("claim_due_lesson_reminders",{p_business_id:businessId,p_limit:Math.max(1,Math.min(100,Math.trunc(limit)))});
+      this.requireBusinessId();
+      const staleResult=await this.client.rpc("release_stale_lesson_reminders");
+      if(staleResult.error)throw new Error(`REMINDER_STALE_RELEASE_FAILED:${staleResult.error.message}`);
+      const{data,error}=await this.client.rpc("claim_due_lesson_reminders",{p_limit:Math.max(1,Math.min(100,Math.trunc(limit)))});
       if(error)throw new Error(`REMINDER_CLAIM_FAILED:${error.message}`);
       const reminders=(data??[]) as ClaimedLessonReminder[];
       let sent=0,failed=0,skipped=0;
@@ -88,8 +89,8 @@ export class ReminderDispatchService {
   }
 
   private async finish(reminderId:string,success:boolean,errorCode:string|null):Promise<void>{
-    const businessId=this.requireBusinessId();
-    const{error}=await this.client.rpc("finish_lesson_reminder",{p_business_id:businessId,p_reminder_id:reminderId,p_success:success,p_error:errorCode});
+    this.requireBusinessId();
+    const{error}=await this.client.rpc("finish_lesson_reminder",{p_reminder_id:reminderId,p_success:success,p_error:errorCode});
     if(error)throw new Error(`REMINDER_FINISH_FAILED:${error.message}`);
   }
 }
