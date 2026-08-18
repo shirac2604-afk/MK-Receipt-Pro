@@ -27,6 +27,8 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: TypeScript
         run: npm run typecheck
+      - name: Group lesson UI contract
+        run: node scripts/verify-student-groups-v1.mjs
       - name: File capability hardening
         run: npm run check:file-capability-hardening
       - name: Windows production build
