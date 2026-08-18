@@ -36,4 +36,4 @@ jobs:
           git commit -m "feat(students): add reminder history and retry UI" || exit 0
           git push origin HEAD:feature/student-management-v1
 
-# retrigger: 2026-08-18
+# retrigger: 2026-08-18T14:20+03:00
