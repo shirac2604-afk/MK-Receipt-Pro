@@ -3,6 +3,7 @@ import type {DatabaseService} from "../../../../packages/database/src/DatabaseSe
 import type {SupabaseCloudService} from "../main/SupabaseCloudService";
 import {LessonManagementCloudService} from "../main/LessonManagementCloudService";
 import {LessonReceiptCloudService} from "../main/LessonReceiptCloudService";
+import {LessonNotesCloudService} from "../main/LessonNotesCloudService";
 import type {LessonSeriesSaveInput} from "../../../../packages/database/src/studentTypes";
 import {apiFailure,apiSuccess,type ApiResult} from "../../../../packages/shared/src/api";
 import {assertPayloadSize,assertTrustedSender,withTimeout} from "./security";
@@ -11,10 +12,11 @@ function lessonError(error:unknown):ApiResult<never>{const code=error instanceof
 async function handle<T>(event:IpcMainInvokeEvent,payload:unknown,action:()=>T|Promise<T>):Promise<ApiResult<T>>{try{assertTrustedSender(event);assertPayloadSize(payload);return apiSuccess(await withTimeout(Promise.resolve().then(action),30000));}catch(error){console.warn("[Lessons IPC] failure",error);return lessonError(error)}}
 function parseSeries(raw:any):LessonSeriesSaveInput{return{studentId:typeof raw?.studentId==="string"?raw.studentId:"",title:typeof raw?.title==="string"?raw.title:"",weekday:Number(raw?.weekday) as 0|1|2|3|4|5|6,localStartTime:typeof raw?.localStartTime==="string"?raw.localStartTime:"",durationMinutes:Math.trunc(Number(raw?.durationMinutes)||0),recurrenceIntervalWeeks:Math.trunc(Number(raw?.recurrenceIntervalWeeks)||0),startsOn:typeof raw?.startsOn==="string"?raw.startsOn:"",endsOn:typeof raw?.endsOn==="string"?raw.endsOn:"",defaultPriceAgorot:Math.trunc(Number(raw?.defaultPriceAgorot)||0),parentReminderMinutes:Math.trunc(Number(raw?.parentReminderMinutes)||0),studentReminderMinutes:Math.trunc(Number(raw?.studentReminderMinutes)||0)};}
 export function registerLessonHandlers(supabaseCloud:SupabaseCloudService,databaseService:DatabaseService):void{
- const lessons=new LessonManagementCloudService(supabaseCloud),lessonReceipts=new LessonReceiptCloudService(supabaseCloud);const receiptInFlight=new Set<string>();
+ const lessons=new LessonManagementCloudService(supabaseCloud),lessonReceipts=new LessonReceiptCloudService(supabaseCloud),lessonNotes=new LessonNotesCloudService(supabaseCloud);const receiptInFlight=new Set<string>();
  ipcMain.handle("lessons:list-series",event=>handle(event,undefined,()=>lessons.listSeries()));
  ipcMain.handle("lessons:create-series",(event,input)=>handle(event,input,()=>lessons.createIndividualSeries(parseSeries(input))));
  ipcMain.handle("lessons:list-calendar",(event,input)=>handle(event,input,()=>lessons.listCalendar(typeof input?.fromIso==="string"?input.fromIso:"",typeof input?.toIso==="string"?input.toIso:"")));
+ ipcMain.handle("lessons:save-notes",(event,input)=>handle(event,input,()=>lessonNotes.save(typeof input?.lessonId==="string"?input.lessonId:"",typeof input?.lessonSummary==="string"?input.lessonSummary:"",typeof input?.homework==="string"?input.homework:"")));
  ipcMain.handle("lessons:update-participant",(event,input)=>handle(event,input,async()=>{
    const participantId=typeof input?.participantId==="string"?input.participantId:"";
    const updated=await lessons.updateParticipant(participantId,typeof input?.attendanceStatus==="string"?input.attendanceStatus:"",typeof input?.paymentStatus==="string"?input.paymentStatus:"",typeof input?.paymentMethod==="string"?input.paymentMethod:null,Math.trunc(Number(input?.amountAgorot)||0));
