@@ -35,3 +35,5 @@ jobs:
           git add apps/windows/apps/desktop/electron/preload/preload.ts apps/windows/apps/desktop/renderer/src/global.d.ts apps/windows/apps/desktop/renderer/src/students/LessonsScreen.tsx
           git commit -m "feat(students): add reminder history and retry UI" || exit 0
           git push origin HEAD:feature/student-management-v1
+
+# retrigger: 2026-08-18
