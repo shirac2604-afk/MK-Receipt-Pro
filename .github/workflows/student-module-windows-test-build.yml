@@ -1,10 +1,11 @@
 name: Student Module Windows Test Build
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/student-management-v1
+      - main
     paths:
+      - apps/windows/**
       - .github/workflows/student-module-windows-test-build.yml
 
 permissions:
