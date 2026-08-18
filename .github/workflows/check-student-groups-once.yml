@@ -1,0 +1,26 @@
+name: Check Student Groups Once
+on:
+  push:
+    branches: [feature/student-management-v1]
+    paths: ['.github/workflows/check-student-groups-once.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Group UI contract
+        run: node scripts/verify-student-groups-v1.mjs
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Production renderer build
+        run: npm run build
