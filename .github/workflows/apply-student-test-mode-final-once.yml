@@ -1,4 +1,5 @@
 name: Apply Student Test Mode Final Once
+# retrigger: 2026-08-18
 on:
   push:
     branches: [feature/student-management-v1]
