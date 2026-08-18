@@ -185,6 +185,23 @@ export interface LessonReminderRecord {
   lastError: string | null;
 }
 
+export interface ClaimedLessonReminder {
+  reminderId: string;
+  businessId: string;
+  lessonId: string;
+  studentId: string;
+  guardianId: string | null;
+  audience: ReminderAudience;
+  channel: ReminderChannel;
+  scheduledFor: string;
+  studentName: string;
+  recipientName: string;
+  recipientPhone: string | null;
+  recipientEmail: string | null;
+  lessonTitle: string;
+  lessonStartsAt: string;
+}
+
 export interface ReceiptEligibility {
   eligible: boolean;
   reason:
