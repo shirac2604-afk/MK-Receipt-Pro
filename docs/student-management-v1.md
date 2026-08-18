@@ -4,6 +4,10 @@
 
 Student management is an integrated module inside MK Receipt Pro, not a separate application. It shares the existing business identity, Supabase tenant boundary, customer/receipt system and later both Windows and Android clients.
 
+## Current checkpoint
+
+Windows now includes dedicated `Students` and `Lessons` renderer routes wired into the existing sidebar on the feature branch. The integration remains isolated from `main` and Production Supabase until the full regression and Staging end-to-end flow pass.
+
 ## Core workflow
 
 1. Create a student and link one or more parents/guardians.
