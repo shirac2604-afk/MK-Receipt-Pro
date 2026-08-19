@@ -1,0 +1,61 @@
+name: Android Student Test APK
+
+on:
+  push:
+    branches: [feature/student-management-v1]
+    paths: ['.github/workflows/android-student-test-apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-student-test-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.1'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify student test release gates
+        run: npm run release:check
+      - name: Switch to isolated student-only entry
+        run: |
+          cp StudentTestApp.tsx App.tsx
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='app.json';
+          const a=JSON.parse(fs.readFileSync(p,'utf8'));
+          a.expo.name='MK Student Test';
+          a.expo.slug='mk-student-test-android';
+          a.expo.version='1.0.0-test';
+          a.expo.android.package='il.mkreceiptpro.studenttest';
+          a.expo.android.versionCode=1;
+          fs.writeFileSync(p,JSON.stringify(a,null,2)+'\n');
+          NODE
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --clean --no-install
+      - name: Build debug APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug --no-daemon
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/MK-Student-Test-Android.apk
+          sha256sum dist/MK-Student-Test-Android.apk > dist/SHA256SUMS.txt
+      - name: Upload APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: MK-Student-Test-Android
+          path: |
+            apps/android/dist/MK-Student-Test-Android.apk
+            apps/android/dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
