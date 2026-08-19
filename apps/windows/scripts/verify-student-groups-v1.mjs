@@ -18,7 +18,7 @@ const checks=[
  ['per participant absent action',groups.includes('"absent"')&&groups.includes('לא הגיע')],
  ['per participant payment action',groups.includes('"paid"')&&groups.includes('שולם')],
  ['test mode surfaces saved payment instead of receipt',groups.includes('תשלום נשמר')&&groups.includes('אין הפקת קבלות')],
- ['receipt issuance remains disconnected in test IPC',lessonHandlers.includes('receipt:null')&&lessonHandlers.includes('Receipt issuance is disconnected')],
+ ['receipt issuance remains disconnected in test IPC',lessonHandlers.includes('receipt:null')&&!lessonHandlers.includes('issue_lesson_receipt')&&!lessonHandlers.includes('issueLessonReceipt')],
  ['group API exposed in preload',preload.includes('groups:Object.freeze')&&preload.includes('groups:create-series')],
  ['group IPC registered',handlers.includes('groups:list')&&handlers.includes('groups:save')&&handlers.includes('groups:create-series')],
  ['group service creates lesson participants',service.includes('lesson_participants')&&(service.includes('kind:"group"')||service.includes("kind:'group'"))],
