@@ -16,6 +16,6 @@ export function registerGroupHandlers(cloud:SupabaseCloudService,localStore:Loca
  ipcMain.handle("groups:list",e=>handle(e,undefined,()=>STUDENT_TEST_MODE?localStore.listGroups():groups!.list()));
  ipcMain.handle("groups:save",(e,input)=>handle(e,input,()=>{const parsed=parseGroup(input);return STUDENT_TEST_MODE?localStore.saveGroup(parsed):groups!.save(parsed);}));
  ipcMain.handle("groups:deactivate",(e,input)=>handle(e,input,()=>{const groupId=typeof input?.groupId==="string"?input.groupId:"";return STUDENT_TEST_MODE?localStore.deactivateGroup(groupId):groups!.deactivate(groupId);}));
- ipcMain.handle("groups:create-series",(e,input)=>handle(e,input,()=>{const parsed=parseSeries(input);return STUDENT_TEST_MODE?localStore.createGroupSeries(parsed):lessons!.createSeries(parsed);}));
+ ipcMain.handle("groups:create-series",(e,input)=>handle<any>(e,input,()=>{const parsed=parseSeries(input);return STUDENT_TEST_MODE?localStore.createGroupSeries(parsed):lessons!.createSeries(parsed);}));
  ipcMain.handle("groups:list-calendar",(e,input)=>handle(e,input,()=>{const from=typeof input?.fromIso==="string"?input.fromIso:"",to=typeof input?.toIso==="string"?input.toIso:"";return STUDENT_TEST_MODE?localStore.listGroupCalendar(from,to):lessons!.listCalendar(from,to);}));
 }
