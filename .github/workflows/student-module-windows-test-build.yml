@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - apps/windows/**
-      - scripts/apply-student-test-auto-login.mjs
       - .github/workflows/student-module-windows-test-build.yml
 
 permissions:
@@ -22,16 +21,14 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - name: Inject isolated Staging auto-login
-        working-directory: .
-        run: node scripts/apply-student-test-auto-login.mjs
-      - name: Verify isolated test mode
+      - name: Verify fully local isolated test mode
         shell: pwsh
         run: |
           Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_TEST_MODE=true' -Quiet | ForEach-Object { if (-not $_) { throw 'Student test mode missing' } }
-          Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'ymcmmvnfrfntmllytpyu.supabase.co' -Quiet | ForEach-Object { if (-not $_) { throw 'Staging endpoint missing' } }
-          Select-String -Path apps/desktop/electron/ipc/lessonHandlers.ts -Pattern 'Receipt issuance is intentionally disconnected' -Quiet | ForEach-Object { if (-not $_) { throw 'Receipt isolation missing' } }
-          Select-String -Path apps/desktop/electron/main/SupabaseCloudService.ts -Pattern 'student-test@mkreceipt.local' -Quiet | ForEach-Object { if (-not $_) { throw 'Test auto-login missing' } }
+          Select-String -Path apps/desktop/electron/main/LocalStudentTestStore.ts -Pattern 'student-test-data.json' -Quiet | ForEach-Object { if (-not $_) { throw 'Local student store missing' } }
+          Select-String -Path apps/desktop/electron/main/main.ts -Pattern 'if\(!STUDENT_TEST_MODE\)await supabaseCloud.initialize' -Quiet | ForEach-Object { if (-not $_) { throw 'Cloud initialization is not isolated' } }
+          Select-String -Path apps/desktop/electron/ipc/lessonHandlers.ts -Pattern 'receipt:null' -Quiet | ForEach-Object { if (-not $_) { throw 'Receipt isolation missing' } }
+          if (Select-String -Path apps/desktop/electron/main/SupabaseCloudService.ts -Pattern 'student-test@mkreceipt.local' -Quiet) { throw 'Test credentials must not be embedded' }
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: TypeScript
