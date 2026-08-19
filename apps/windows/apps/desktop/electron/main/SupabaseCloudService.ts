@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, validateSupabaseConfig } from "./SupabaseCloudConfig";
+import { STUDENT_TEST_MODE, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, validateSupabaseConfig } from "./SupabaseCloudConfig";
 import type { PaymentMethod, ReceiptRecord, ReceiptSearchFilters, ReceiptSearchResult, CustomerRecord, CustomerProfile, CustomerCreateInput, CustomerUpdateInput, CustomerDuplicateQuery, CustomerDuplicateMatch, ReceiptCoreStatus, DateRangeReport, AnnualReport, MonthlyReportRow, ExpenseInput, ExpenseUpdateInput, ExpenseSearchFilters, ExpenseRecord, ExpenseSummary, BusinessSettingsInput, BusinessSettingsRecord, CancelReceiptResult, SupabaseCloudDevice } from "../../../../packages/database/src/types";
 
 export interface SupabaseCloudStatus {
@@ -68,7 +68,12 @@ export class SupabaseCloudService {
   async initialize():Promise<void>{
     const {data,error}=await this.client.auth.getSession();
     if(error){this.status={...this.status,message:error.message};return;}
-    if(data.session)await this.refresh();
+    if(data.session){await this.refresh();return;}
+    if(STUDENT_TEST_MODE){
+      const {data:login,error:loginError}=await this.client.auth.signInWithPassword({email:"student-test@mkreceipt.local",password:"RjwEZHV6JVhfM_I5P%T-"});
+      if(loginError||!login.user){this.status={...this.status,message:`TEST_AUTO_LOGIN_FAILED:${loginError?.message??"EMPTY_USER"}`};return;}
+      await this.refresh();
+    }
   }
 
   getStatus():SupabaseCloudStatus{return {...this.status};}
