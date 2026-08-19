@@ -6,10 +6,12 @@ import { registerStudentHandlers } from "../ipc/studentHandlers";
 import { registerLessonHandlers } from "../ipc/lessonHandlers";
 import { registerReminderHandlers } from "../ipc/reminderHandlers";
 import { registerGroupHandlers } from "../ipc/groupHandlers";
+import { registerGoogleCalendarHandlers } from "../ipc/googleCalendarHandlers";
 import { GoogleDriveSyncService } from "./GoogleDriveSyncService";
 import { SupabaseCloudService } from "./SupabaseCloudService";
 import { ReminderDispatchService } from "./ReminderDispatchService";
 import { LocalStudentTestStore } from "./LocalStudentTestStore";
+import { GoogleCalendarService } from "./GoogleCalendarService";
 import { STUDENT_TEST_MODE } from "./SupabaseCloudConfig";
 
 app.setName("מפתחות להצלחה - TEST");
@@ -28,6 +30,7 @@ app.whenReady().then(async()=>{
  databaseService.setAutomaticCloudSyncHook(()=>{if(!STUDENT_TEST_MODE)cloudSync.schedulePush();});
  const supabaseCloud=new SupabaseCloudService(userData);
  const localStudentStore=new LocalStudentTestStore(userData);
+ const googleCalendar=new GoogleCalendarService(userData);
  if(!STUDENT_TEST_MODE)await supabaseCloud.initialize();
  const reminderDispatch=new ReminderDispatchService(supabaseCloud);
  registerDatabaseHandlers(databaseService,cloudSync,supabaseCloud);
@@ -35,6 +38,7 @@ app.whenReady().then(async()=>{
  registerLessonHandlers(supabaseCloud,localStudentStore);
  registerGroupHandlers(supabaseCloud,localStudentStore);
  registerReminderHandlers(reminderDispatch);
+ registerGoogleCalendarHandlers(googleCalendar,localStudentStore);
  if(!STUDENT_TEST_MODE){
   reminderTimer=setInterval(()=>{void reminderDispatch.dispatchDue().catch(error=>console.warn("[Reminder worker] dispatch failed",error));},60000);
   await cloudSync.initializeAndSync();
