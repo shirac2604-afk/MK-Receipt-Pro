@@ -1,5 +1,6 @@
 import {ipcMain,type IpcMainInvokeEvent} from "electron";
 import type {ReminderDispatchService} from "../main/ReminderDispatchService";
+import {STUDENT_TEST_MODE} from "../main/SupabaseCloudConfig";
 import {apiFailure,apiSuccess,type ApiResult} from "../../../../packages/shared/src/api";
 import {assertPayloadSize,assertTrustedSender,withTimeout} from "./security";
 
@@ -18,8 +19,8 @@ async function handle<T>(event:IpcMainInvokeEvent,payload:unknown,action:()=>T|P
 }
 
 export function registerReminderHandlers(service:ReminderDispatchService):void{
- ipcMain.handle("reminders:get-status",event=>handle(event,undefined,()=>service.getStatus()));
- ipcMain.handle("reminders:dispatch-now",(event,input)=>handle(event,input,()=>service.dispatchDue(Math.trunc(Number(input?.limit)||20))));
- ipcMain.handle("reminders:list-recent",(event,input)=>handle(event,input,()=>service.listRecent(Math.trunc(Number(input?.limit)||50))));
- ipcMain.handle("reminders:retry-failed",(event,input)=>handle(event,input,()=>service.retryFailed(typeof input?.reminderId==="string"?input.reminderId:"")));
+ ipcMain.handle("reminders:get-status",event=>handle(event,undefined,()=>STUDENT_TEST_MODE?{providerId:"local-test-disabled",configured:false,running:false}:service.getStatus()));
+ ipcMain.handle("reminders:dispatch-now",(event,input)=>handle(event,input,()=>STUDENT_TEST_MODE?{providerId:"local-test-disabled",configured:false,claimed:0,sent:0,failed:0,skipped:0}:service.dispatchDue(Math.trunc(Number(input?.limit)||20))));
+ ipcMain.handle("reminders:list-recent",(event,input)=>handle(event,input,()=>STUDENT_TEST_MODE?[]:service.listRecent(Math.trunc(Number(input?.limit)||50))));
+ ipcMain.handle("reminders:retry-failed",(event,input)=>handle(event,input,()=>STUDENT_TEST_MODE?undefined:service.retryFailed(typeof input?.reminderId==="string"?input.reminderId:"")));
 }
