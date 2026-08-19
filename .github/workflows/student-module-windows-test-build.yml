@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - apps/windows/**
+      - scripts/apply-student-test-auto-login.mjs
       - .github/workflows/student-module-windows-test-build.yml
 
 permissions:
@@ -21,6 +22,15 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Inject isolated Staging auto-login
+        run: node ../../scripts/apply-student-test-auto-login.mjs
+      - name: Verify isolated test mode
+        shell: pwsh
+        run: |
+          Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_TEST_MODE=true' -Quiet | ForEach-Object { if (-not $_) { throw 'Student test mode missing' } }
+          Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'ymcmmvnfrfntmllytpyu.supabase.co' -Quiet | ForEach-Object { if (-not $_) { throw 'Staging endpoint missing' } }
+          Select-String -Path apps/desktop/electron/ipc/lessonHandlers.ts -Pattern 'Receipt issuance is intentionally disconnected' -Quiet | ForEach-Object { if (-not $_) { throw 'Receipt isolation missing' } }
+          Select-String -Path apps/desktop/electron/main/SupabaseCloudService.ts -Pattern 'student-test@mkreceipt.local' -Quiet | ForEach-Object { if (-not $_) { throw 'Test auto-login missing' } }
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: TypeScript
