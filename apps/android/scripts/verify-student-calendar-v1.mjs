@@ -14,7 +14,7 @@ const checks=[
  [service.includes("calendar.createEvent")&&service.includes("config.eventIds[lesson.id]=newId"),"new event create and link path"],
  [service.includes("CALENDAR_NOT_SELECTED")&&service.includes("calendarId"),"explicit selected calendar boundary"],
  [panel.includes("requestCalendars")&&panel.includes("selectCalendar")&&panel.includes("סנכרן עכשיו"),"in-app calendar connection controls"],
- [hub.includes("<DeviceCalendarPanel lessons={lessons}/>")&&hub.includes("קבלות אינן מופקות"),"student hub calendar UI remains receipt-isolated"],
+ [hub.includes("<DeviceCalendarPanel lessons={lessons}/>")&&(hub.includes("אין הפקת קבלות")||hub.includes("קבלות אינן מופקות")),"student hub calendar UI remains receipt-isolated"],
  [store.includes("payment:\"unpaid\"")&&!store.includes("receiptId"),"mobile student store has no receipt linkage"],
 ];
 let ok=0;for(const[pass,label]of checks){console.log(pass?"PASS":"FAIL",label);if(pass)ok++;}
