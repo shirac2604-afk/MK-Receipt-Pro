@@ -2,11 +2,12 @@ import fs from "node:fs";
 
 const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const a = JSON.parse(fs.readFileSync("app.json", "utf8"));
+const expo57 = typeof p.dependencies?.expo === "string" && /^\^?57\./.test(p.dependencies.expo.replace(/^~/,""));
 
 const checks = [
   [p.version === "1.0.6", "package version 1.0.6"],
-  [p.dependencies?.expo === "~56.0.0", "Expo SDK 56"],
-  [p.dependencies?.["react-native"] === "0.85.3", "React Native 0.85.3"],
+  [expo57, "Expo SDK 57"],
+  [p.dependencies?.["react-native"] === "0.86.2", "React Native 0.86.2"],
   [a.expo.version === "1.0.6", "app version 1.0.6"],
   [a.expo.android?.versionCode === 8, "versionCode 8"],
   [a.expo.android?.package === "il.mkreceiptpro.android", "stable Android package id"],
