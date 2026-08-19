@@ -8,6 +8,10 @@ on:
     paths: ['.github/workflows/android-student-test-apk.yml']
   workflow_dispatch:
 
+concurrency:
+  group: android-student-test-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
