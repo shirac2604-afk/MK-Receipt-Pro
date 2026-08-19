@@ -31,6 +31,12 @@
         {
           "calendarPermission": "MK Receipt Pro זקוקה לגישה ליומן כדי לסנכרן את שיעורי התלמידים."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "student-reminders"
+        }
       ]
     ],
     "icon": "./assets/app-icon.png"
