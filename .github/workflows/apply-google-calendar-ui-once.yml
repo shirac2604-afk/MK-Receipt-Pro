@@ -1,0 +1,29 @@
+name: Apply Google Calendar UI Once
+on:
+  push:
+    branches: [feature/student-management-v1]
+    paths: ['.github/workflows/apply-google-calendar-ui-once.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: feature/student-management-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node scripts/apply-google-calendar-ui-v1.mjs
+      - run: |
+          grep -q 'googleCalendar' apps/windows/apps/desktop/electron/preload/preload.ts
+          grep -q 'Google Calendar עדיין לא מחובר' apps/windows/apps/desktop/renderer/src/students/LessonsScreen.tsx
+          grep -q 'שומר תשלום' apps/windows/apps/desktop/renderer/src/students/OpenPaymentsScreen.tsx
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/windows/apps/desktop/electron/main/LocalStudentTestStore.ts apps/windows/apps/desktop/electron/preload/preload.ts apps/windows/apps/desktop/renderer/src/global.d.ts apps/windows/apps/desktop/renderer/src/students
+          git commit -m "feat(students): add Google Calendar controls and test payment UX"
+          git push origin HEAD:feature/student-management-v1
