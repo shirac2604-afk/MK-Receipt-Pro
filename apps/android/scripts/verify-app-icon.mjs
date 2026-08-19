@@ -1,7 +1,8 @@
 import fs from "node:fs";
 const app=JSON.parse(fs.readFileSync("app.json","utf8"));
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
-const production=pkg.version==="1.0.6"&&pkg.dependencies?.expo?.startsWith("~56.")&&pkg.dependencies?.["react-native"]==="0.85.3";
+const expo57=typeof pkg.dependencies?.expo==="string"&&/^\^?57\./.test(pkg.dependencies.expo.replace(/^~/,""));
+const production=pkg.version==="1.0.6"&&expo57&&pkg.dependencies?.["react-native"]==="0.86.2";
 const checks=[
  [production,"Android 1.0.6 release version/context"],
  [app.expo.version==="1.0.6","app version 1.0.6"],
