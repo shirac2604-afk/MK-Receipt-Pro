@@ -1,0 +1,28 @@
+name: Remove Student Test AutoLogin Once
+on:
+  push:
+    branches: [feature/student-management-v1]
+    paths: ['.github/workflows/remove-student-test-autologin-once.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: feature/student-management-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node scripts/remove-student-test-autologin.mjs
+      - run: |
+          ! grep -q 'student-test@mkreceipt.local' apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts
+          ! grep -q 'RjwEZHV6JVhfM_I5P%T-' apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts
+          git commit -m "security(students): remove obsolete staging auto login"
+          git push origin HEAD:feature/student-management-v1
