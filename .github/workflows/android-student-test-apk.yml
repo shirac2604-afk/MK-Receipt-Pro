@@ -4,6 +4,8 @@ on:
   push:
     branches: [feature/student-management-v1]
     paths: ['.github/workflows/android-student-test-apk.yml']
+  pull_request:
+    paths: ['.github/workflows/android-student-test-apk.yml']
   workflow_dispatch:
 
 permissions:
