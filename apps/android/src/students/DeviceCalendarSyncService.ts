@@ -8,7 +8,7 @@ const TIME_ZONE="Asia/Jerusalem";
 type SyncConfig={calendarId:string|null;eventIds:Record<string,string>;lastSyncAt:string|null};
 export type CalendarChoice={id:string;title:string;sourceName:string;sourceType:string;isPrimary:boolean;isGoogle:boolean};
 export type DeviceCalendarStatus={permission:"granted"|"denied"|"undetermined";calendarId:string|null;calendarTitle:string|null;isGoogle:boolean;lastSyncAt:string|null};
-export type DeviceCalendarSyncResult={total:number;created:number;updated:number;failed:number};
+export type DeviceCalendarSyncResult={total:number;created:number;updated:number;deleted:number;failed:number};
 
 const empty=():SyncConfig=>({calendarId:null,eventIds:{},lastSyncAt:null});
 async function readConfig():Promise<SyncConfig>{try{const raw=await AsyncStorage.getItem(CONFIG_KEY);if(!raw)return empty();const x=JSON.parse(raw);if(typeof x==="object"&&x&&typeof x.eventIds==="object")return{calendarId:typeof x.calendarId==="string"?x.calendarId:null,eventIds:x.eventIds,lastSyncAt:typeof x.lastSyncAt==="string"?x.lastSyncAt:null};}catch{}return empty();}
@@ -35,10 +35,10 @@ export const DeviceCalendarSyncService={
  async sync(lessons:MobileLesson[]):Promise<DeviceCalendarSyncResult>{
   const permission=await Calendar.getCalendarPermissions();if(permission.status!=="granted")throw new Error("CALENDAR_PERMISSION_DENIED");const config=await readConfig();if(!config.calendarId)throw new Error("CALENDAR_NOT_SELECTED");
   const list=await calendars();const selected=list.find(x=>String(x.id)===config.calendarId&&writable(x));if(!selected)throw new Error("CALENDAR_NOT_WRITABLE");
-  const calendar=await Calendar.ExpoCalendar.get(config.calendarId);let created=0,updated=0,failed=0;
-  for(const lesson of lessons){try{const eventId=config.eventIds[lesson.id];if(eventId){try{const event=await Calendar.ExpoCalendarEvent.get(eventId);await event.update(details(lesson));updated++;continue;}catch{delete config.eventIds[lesson.id];}}
+  const calendar=await Calendar.ExpoCalendar.get(config.calendarId);let created=0,updated=0,deleted=0,failed=0;
+  for(const lesson of lessons){try{const eventId=config.eventIds[lesson.id];if(lesson.cancelled){if(eventId){try{const event=await Calendar.ExpoCalendarEvent.get(eventId);await event.delete();}catch{}delete config.eventIds[lesson.id];}deleted++;continue;}if(eventId){try{const event=await Calendar.ExpoCalendarEvent.get(eventId);await event.update(details(lesson));updated++;continue;}catch{delete config.eventIds[lesson.id];}}
     const event=await calendar.createEvent(details(lesson));const newId=String((event as any).id??"");if(!newId)throw new Error("CALENDAR_EVENT_ID_MISSING");config.eventIds[lesson.id]=newId;created++;
    }catch{failed++;}}
-  config.lastSyncAt=new Date().toISOString();await writeConfig(config);return{total:lessons.length,created,updated,failed};
+  config.lastSyncAt=new Date().toISOString();await writeConfig(config);return{total:lessons.length,created,updated,deleted,failed};
  }
 };
