@@ -7,6 +7,7 @@ import DashboardScreen from "../screens/DashboardScreen";
 import ReceiptsScreen from "../screens/ReceiptsScreen";
 import CustomersScreen from "../screens/CustomersScreen";
 import ExpensesScreen from "../screens/ExpensesScreen";
+import StudentHubScreen from "../screens/StudentHubScreen";
 import MoreScreen from "../screens/MoreScreen";
 import {theme} from "../theme/theme";
 
@@ -17,6 +18,7 @@ const iconFor=(routeName:string,focused:boolean)=>{
     case "ראשי": return focused?"home":"home-outline";
     case "קבלות": return focused?"receipt":"receipt-outline";
     case "לקוחות": return focused?"people":"people-outline";
+    case "תלמידים": return focused?"school":"school-outline";
     case "הוצאות": return focused?"wallet":"wallet-outline";
     default: return focused?"grid":"grid-outline";
   }
@@ -31,16 +33,17 @@ export default function AppNavigator(){
       headerShown:false,
       tabBarActiveTintColor:theme.primary,
       tabBarInactiveTintColor:theme.muted,
-      tabBarLabelStyle:{fontSize:12,fontWeight:"600"},
-      tabBarStyle:{height:56+bottomSpace,paddingTop:5,paddingBottom:bottomSpace},
+      tabBarLabelStyle:{fontSize:11,fontWeight:"600"},
+      tabBarStyle:{height:58+bottomSpace,paddingTop:5,paddingBottom:bottomSpace},
       tabBarIcon:({focused,color,size})=>(
-        <Ionicons name={iconFor(route.name,focused) as any} size={size??24} color={color}/>
+        <Ionicons name={iconFor(route.name,focused) as any} size={size??23} color={color}/>
       )
     })}
   >
    <Tab.Screen name="ראשי" component={DashboardScreen}/>
    <Tab.Screen name="קבלות" component={ReceiptsScreen}/>
    <Tab.Screen name="לקוחות" component={CustomersScreen}/>
+   <Tab.Screen name="תלמידים" component={StudentHubScreen}/>
    <Tab.Screen name="הוצאות" component={ExpensesScreen}/>
    <Tab.Screen name="עוד" component={MoreScreen}/>
   </Tab.Navigator>
