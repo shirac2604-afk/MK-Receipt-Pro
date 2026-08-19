@@ -9,7 +9,9 @@
       "package": "il.mkreceiptpro.android",
       "versionCode": 8,
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-foreground.png",
@@ -22,6 +24,12 @@
         {
           "photosPermission": "MK Receipt Pro זקוקה לגישה לתמונות כדי לצרף אסמכתאות להוצאות.",
           "cameraPermission": "MK Receipt Pro זקוקה למצלמה כדי לצלם אסמכתאות להוצאות."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "MK Receipt Pro זקוקה לגישה ליומן כדי לסנכרן את שיעורי התלמידים."
         }
       ]
     ],
