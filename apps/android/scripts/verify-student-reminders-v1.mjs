@@ -5,7 +5,7 @@ const hub=fs.readFileSync("src/screens/StudentHubScreen.tsx","utf8");
 const checks=[
  [store.includes('ReminderAudience="student"|"guardian"|"both"'),"student guardian both audiences"],
  [store.includes('leadMinutes:60|180|1440'),"one hour three hours one day lead times"],
- [store.includes('dedupeKey=')&&store.includes('existing.has(dedupeKey)'),"reminder dedupe protection"],
+ [store.includes('desired.set(key')&&store.includes('existing.has(dedupeKey)')&&store.includes('existing.set(dedupeKey,entry)')&&store.includes('${lesson.startsAt}'),"reminder dedupe and reschedule protection"],
  [store.includes('if(entry.status!=="failed")')&&store.includes('async retry'),"retry failed reminders only"],
  [store.includes('simulateSend')&&store.includes('simulateFailure'),"safe test simulation actions"],
  [!store.includes('fetch(')&&!store.includes('wa.me')&&!store.includes('whatsapp')&&!store.includes('sms:'),"no external delivery path in test store"],
