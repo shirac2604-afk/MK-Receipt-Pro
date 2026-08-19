@@ -19,6 +19,7 @@ const cleanUserDataPath=path.join(app.getPath("appData"),"MK-Receipt-Pro-Student
 app.setPath("userData",cleanUserDataPath);
 let mainWindow: BrowserWindow | null = null;
 let reminderTimer:NodeJS.Timeout|null=null;
+let googleCalendarTimer:NodeJS.Timeout|null=null;
 const databaseService = new DatabaseService();
 function isTrustedExternalUrl(rawUrl:string):boolean{try{const url=new URL(rawUrl);if(url.protocol==="mailto:")return true;if(url.protocol!=="https:")return false;return new Set(["wa.me","accounts.google.com","ymcmmvnfrfntmllytpyu.supabase.co"]).has(url.hostname.toLowerCase())}catch{return false}}
 function createMainWindow():void{mainWindow=new BrowserWindow({width:1180,height:760,minWidth:980,minHeight:650,show:false,backgroundColor:"#f8fafc",title:"מפתחות להצלחה - TEST",autoHideMenuBar:true,icon:path.join(process.resourcesPath,"installer","app-icon.ico"),webPreferences:{preload:path.join(__dirname,"../preload/preload.js"),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,devTools:!app.isPackaged,navigateOnDragDrop:false}});mainWindow.setMenuBarVisibility(false);mainWindow.webContents.session.setPermissionRequestHandler((_webContents,_permission,callback)=>callback(false));mainWindow.webContents.session.setPermissionCheckHandler(()=>false);mainWindow.webContents.setWindowOpenHandler(({url})=>{if(isTrustedExternalUrl(url))void shell.openExternal(url);return{action:"deny"}});mainWindow.webContents.on("will-navigate",(event,url)=>{const currentUrl=mainWindow?.webContents.getURL();if(currentUrl&&url!==currentUrl)event.preventDefault()});const devServerUrl=!app.isPackaged?process.env.VITE_DEV_SERVER_URL:undefined;if(devServerUrl==="http://127.0.0.1:5173")void mainWindow.loadURL(devServerUrl);else void mainWindow.loadFile(path.join(__dirname,"../../../../../dist/index.html"));mainWindow.once("ready-to-show",()=>mainWindow?.show());mainWindow.on("closed",()=>{mainWindow=null})}
@@ -43,7 +44,20 @@ app.whenReady().then(async()=>{
   reminderTimer=setInterval(()=>{void reminderDispatch.dispatchDue().catch(error=>console.warn("[Reminder worker] dispatch failed",error));},60000);
   await cloudSync.initializeAndSync();
  }
+ let lastGoogleSnapshot="";
+ const autoSyncGoogle=async()=>{
+  const status=googleCalendar.getStatus();
+  if(!status.connected||status.syncing)return;
+  const from=new Date();from.setDate(from.getDate()-30);
+  const to=new Date();to.setFullYear(to.getFullYear()+1);
+  const lessons=localStudentStore.listLessonsForSync(from.toISOString(),to.toISOString());
+  const snapshot=JSON.stringify(lessons.map(x=>[x.id,x.title,x.startsAt,x.endsAt,x.status,x.lessonSummary,x.homework]));
+  if(snapshot===lastGoogleSnapshot)return;
+  try{const result=await googleCalendar.syncLessons(lessons);if(result.failed===0)lastGoogleSnapshot=snapshot;}catch(error){console.warn("[Google Calendar] automatic sync failed",error);}
+ };
+ googleCalendarTimer=setInterval(()=>{void autoSyncGoogle();},60000);
+ setTimeout(()=>{void autoSyncGoogle();},5000).unref();
  createMainWindow();
  app.on("activate",()=>{if(BrowserWindow.getAllWindows().length===0)createMainWindow()});
 });
-app.on("before-quit",()=>{if(reminderTimer)clearInterval(reminderTimer);databaseService.close()});app.on("window-all-closed",()=>{if(process.platform!=="darwin")app.quit()});
+app.on("before-quit",()=>{if(reminderTimer)clearInterval(reminderTimer);if(googleCalendarTimer)clearInterval(googleCalendarTimer);databaseService.close()});app.on("window-all-closed",()=>{if(process.platform!=="darwin")app.quit()});
