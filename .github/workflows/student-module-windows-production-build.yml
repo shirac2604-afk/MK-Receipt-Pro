@@ -1,0 +1,60 @@
+name: Student Module Windows Production Build
+
+on:
+  push:
+    branches:
+      - feature/student-management-v1
+    paths:
+      - apps/windows/**
+      - supabase/functions/lesson-reminder-dispatch/**
+      - .github/workflows/student-module-windows-production-build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-windows-production:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.13.1"
+      - name: Select guarded production cloud configuration
+        shell: pwsh
+        run: |
+          Copy-Item apps/desktop/electron/main/SupabaseCloudConfig.production.ts apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_TEST_MODE=false' -Quiet)) { throw "Production mode is missing" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_RECEIPTS_ENABLED=false' -Quiet)) { throw "Receipt isolation is missing" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'REMINDER_AUTO_DISPATCH_ENABLED=false' -Quiet)) { throw "Automatic reminder delivery must remain disabled" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'noimclnzzuxcszdotmby.supabase.co' -Quiet)) { throw "Production cloud is missing" }
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Google Calendar sync contract
+        run: node scripts/verify-google-calendar-sync-v1.mjs
+      - name: Student production safety contract
+        run: node scripts/verify-student-production-release.mjs
+      - name: Build renderer and Electron
+        run: npm run build
+      - name: Build portable production directory
+        run: npx electron-builder --win dir --x64
+      - name: Zip guarded production build
+        shell: pwsh
+        run: |
+          if (-not (Test-Path release/win-unpacked/MaptehotLaHatzlaha.exe)) { throw "Portable executable not produced" }
+          Compress-Archive -Path release/win-unpacked/* -DestinationPath release/MK-Receipt-Pro-Student-Module-Production-Windows.zip -CompressionLevel Optimal
+      - name: Upload guarded production build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: MK-Receipt-Pro-Student-Module-Production-Windows
+          path: apps/windows/release/MK-Receipt-Pro-Student-Module-Production-Windows.zip
+          if-no-files-found: error
+          retention-days: 7

@@ -20,7 +20,9 @@ export class SupabaseEdgeReminderProvider implements ReminderProvider {
   async send(request:ReminderDeliveryRequest):Promise<ReminderDeliveryResult>{
     if(!this.configured)return{success:false,errorCode:"REMINDER_PROVIDER_NOT_CONFIGURED"};
     const r=request.reminder;
-    const{data,error}=await this.client.functions.invoke<EdgeFunctionResponse>("lesson-reminder-dispatch",{body:{reminderId:r.reminderId,channel:r.channel,recipientPhone:r.recipientPhone,recipientEmail:r.recipientEmail,recipientName:r.recipientName,studentName:r.studentName,lessonTitle:r.lessonTitle,lessonStartsAt:r.lessonStartsAt}});
+    // The server resolves every recipient and message field from the claimed reminder.
+    // The desktop client may only nominate a reminder it has already claimed through RLS.
+    const{data,error}=await this.client.functions.invoke<EdgeFunctionResponse>("lesson-reminder-dispatch",{body:{reminderId:r.reminderId}});
     if(error){
       const message=String(error.message||"");
       if(message.includes("503"))return{success:false,errorCode:"REMINDER_PROVIDER_NOT_CONFIGURED"};
