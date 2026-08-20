@@ -19,6 +19,8 @@ const checks=[
  [calendar.includes("sendOAuthPage")&&calendar.includes("this.writeTokens")&&calendar.includes("if(oauthResponse)sendOAuthPage(oauthResponse,200"),"OAuth success waits for secure token storage"],
  [calendar.includes("rememberError")&&calendar.includes("lastError"),"OAuth failures survive restart for diagnosis"],
  [calendar.includes('const redirectUri=`http://127.0.0.1:${address.port}`')&&calendar.includes('if(url.pathname!=="/")'),"OAuth uses the documented root loopback redirect"],
+ [calendar.includes("clientSecretPath")&&calendar.includes("safeStorage.encryptString(clientSecret)")&&calendar.includes("clientSecretConfigured"),"Client Secret is encrypted locally and never exposed in status"],
+ [calendar.includes('body.set("client_secret",clientSecret)')&&handlers.includes("google-calendar:set-client-secret")&&lessons.includes("שמור Client Secret")&&lessons.includes("!googleStatus.clientSecretConfigured"),"token exchange supports a locally saved Client Secret"],
  [lessons.includes("const refreshed=await window.mkApi.googleCalendar.getStatus().catch(()=>null)")&&lessons.includes("refreshed.data.lastError?\"\":fallback"),"failed OAuth refreshes the visible diagnostic"],
  [lessons.includes('code.slice("GOOGLE_TOKEN_EXCHANGE_FAILED:".length)')&&lessons.includes("קוד Google:"),"token exchange failures expose a safe Google diagnostic"],
 ];

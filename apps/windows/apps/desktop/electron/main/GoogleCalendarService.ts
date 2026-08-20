@@ -13,7 +13,7 @@ const TIME_ZONE="Asia/Jerusalem";
 
 type StoredTokens={accessToken:string;refreshToken:string|null;expiresAt:number;scope:string;tokenType:string};
 type Config={clientId:string;lastSyncAt:string|null;lastError:string|null};
-export interface GoogleCalendarStatus{configured:boolean;connected:boolean;syncing:boolean;calendarId:string;lastSyncAt:string|null;lastError:string|null;}
+export interface GoogleCalendarStatus{configured:boolean;clientSecretConfigured:boolean;connected:boolean;syncing:boolean;calendarId:string;lastSyncAt:string|null;lastError:string|null;}
 export interface GoogleCalendarSyncResult{total:number;created:number;updated:number;deleted:number;failed:number;}
 
 function base64url(value:Buffer){return value.toString("base64").replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");}
@@ -23,22 +23,26 @@ function sendOAuthPage(response:http.ServerResponse,status:number,message:string
 export class GoogleCalendarService{
  private readonly configPath:string;
  private readonly tokenPath:string;
+ private readonly clientSecretPath:string;
  private syncing=false;
  private lastError:string|null=null;
- constructor(userDataPath:string){const folder=path.join(userDataPath,"student-module");this.configPath=path.join(folder,"google-calendar-config.json");this.tokenPath=path.join(folder,"google-calendar-token.bin");}
+ constructor(userDataPath:string){const folder=path.join(userDataPath,"student-module");this.configPath=path.join(folder,"google-calendar-config.json");this.tokenPath=path.join(folder,"google-calendar-token.bin");this.clientSecretPath=path.join(folder,"google-calendar-client-secret.bin");}
 
  private readConfig():Config{try{const raw=JSON.parse(fs.readFileSync(this.configPath,"utf8"));return{clientId:typeof raw?.clientId==="string"?raw.clientId:"",lastSyncAt:typeof raw?.lastSyncAt==="string"?raw.lastSyncAt:null,lastError:typeof raw?.lastError==="string"?raw.lastError:null};}catch{return{clientId:"",lastSyncAt:null,lastError:null};}}
  private writeConfig(config:Config){fs.mkdirSync(path.dirname(this.configPath),{recursive:true});fs.writeFileSync(this.configPath,JSON.stringify(config,null,2),"utf8");}
+ private readClientSecret():string|null{try{if(!safeStorage.isEncryptionAvailable())return null;const value=safeStorage.decryptString(fs.readFileSync(this.clientSecretPath)).trim();return value||null;}catch{return null;}}
+ private writeClientSecret(clientSecret:string){if(!safeStorage.isEncryptionAvailable())throw new Error("GOOGLE_SECURE_STORAGE_UNAVAILABLE");fs.mkdirSync(path.dirname(this.clientSecretPath),{recursive:true});fs.writeFileSync(this.clientSecretPath,safeStorage.encryptString(clientSecret));}
  private readTokens():StoredTokens|null{try{if(!safeStorage.isEncryptionAvailable())return null;const encrypted=fs.readFileSync(this.tokenPath);const parsed=JSON.parse(safeStorage.decryptString(encrypted));if(typeof parsed?.accessToken!=="string")return null;return parsed as StoredTokens;}catch{return null;}}
  private writeTokens(tokens:StoredTokens){if(!safeStorage.isEncryptionAvailable())throw new Error("GOOGLE_SECURE_STORAGE_UNAVAILABLE");fs.mkdirSync(path.dirname(this.tokenPath),{recursive:true});fs.writeFileSync(this.tokenPath,safeStorage.encryptString(JSON.stringify(tokens)));}
- getStatus():GoogleCalendarStatus{const config=this.readConfig();return{configured:Boolean(config.clientId),connected:Boolean(this.readTokens()),syncing:this.syncing,calendarId:"primary",lastSyncAt:config.lastSyncAt,lastError:this.lastError??config.lastError};}
+ getStatus():GoogleCalendarStatus{const config=this.readConfig();return{configured:Boolean(config.clientId),clientSecretConfigured:Boolean(this.readClientSecret()),connected:Boolean(this.readTokens()),syncing:this.syncing,calendarId:"primary",lastSyncAt:config.lastSyncAt,lastError:this.lastError??config.lastError};}
  private clearLastError(){const config=this.readConfig();this.writeConfig({...config,lastError:null});this.lastError=null;}
  private rememberError(error:unknown){const code=error instanceof Error?error.message:"GOOGLE_CALENDAR_CONNECT_FAILED";const config=this.readConfig();this.writeConfig({...config,lastError:code});this.lastError=code;}
- setClientId(raw:string):GoogleCalendarStatus{const clientId=raw.trim();if(!/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(clientId))throw new Error("INVALID_GOOGLE_CLIENT_ID");const current=this.readConfig();if(current.clientId&&current.clientId!==clientId){try{fs.rmSync(this.tokenPath,{force:true});}catch{}}this.writeConfig({clientId,lastSyncAt:current.lastSyncAt,lastError:null});this.lastError=null;return this.getStatus();}
+ setClientId(raw:string):GoogleCalendarStatus{const clientId=raw.trim();if(!/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(clientId))throw new Error("INVALID_GOOGLE_CLIENT_ID");const current=this.readConfig();if(current.clientId&&current.clientId!==clientId){try{fs.rmSync(this.tokenPath,{force:true});fs.rmSync(this.clientSecretPath,{force:true});}catch{}}this.writeConfig({clientId,lastSyncAt:current.lastSyncAt,lastError:null});this.lastError=null;return this.getStatus();}
+ setClientSecret(raw:string):GoogleCalendarStatus{if(!this.readConfig().clientId)throw new Error("GOOGLE_CALENDAR_NOT_CONFIGURED");const clientSecret=raw.trim();if(clientSecret.length<8||clientSecret.length>512)throw new Error("INVALID_GOOGLE_CLIENT_SECRET");this.writeClientSecret(clientSecret);this.clearLastError();return this.getStatus();}
  disconnect():GoogleCalendarStatus{try{fs.rmSync(this.tokenPath,{force:true});}catch{}this.clearLastError();return this.getStatus();}
 
  async connect():Promise<GoogleCalendarStatus>{
-  const config=this.readConfig();if(!config.clientId)throw new Error("GOOGLE_CALENDAR_NOT_CONFIGURED");
+  const config=this.readConfig(),clientSecret=this.readClientSecret();if(!config.clientId)throw new Error("GOOGLE_CALENDAR_NOT_CONFIGURED");if(!clientSecret)throw new Error("GOOGLE_CLIENT_SECRET_REQUIRED");
   const verifier=base64url(crypto.randomBytes(48));
   const challenge=base64url(crypto.createHash("sha256").update(verifier).digest());
   const state=base64url(crypto.randomBytes(24));
@@ -59,14 +63,14 @@ export class GoogleCalendarService{
    await shell.openExternal(url.toString());
    let timer:NodeJS.Timeout|undefined;const timeout=new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error("GOOGLE_OAUTH_TIMEOUT")),180000);timer.unref();});
    const code=await Promise.race([callback,timeout]);if(timer)clearTimeout(timer);
-   const body=new URLSearchParams({client_id:config.clientId,code,code_verifier:verifier,redirect_uri:redirectUri,grant_type:"authorization_code"});
+   const body=new URLSearchParams({client_id:config.clientId,code,code_verifier:verifier,redirect_uri:redirectUri,grant_type:"authorization_code"});body.set("client_secret",clientSecret);
    const response=await fetch(TOKEN_URL,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body,redirect:"error"});
    const data:any=await response.json().catch(()=>({}));if(!response.ok||typeof data.access_token!=="string")throw new Error(`GOOGLE_TOKEN_EXCHANGE_FAILED:${data.error??response.status}`);
    this.writeTokens({accessToken:data.access_token,refreshToken:typeof data.refresh_token==="string"?data.refresh_token:null,expiresAt:Date.now()+Math.max(60,Number(data.expires_in)||3600)*1000,scope:String(data.scope??SCOPE),tokenType:String(data.token_type??"Bearer")});this.clearLastError();if(oauthResponse)sendOAuthPage(oauthResponse,200,"החיבור ל-Google Calendar אושר בהצלחה");return this.getStatus();
   }catch(error){this.rememberError(error);if(oauthResponse)sendOAuthPage(oauthResponse,400,"החיבור לא הושלם — חזרי לתוכנה לפרטים");throw error;}finally{server.close();}
  }
 
- private async accessToken(forceRefresh=false):Promise<string>{const config=this.readConfig(),tokens=this.readTokens();if(!config.clientId||!tokens)throw new Error("GOOGLE_CALENDAR_NOT_CONNECTED");if(!forceRefresh&&tokens.expiresAt>Date.now()+60000)return tokens.accessToken;if(!tokens.refreshToken)throw new Error("GOOGLE_CALENDAR_RECONNECT_REQUIRED");const body=new URLSearchParams({client_id:config.clientId,refresh_token:tokens.refreshToken,grant_type:"refresh_token"});const response=await fetch(TOKEN_URL,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body,redirect:"error"});const data:any=await response.json().catch(()=>({}));if(!response.ok||typeof data.access_token!=="string")throw new Error(`GOOGLE_TOKEN_REFRESH_FAILED:${data.error??response.status}`);const refreshed={...tokens,accessToken:data.access_token,expiresAt:Date.now()+Math.max(60,Number(data.expires_in)||3600)*1000,scope:String(data.scope??tokens.scope),tokenType:String(data.token_type??tokens.tokenType)};this.writeTokens(refreshed);return refreshed.accessToken;}
+ private async accessToken(forceRefresh=false):Promise<string>{const config=this.readConfig(),clientSecret=this.readClientSecret(),tokens=this.readTokens();if(!config.clientId||!tokens)throw new Error("GOOGLE_CALENDAR_NOT_CONNECTED");if(!clientSecret)throw new Error("GOOGLE_CLIENT_SECRET_REQUIRED");if(!forceRefresh&&tokens.expiresAt>Date.now()+60000)return tokens.accessToken;if(!tokens.refreshToken)throw new Error("GOOGLE_CALENDAR_RECONNECT_REQUIRED");const body=new URLSearchParams({client_id:config.clientId,refresh_token:tokens.refreshToken,grant_type:"refresh_token"});body.set("client_secret",clientSecret);const response=await fetch(TOKEN_URL,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body,redirect:"error"});const data:any=await response.json().catch(()=>({}));if(!response.ok||typeof data.access_token!=="string")throw new Error(`GOOGLE_TOKEN_REFRESH_FAILED:${data.error??response.status}`);const refreshed={...tokens,accessToken:data.access_token,expiresAt:Date.now()+Math.max(60,Number(data.expires_in)||3600)*1000,scope:String(data.scope??tokens.scope),tokenType:String(data.token_type??tokens.tokenType)};this.writeTokens(refreshed);return refreshed.accessToken;}
  private eventId(lessonId:string){return `mk${crypto.createHash("sha256").update(`mkstudent:${lessonId}`).digest("hex").slice(0,48)}`;}
  private eventBody(lesson:LessonRecord){return{id:this.eventId(lesson.id),summary:lesson.title,description:`מפתחות להצלחה - יומן תלמידים\nlesson:${lesson.id}\nסוג: ${lesson.kind==="group"?"קבוצתי":"פרטני"}`,start:{dateTime:lesson.startsAt,timeZone:TIME_ZONE},end:{dateTime:lesson.endsAt,timeZone:TIME_ZONE},extendedProperties:{private:{mkLessonId:lesson.id,mkSource:"student-module"}}};}
  private async request(url:string,init:RequestInit,token:string){return fetch(url,{...init,headers:{authorization:`Bearer ${token}`,"content-type":"application/json",...(init.headers??{})},redirect:"error"});}
