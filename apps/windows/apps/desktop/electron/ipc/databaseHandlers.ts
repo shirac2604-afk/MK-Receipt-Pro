@@ -6,6 +6,7 @@ import { apiFailure, apiSuccess, type ApiResult } from "../../../../packages/sha
 import { parseIssueReceiptInput } from "./receiptInputSchema";
 import { parseBusinessSettingsInput } from "./settingsInputSchema";
 import { assertPayloadSize, assertTrustedSender, withTimeout } from "./security";
+import { SUPABASE_URL } from "../main/SupabaseCloudConfig";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -15,6 +16,7 @@ import { spawn } from "node:child_process";
 const MAX_USER_FILE_BYTES = 10 * 1024 * 1024;
 const approvedExpenseAttachmentPaths = new Set<string>();
 const approvedImagePaths = new Set<string>();
+const SUPABASE_STORAGE_HOST = new URL(SUPABASE_URL).hostname.toLowerCase();
 
 type UserFileKind = "expense" | "image";
 
@@ -81,7 +83,7 @@ function assertTrustedExternalTarget(rawUrl:string):string {
   if(url.protocol!=="https:")throw new Error("INVALID_INPUT");
   const host=url.hostname.toLowerCase();
   if(host==="wa.me")return url.toString();
-  if(host==="noimclnzzuxcszdotmby.supabase.co" && url.pathname.startsWith("/storage/v1/object/sign/"))return url.toString();
+  if(host===SUPABASE_STORAGE_HOST && url.pathname.startsWith("/storage/v1/object/sign/"))return url.toString();
   throw new Error("INVALID_INPUT");
 }
 
