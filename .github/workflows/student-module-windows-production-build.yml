@@ -40,6 +40,8 @@ jobs:
         run: npm run typecheck
       - name: Google Calendar sync contract
         run: node scripts/verify-google-calendar-sync-v1.mjs
+      - name: Manual WhatsApp contract
+        run: node scripts/verify-manual-whatsapp-v1.mjs
       - name: Student production safety contract
         run: node scripts/verify-student-production-release.mjs
       - name: Build renderer and Electron

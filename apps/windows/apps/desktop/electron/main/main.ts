@@ -5,6 +5,7 @@ import { registerDatabaseHandlers } from "../ipc/databaseHandlers";
 import { registerStudentHandlers } from "../ipc/studentHandlers";
 import { registerLessonHandlers } from "../ipc/lessonHandlers";
 import { registerReminderHandlers } from "../ipc/reminderHandlers";
+import { registerManualWhatsAppHandlers } from "../ipc/manualWhatsAppHandlers";
 import { registerGroupHandlers } from "../ipc/groupHandlers";
 import { registerGoogleCalendarHandlers } from "../ipc/googleCalendarHandlers";
 import { GoogleDriveSyncService } from "./GoogleDriveSyncService";
@@ -42,6 +43,7 @@ app.whenReady().then(async()=>{
  registerLessonHandlers(supabaseCloud,localStudentStore);
  registerGroupHandlers(supabaseCloud,localStudentStore);
  registerReminderHandlers(reminderDispatch);
+ registerManualWhatsAppHandlers();
  const listLessonsForGoogleCalendar=async(fromIso:string,toIso:string):Promise<LessonRecord[]>=>STUDENT_TEST_MODE?localStudentStore.listLessonsForSync(fromIso,toIso):supabaseCloud.listLessonsForGoogleCalendar(fromIso,toIso);
  registerGoogleCalendarHandlers(googleCalendar,listLessonsForGoogleCalendar);
  if(!STUDENT_TEST_MODE){
