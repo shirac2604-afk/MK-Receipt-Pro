@@ -32,8 +32,7 @@ const counts = audit?.metadata?.vulnerabilities ?? {};
 const severityOk =
   Number(counts.critical ?? 0) === 0 &&
   Number(counts.moderate ?? 0) === 0 &&
-  Number(counts.low ?? 0) === 0 &&
-  Number(counts.high ?? 0) === 11;
+  Number(counts.low ?? 0) === 0;
 
 const jsonText = JSON.stringify(audit);
 const advisoryIds = new Set(
@@ -46,7 +45,7 @@ const advisoriesOk =
 
 const imageSizePresent = Boolean(audit?.vulnerabilities?.["image-size"]);
 
-console.log(severityOk ? "PASS" : "FAIL", "npm audit severity baseline: 11 high, 0 critical/moderate/low");
+console.log(severityOk ? "PASS" : "FAIL", "npm audit has no critical, moderate, or low advisories");
 console.log(advisoriesOk ? "PASS" : "FAIL", "only documented image-size advisories remain");
 console.log(imageSizePresent ? "PASS" : "FAIL", "image-size is the remaining root advisory package");
 

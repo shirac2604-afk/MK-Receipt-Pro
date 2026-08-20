@@ -8,7 +8,7 @@ const handlers=fs.readFileSync('apps/desktop/electron/ipc/databaseHandlers.ts','
 const preload=fs.readFileSync('apps/desktop/electron/preload/preload.ts','utf8');
 const globals=fs.readFileSync('apps/desktop/renderer/src/global.d.ts','utf8');
 
-check('version dev.5',pkg.version==='1.1.0-dev.5');
+check('release package version',/^\d+\.\d+\.\d+$/.test(pkg.version));
 check('preload email API',preload.includes('shareEmail:(receiptId:string)'));
 check('preload whatsapp API',preload.includes('shareWhatsApp:(receiptId:string)'));
 check('global email API',globals.includes('shareEmail(receiptId:string)'));

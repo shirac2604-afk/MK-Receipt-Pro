@@ -13,16 +13,17 @@ const nav=read("src/navigation/AppNavigator.tsx");
 const pdfFlow=read("src/services/ReceiptDocumentWorkflow.ts");
 const pdfSvc=read("src/services/ReceiptPdfService.ts");
 
+const expo57=typeof pkg.dependencies.expo==="string"&&/^\^?57\./.test(pkg.dependencies.expo.replace(/^~/,""));
 const productionContext=
   pkg.version==="1.0.6"&&
   app.expo.version==="1.0.6"&&
   app.expo.android?.versionCode===8&&
-  pkg.dependencies.expo==="~56.0.0"&&
-  pkg.dependencies["react-native"]==="0.85.3";
+  expo57&&
+  pkg.dependencies["react-native"]==="0.86.2";
 
 const checks=[
  [productionContext,"production release version/context"],
- [pkg.dependencies.expo==="~56.0.0"&&pkg.dependencies["react-native"]==="0.85.3","Expo 56 React Native compatibility"],
+ [expo57&&pkg.dependencies["react-native"]==="0.86.2","Expo 57 React Native compatibility"],
  [app.expo.android?.package==="il.mkreceiptpro.android","stable Android package id"],
  [eas.build?.["production-apk"]?.android?.buildType==="apk","standalone APK profile"],
  [eas.build?.production?.android?.buildType==="app-bundle","Play Store AAB profile"],

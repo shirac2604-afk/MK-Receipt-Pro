@@ -25,5 +25,5 @@ check("ui template panel",ui.includes("תבניות לתקבולים חוזרי�
 check("ui apply",ui.includes("applyTemplate"));
 check("ui save",ui.includes("saveTemplate"));
 check("ui customer link",ui.includes("template.customerId"));
-check("dev version",pkg.version==="1.1.0-dev.6"&&preload.includes('1.1.0-dev.6'));
+check("release version metadata",/^\d+\.\d+\.\d+$/.test(pkg.version)&&/foundationVersion:"\d+\.\d+\.\d+"/.test(preload));
 const failed=checks.filter(([,ok])=>!ok);for(const [name,ok] of checks)console.log(`${ok?"PASS":"FAIL"} ${name}`);console.log(`${checks.length-failed.length}/${checks.length} passed`);if(failed.length)process.exit(1);

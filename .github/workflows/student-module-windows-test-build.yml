@@ -1,0 +1,55 @@
+name: Student Module Windows Test Build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - apps/windows/**
+      - .github/workflows/student-module-windows-test-build.yml
+
+permissions:
+  contents: read
+
+jobs:
+  portable-windows-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify fully local isolated test mode
+        shell: pwsh
+        run: |
+          Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_TEST_MODE=true' -Quiet | ForEach-Object { if (-not $_) { throw 'Student test mode missing' } }
+          Select-String -Path apps/desktop/electron/main/LocalStudentTestStore.ts -Pattern 'student-test-data.json' -Quiet | ForEach-Object { if (-not $_) { throw 'Local student store missing' } }
+          Select-String -Path apps/desktop/electron/main/main.ts -Pattern 'if\(!STUDENT_TEST_MODE\)await supabaseCloud.initialize' -Quiet | ForEach-Object { if (-not $_) { throw 'Cloud initialization is not isolated' } }
+          Select-String -Path apps/desktop/electron/ipc/lessonHandlers.ts -Pattern 'receipt:null' -Quiet | ForEach-Object { if (-not $_) { throw 'Receipt isolation missing' } }
+          if (Select-String -Path apps/desktop/electron/main/SupabaseCloudService.ts -Pattern 'student-test@mkreceipt.local' -Quiet) { throw 'Test credentials must not be embedded' }
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Group lesson UI contract
+        run: node scripts/verify-student-groups-v1.mjs
+      - name: Google Calendar sync contract
+        run: node scripts/verify-google-calendar-sync-v1.mjs
+      - name: Build renderer and Electron
+        run: npm run build
+      - name: Build portable directory
+        run: npx electron-builder --win dir --x64
+      - name: Zip portable test build
+        shell: pwsh
+        run: |
+          if (-not (Test-Path release/win-unpacked/MaptehotLaHatzlaha.exe)) { throw "Portable executable not produced" }
+          Compress-Archive -Path release/win-unpacked/* -DestinationPath release/MK-Receipt-Pro-Student-Module-Test-Windows.zip -CompressionLevel Optimal
+      - name: Upload portable test build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: MK-Receipt-Pro-Student-Module-Test-Windows
+          path: apps/windows/release/MK-Receipt-Pro-Student-Module-Test-Windows.zip
+          if-no-files-found: error
+          retention-days: 7
