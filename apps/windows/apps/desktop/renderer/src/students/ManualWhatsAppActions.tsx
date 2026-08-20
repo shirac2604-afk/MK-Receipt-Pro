@@ -20,9 +20,10 @@ function draftFor(item: LessonCalendarItem): { phone: string; message: string } 
 export function ManualWhatsAppActions({ item, onNotice, onError }: Props) {
   const draft = draftFor(item);
   if (!draft) return null;
+  const { phone, message } = draft;
   async function copy(): Promise<void> {
     try {
-      const result = await window.mkApi.reminders.copyManualWhatsApp(draft.message);
+      const result = await window.mkApi.reminders.copyManualWhatsApp(message);
       if (!result.success) throw new Error(result.error?.message || "לא ניתן להעתיק את התזכורת.");
       onNotice("נוסח התזכורת הועתק. אפשר להדביק אותו ב־WhatsApp Business.");
     } catch (error) {
@@ -31,7 +32,7 @@ export function ManualWhatsAppActions({ item, onNotice, onError }: Props) {
   }
   async function open(): Promise<void> {
     try {
-      const result = await window.mkApi.reminders.openManualWhatsApp(draft.phone, draft.message);
+      const result = await window.mkApi.reminders.openManualWhatsApp(phone, message);
       if (!result.success) throw new Error(result.error?.message || "לא ניתן לפתוח את WhatsApp.");
       onNotice("נפתחה שיחת WhatsApp עם נוסח מוכן. ההודעה לא נשלחה — יש לאשר שליחה ב־WhatsApp.");
     } catch (error) {
