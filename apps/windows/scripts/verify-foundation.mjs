@@ -27,14 +27,14 @@ if (pkg.build?.appId !== "il.co.mkreceipt.desktop") {
 
 const main = fs.readFileSync("apps/desktop/electron/main/main.ts", "utf8");
 const securityChecks = [
-  "nodeIntegration: false",
-  "contextIsolation: true",
-  "sandbox: true",
-  "webSecurity: true",
+  ["nodeIntegration", /nodeIntegration\s*:\s*false/],
+  ["contextIsolation", /contextIsolation\s*:\s*true/],
+  ["sandbox", /sandbox\s*:\s*true/],
+  ["webSecurity", /webSecurity\s*:\s*true/],
 ];
-for (const check of securityChecks) {
-  if (!main.includes(check)) {
-    console.error(`✗ חסרה הגדרת אבטחה: ${check}`);
+for (const [name, check] of securityChecks) {
+  if (!check.test(main)) {
+    console.error(`✗ חסרה הגדרת אבטחה: ${name}`);
     process.exit(1);
   }
 }

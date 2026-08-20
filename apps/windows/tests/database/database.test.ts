@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { DatabaseConnection } from "../../packages/database/src/DatabaseConnection";
+import { migrations } from "../../packages/database/src/migrations";
 import { BusinessSettingsRepository } from "../../packages/database/src/repositories/BusinessSettingsRepository";
 
 const temporaryDirectories: string[] = [];
@@ -20,12 +21,12 @@ afterEach(() => {
 });
 
 describe("Database Foundation", () => {
-  it("applies the initial migration and passes health check", () => {
+  it("applies every registered migration and passes health check", () => {
     const connection = createDatabase();
     const report = connection.healthCheck();
     expect(report.status).toBe("healthy");
-    expect(report.schemaVersion).toBe(1);
-    expect(report.appliedMigrations).toBe(1);
+    expect(report.schemaVersion).toBe(migrations.at(-1)?.version);
+    expect(report.appliedMigrations).toBe(migrations.length);
     expect(report.foreignKeysEnabled).toBe(true);
     connection.close();
   });
