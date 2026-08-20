@@ -18,6 +18,7 @@ const checks=[
  [calendar.includes("sendUpdates=none"),"calendar sync does not invite students"],
  [calendar.includes("sendOAuthPage")&&calendar.includes("this.writeTokens")&&calendar.includes("if(oauthResponse)sendOAuthPage(oauthResponse,200"),"OAuth success waits for secure token storage"],
  [calendar.includes("rememberError")&&calendar.includes("lastError"),"OAuth failures survive restart for diagnosis"],
+ [calendar.includes('const redirectUri=`http://127.0.0.1:${address.port}`')&&calendar.includes('if(url.pathname!=="/")'),"OAuth uses the documented root loopback redirect"],
  [lessons.includes("const refreshed=await window.mkApi.googleCalendar.getStatus().catch(()=>null)")&&lessons.includes("refreshed.data.lastError?\"\":fallback"),"failed OAuth refreshes the visible diagnostic"],
  [lessons.includes('code.slice("GOOGLE_TOKEN_EXCHANGE_FAILED:".length)')&&lessons.includes("קוד Google:"),"token exchange failures expose a safe Google diagnostic"],
 ];

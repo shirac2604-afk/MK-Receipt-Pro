@@ -51,9 +51,9 @@ export class GoogleCalendarService{
     server.once("error",onError);server.once("listening",onListening);server.listen(0,"127.0.0.1");
    });
    const address=server.address();if(!address||typeof address==="string")throw new Error("GOOGLE_OAUTH_LISTENER_FAILED");
-   const redirectUri=`http://127.0.0.1:${address.port}/oauth2callback`;
+   const redirectUri=`http://127.0.0.1:${address.port}`;
    const callback=new Promise<string>((resolve,reject)=>{
-    server.on("request",(req,res)=>{try{const url=new URL(req.url??"/",redirectUri);if(url.pathname!=="/oauth2callback"){res.writeHead(404);res.end();return;}if(url.searchParams.get("state")!==state)throw new Error("GOOGLE_OAUTH_STATE_MISMATCH");const oauthError=url.searchParams.get("error");if(oauthError)throw new Error(`GOOGLE_OAUTH_DENIED:${oauthError}`);const code=url.searchParams.get("code");if(!code)throw new Error("GOOGLE_OAUTH_CODE_MISSING");oauthResponse=res;resolve(code);}catch(error){sendOAuthPage(res,400,"החיבור לא הושלם");reject(error);}});
+    server.on("request",(req,res)=>{try{const url=new URL(req.url??"/",redirectUri);if(url.pathname!=="/"){res.writeHead(404);res.end();return;}if(url.searchParams.get("state")!==state)throw new Error("GOOGLE_OAUTH_STATE_MISMATCH");const oauthError=url.searchParams.get("error");if(oauthError)throw new Error(`GOOGLE_OAUTH_DENIED:${oauthError}`);const code=url.searchParams.get("code");if(!code)throw new Error("GOOGLE_OAUTH_CODE_MISSING");oauthResponse=res;resolve(code);}catch(error){sendOAuthPage(res,400,"החיבור לא הושלם");reject(error);}});
    });
    const url=new URL(AUTH_URL);url.searchParams.set("client_id",config.clientId);url.searchParams.set("redirect_uri",redirectUri);url.searchParams.set("response_type","code");url.searchParams.set("scope",SCOPE);url.searchParams.set("state",state);url.searchParams.set("code_challenge",challenge);url.searchParams.set("code_challenge_method","S256");url.searchParams.set("access_type","offline");url.searchParams.set("prompt","consent");
    await shell.openExternal(url.toString());
