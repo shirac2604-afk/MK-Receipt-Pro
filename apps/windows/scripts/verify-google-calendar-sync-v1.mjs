@@ -5,6 +5,7 @@ const main=read("apps/desktop/electron/main/main.ts");
 const handlers=read("apps/desktop/electron/ipc/googleCalendarHandlers.ts");
 const cloud=read("apps/desktop/electron/main/SupabaseCloudService.ts");
 const calendar=read("apps/desktop/electron/main/GoogleCalendarService.ts");
+const lessons=read("apps/desktop/renderer/src/students/LessonsScreen.tsx");
 
 const checks=[
  [main.includes("const listLessonsForGoogleCalendar=async"),"single lesson source"],
@@ -17,6 +18,7 @@ const checks=[
  [calendar.includes("sendUpdates=none"),"calendar sync does not invite students"],
  [calendar.includes("sendOAuthPage")&&calendar.includes("this.writeTokens")&&calendar.includes("if(oauthResponse)sendOAuthPage(oauthResponse,200"),"OAuth success waits for secure token storage"],
  [calendar.includes("rememberError")&&calendar.includes("lastError"),"OAuth failures survive restart for diagnosis"],
+ [lessons.includes("const refreshed=await window.mkApi.googleCalendar.getStatus().catch(()=>null)")&&lessons.includes("refreshed.data.lastError?\"\":fallback"),"failed OAuth refreshes the visible diagnostic"],
 ];
 
 let failed=0;
