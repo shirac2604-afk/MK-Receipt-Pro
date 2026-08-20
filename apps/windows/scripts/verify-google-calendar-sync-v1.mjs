@@ -15,6 +15,8 @@ const checks=[
  [!handlers.includes("LocalStudentTestStore"),"IPC no longer hard-codes test data"],
  [cloud.includes("async listLessonsForGoogleCalendar")&&cloud.includes('from("lessons")'),"cloud source lists real lessons"],
  [calendar.includes("sendUpdates=none"),"calendar sync does not invite students"],
+ [calendar.includes("sendOAuthPage")&&calendar.includes("this.writeTokens")&&calendar.includes("if(oauthResponse)sendOAuthPage(oauthResponse,200"),"OAuth success waits for secure token storage"],
+ [calendar.includes("rememberError")&&calendar.includes("lastError"),"OAuth failures survive restart for diagnosis"],
 ];
 
 let failed=0;
