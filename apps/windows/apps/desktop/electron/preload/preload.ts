@@ -9,7 +9,7 @@ export interface AboutInfo {productName:string;version:string;buildNumber:string
 export interface LessonParticipantUpdateResult {participant:LessonParticipantRecord;receipt:null|{id:string;receiptNumber:number;pdfCreated:boolean;pdfPath:string|null;warningCode:string|null};}
 export interface ReminderDispatchStatus {providerId:string;configured:boolean;running:boolean;}
 export interface ReminderDispatchSummary {providerId:string;configured:boolean;claimed:number;sent:number;failed:number;skipped:number;}
-export interface GoogleCalendarStatus {configured:boolean;connected:boolean;syncing:boolean;calendarId:string;lastSyncAt:string|null;lastError:string|null;}
+export interface GoogleCalendarStatus {configured:boolean;clientSecretConfigured:boolean;connected:boolean;syncing:boolean;calendarId:string;lastSyncAt:string|null;lastError:string|null;}
 export interface GoogleCalendarSyncResult {total:number;created:number;updated:number;deleted:number;failed:number;}
 const appInfo:AppInfo=Object.freeze({productName:"מפתחות להצלחה",foundationVersion:"1.1.0",platform:process.platform,apiVersion:"1.0"});
 const invoke=<T>(channel:string,payload?:unknown):Promise<ApiResult<T>>=>ipcRenderer.invoke(channel,payload);

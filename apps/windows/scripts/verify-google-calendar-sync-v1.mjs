@@ -3,6 +3,7 @@ import fs from "node:fs";
 const read=path=>fs.readFileSync(path,"utf8");
 const main=read("apps/desktop/electron/main/main.ts");
 const handlers=read("apps/desktop/electron/ipc/googleCalendarHandlers.ts");
+const preload=read("apps/desktop/electron/preload/preload.ts");
 const cloud=read("apps/desktop/electron/main/SupabaseCloudService.ts");
 const calendar=read("apps/desktop/electron/main/GoogleCalendarService.ts");
 const lessons=read("apps/desktop/renderer/src/students/LessonsScreen.tsx");
@@ -20,7 +21,7 @@ const checks=[
  [calendar.includes("rememberError")&&calendar.includes("lastError"),"OAuth failures survive restart for diagnosis"],
  [calendar.includes('const redirectUri=`http://127.0.0.1:${address.port}`')&&calendar.includes('if(url.pathname!=="/")'),"OAuth uses the documented root loopback redirect"],
  [calendar.includes("clientSecretPath")&&calendar.includes("safeStorage.encryptString(clientSecret)")&&calendar.includes("clientSecretConfigured"),"Client Secret is encrypted locally and never exposed in status"],
- [calendar.includes('body.set("client_secret",clientSecret)')&&handlers.includes("google-calendar:set-client-secret")&&lessons.includes("שמור Client Secret")&&lessons.includes("!googleStatus.clientSecretConfigured"),"token exchange supports a locally saved Client Secret"],
+ [calendar.includes('body.set("client_secret",clientSecret)')&&handlers.includes("google-calendar:set-client-secret")&&preload.includes("clientSecretConfigured")&&lessons.includes("שמור Client Secret")&&lessons.includes("!googleStatus.clientSecretConfigured"),"token exchange supports a locally saved Client Secret"],
  [lessons.includes("const refreshed=await window.mkApi.googleCalendar.getStatus().catch(()=>null)")&&lessons.includes("refreshed.data.lastError?\"\":fallback"),"failed OAuth refreshes the visible diagnostic"],
  [lessons.includes('code.slice("GOOGLE_TOKEN_EXCHANGE_FAILED:".length)')&&lessons.includes("קוד Google:"),"token exchange failures expose a safe Google diagnostic"],
 ];
