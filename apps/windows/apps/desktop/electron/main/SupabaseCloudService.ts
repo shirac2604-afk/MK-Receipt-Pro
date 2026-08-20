@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, validateSupabaseConfig } from "./SupabaseCloudConfig";
 import type { PaymentMethod, ReceiptRecord, ReceiptSearchFilters, ReceiptSearchResult, CustomerRecord, CustomerProfile, CustomerCreateInput, CustomerUpdateInput, CustomerDuplicateQuery, CustomerDuplicateMatch, ReceiptCoreStatus, DateRangeReport, AnnualReport, MonthlyReportRow, ExpenseInput, ExpenseUpdateInput, ExpenseSearchFilters, ExpenseRecord, ExpenseSummary, BusinessSettingsInput, BusinessSettingsRecord, CancelReceiptResult, SupabaseCloudDevice } from "../../../../packages/database/src/types";
+import type { LessonRecord } from "../../../../packages/database/src/studentTypes";
 
 export interface SupabaseCloudStatus {
   connected:boolean;
@@ -139,6 +140,21 @@ export class SupabaseCloudService {
     const {data,error}=await this.client.from("customers").select("id,display_name,phone,email,notes,created_at,updated_at").eq("business_id",businessId).eq("is_archived",false).order("display_name",{ascending:true});
     if(error)throw new Error(`CLOUD_CUSTOMERS_LIST_FAILED:${error.message}`);
     return (data??[]).map(row=>this.mapCustomer(row));
+  }
+
+  async listLessonsForGoogleCalendar(fromIso:string,toIso:string):Promise<LessonRecord[]>{
+    const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_LESSONS");
+    const from=new Date(fromIso),to=new Date(toIso);
+    if(Number.isNaN(from.getTime())||Number.isNaN(to.getTime())||to<=from)throw new Error("INVALID_LESSON_RANGE");
+    const {data,error}=await this.client.from("lessons").select("id,business_id,series_id,kind,student_id,group_id,title,starts_at,ends_at,status,lesson_summary,homework").eq("business_id",businessId).gte("starts_at",from.toISOString()).lt("starts_at",to.toISOString()).order("starts_at",{ascending:true});
+    if(error)throw new Error(`CLOUD_GOOGLE_CALENDAR_LESSONS_FAILED:${error.message}`);
+    return (data??[]).map((row:any):LessonRecord=>({
+      id:String(row.id),businessId:String(row.business_id),seriesId:row.series_id?String(row.series_id):null,
+      kind:row.kind==="group"?"group":"individual",studentId:row.student_id?String(row.student_id):null,groupId:row.group_id?String(row.group_id):null,
+      title:String(row.title??""),startsAt:String(row.starts_at),endsAt:String(row.ends_at),
+      status:row.status==="cancelled"?"cancelled":row.status==="completed"?"completed":"scheduled",
+      lessonSummary:row.lesson_summary?String(row.lesson_summary):null,homework:row.homework?String(row.homework):null
+    }));
   }
 
   async getCustomerProfile(customerId:string):Promise<CustomerProfile>{

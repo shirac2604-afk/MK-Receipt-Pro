@@ -35,6 +35,8 @@ jobs:
         run: npm run typecheck
       - name: Group lesson UI contract
         run: node scripts/verify-student-groups-v1.mjs
+      - name: Google Calendar sync contract
+        run: node scripts/verify-google-calendar-sync-v1.mjs
       - name: Build renderer and Electron
         run: npm run build
       - name: Build portable directory

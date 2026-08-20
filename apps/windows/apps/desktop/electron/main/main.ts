@@ -13,6 +13,7 @@ import { ReminderDispatchService } from "./ReminderDispatchService";
 import { LocalStudentTestStore } from "./LocalStudentTestStore";
 import { GoogleCalendarService } from "./GoogleCalendarService";
 import { STUDENT_TEST_MODE, SUPABASE_URL } from "./SupabaseCloudConfig";
+import type { LessonRecord } from "../../../../packages/database/src/studentTypes";
 
 app.setName("מפתחות להצלחה - TEST");
 const cleanUserDataPath=path.join(app.getPath("appData"),"MK-Receipt-Pro-Student-Test");
@@ -39,7 +40,8 @@ app.whenReady().then(async()=>{
  registerLessonHandlers(supabaseCloud,localStudentStore);
  registerGroupHandlers(supabaseCloud,localStudentStore);
  registerReminderHandlers(reminderDispatch);
- registerGoogleCalendarHandlers(googleCalendar,localStudentStore);
+ const listLessonsForGoogleCalendar=async(fromIso:string,toIso:string):Promise<LessonRecord[]>=>STUDENT_TEST_MODE?localStudentStore.listLessonsForSync(fromIso,toIso):supabaseCloud.listLessonsForGoogleCalendar(fromIso,toIso);
+ registerGoogleCalendarHandlers(googleCalendar,listLessonsForGoogleCalendar);
  if(!STUDENT_TEST_MODE){
   reminderTimer=setInterval(()=>{void reminderDispatch.dispatchDue().catch(error=>console.warn("[Reminder worker] dispatch failed",error));},60000);
   await cloudSync.initializeAndSync();
@@ -50,7 +52,7 @@ app.whenReady().then(async()=>{
   if(!status.connected||status.syncing)return;
   const from=new Date();from.setDate(from.getDate()-30);
   const to=new Date();to.setFullYear(to.getFullYear()+1);
-  const lessons=localStudentStore.listLessonsForSync(from.toISOString(),to.toISOString());
+  const lessons=await listLessonsForGoogleCalendar(from.toISOString(),to.toISOString());
   const snapshot=JSON.stringify(lessons.map(x=>[x.id,x.title,x.startsAt,x.endsAt,x.status,x.lessonSummary,x.homework]));
   if(snapshot===lastGoogleSnapshot)return;
   try{const result=await googleCalendar.syncLessons(lessons);if(result.failed===0)lastGoogleSnapshot=snapshot;}catch(error){console.warn("[Google Calendar] automatic sync failed",error);}
