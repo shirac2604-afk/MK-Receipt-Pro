@@ -3,7 +3,7 @@ name: Student Module Windows Production Build
 on:
   push:
     branches:
-      - feature/student-management-v1
+      - main
     paths:
       - apps/windows/**
       - supabase/functions/lesson-reminder-dispatch/**
@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  portable-windows-production:
+  windows-installer-production:
     runs-on: windows-latest
     defaults:
       run:
@@ -44,19 +44,23 @@ jobs:
         run: node scripts/verify-manual-whatsapp-v1.mjs
       - name: Student production safety contract
         run: node scripts/verify-student-production-release.mjs
-      - name: Build renderer and Electron
-        run: npm run build
-      - name: Build portable production directory
-        run: npx electron-builder --win dir --x64
-      - name: Zip guarded production build
+      - name: Build production Windows installer
+        run: npm run release:production:win
+      - name: Verify installer and write SHA-256
         shell: pwsh
         run: |
-          if (-not (Test-Path release/win-unpacked/MaptehotLaHatzlaha.exe)) { throw "Portable executable not produced" }
-          Compress-Archive -Path release/win-unpacked/* -DestinationPath release/MK-Receipt-Pro-Student-Module-Production-Windows.zip -CompressionLevel Optimal
-      - name: Upload guarded production build
+          $installer = Get-ChildItem -Path release -Filter "Maptehot-LaHatzlaha-*-Setup.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows installer was not produced" }
+          $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content -Encoding ascii release/SHA256SUMS.txt
+          Write-Host "Installer: $($installer.FullName)"
+          Write-Host "SHA256: $hash"
+      - name: Upload guarded production installer
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: MK-Receipt-Pro-Student-Module-Production-Windows
-          path: apps/windows/release/MK-Receipt-Pro-Student-Module-Production-Windows.zip
+          name: MK-Receipt-Pro-Windows-Production
+          path: |
+            apps/windows/release/Maptehot-LaHatzlaha-*-Setup.exe
+            apps/windows/release/SHA256SUMS.txt
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
