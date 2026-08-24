@@ -40,5 +40,7 @@ jobs:
             echo "Production Android build is blocked until EXPO_TOKEN is configured as a GitHub Actions secret."
             exit 1
           fi
+      - name: Initialize the MK Receipt Pro Expo project
+        run: npx eas-cli@22.2.0 init --account shirac --non-interactive
       - name: Submit signed Android APK build to Expo
         run: npx eas-cli@22.2.0 build --platform android --profile production-apk --non-interactive --no-wait
