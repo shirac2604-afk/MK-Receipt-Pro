@@ -3,10 +3,10 @@ const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 const appConfig=JSON.parse(fs.readFileSync("app.json","utf8"));
 const app=fs.readFileSync("App.tsx","utf8");
 const expo57=typeof pkg.dependencies?.expo==="string"&&/^\^?57\./.test(pkg.dependencies.expo.replace(/^~/,""));
-const production=pkg.version==="1.0.6"&&expo57&&pkg.dependencies?.["react-native"]==="0.86.2";
-const productionContext=appConfig.expo?.version==="1.0.6"&&appConfig.expo?.android?.versionCode===8;
+const production=pkg.version==="1.0.7"&&expo57&&pkg.dependencies?.["react-native"]==="0.86.2";
+const productionContext=appConfig.expo?.version==="1.0.7"&&appConfig.expo?.android?.versionCode===9;
 const checks=[
- [production&&productionContext,"Android 1.0.6 release context"],
+ [production&&productionContext,"Android 1.0.7 release context"],
  [pkg.dependencies?.["expo-status-bar"]==="~57.0.1","expo-status-bar declared for Expo SDK 57"],
  [app.includes('from "expo-status-bar"'),"StatusBar import covered by dependency"],
  [expo57,"Expo SDK 57"],

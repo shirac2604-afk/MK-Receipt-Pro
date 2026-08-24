@@ -188,6 +188,58 @@ grant execute on function issue_receipt_from_reservation(
   uuid,uuid,uuid,date,uuid,text,text,text,text,bigint,text,text
 ) to authenticated;
 
+-- Receipt PDFs may be linked only after an authorized user uploaded the
+-- expected object for that exact business and receipt.
+create or replace function public.link_receipt_pdf_storage_key(
+  p_business_id uuid,
+  p_receipt_id uuid,
+  p_pdf_storage_key text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+begin
+  if (select auth.uid()) is null
+     or not public.user_has_business_access(p_business_id) then
+    raise exception 'BUSINESS_ACCESS_DENIED';
+  end if;
+
+  if p_pdf_storage_key is null
+     or char_length(p_pdf_storage_key) > 1024
+     or p_pdf_storage_key !~ (
+       '^' || p_business_id::text || '/' || p_receipt_id::text ||
+       '/([0-9]+-)?receipt-[0-9]+[.]pdf$'
+     ) then
+    raise exception 'INVALID_RECEIPT_PDF_STORAGE_KEY';
+  end if;
+
+  if not exists (
+    select 1
+    from storage.objects o
+    where o.bucket_id = 'receipt-documents'
+      and o.name = p_pdf_storage_key
+  ) then
+    raise exception 'RECEIPT_PDF_OBJECT_NOT_FOUND';
+  end if;
+
+  update public.receipts r
+     set pdf_storage_key = p_pdf_storage_key,
+         updated_at = now()
+   where r.id = p_receipt_id
+     and r.business_id = p_business_id
+     and r.status = 'active';
+
+  if not found then
+    raise exception 'RECEIPT_NOT_ACTIVE_OR_NOT_FOUND';
+  end if;
+end;
+$$;
+
+revoke all on function public.link_receipt_pdf_storage_key(uuid, uuid, text) from public, anon;
+grant execute on function public.link_receipt_pdf_storage_key(uuid, uuid, text) to authenticated;
+
 -- Storage policies remain idempotent.
 drop policy if exists mk_receipt_documents_select on storage.objects;
 create policy mk_receipt_documents_select

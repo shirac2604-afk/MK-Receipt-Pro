@@ -59,13 +59,13 @@ export class ReceiptRepository{
   return mapReceipt(row);
  }
  async setPdfStorageKey(receiptId:string,storageKey:string):Promise<Receipt>{
-  const {data,error}=await supabase.from("receipts")
-    .update({pdf_storage_key:storageKey,updated_at:new Date().toISOString()})
-    .eq("business_id",this.businessId).eq("id",receiptId)
-    .select("*").single();
+  const {error}=await supabase.rpc("link_receipt_pdf_storage_key",{
+    p_business_id:this.businessId,
+    p_receipt_id:receiptId,
+    p_pdf_storage_key:storageKey
+  });
   if(error)throw error;
-  if(!data)throw new Error("PDF_STORAGE_KEY_UPDATE_EMPTY_RESPONSE");
-  return mapReceipt(data);
+  return this.getById(receiptId);
  }
  async cancel(receiptId:string,reason:string):Promise<Receipt>{
   const cleanReason=reason.trim();

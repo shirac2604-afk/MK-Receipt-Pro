@@ -87,7 +87,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['devices','customers','expenses','receipt_templates','receipt_sequences','receipt_number_reservations','receipts','sync_mutations']
+  foreach t in array array['devices','customers','expenses','receipt_templates','sync_mutations']
   loop
     execute format('drop policy if exists %I_select_member on %I',t,t);
     execute format(
@@ -108,6 +108,28 @@ begin
     );
   end loop;
 end $$;
+
+-- Financial receipt records are read-only through the Data API. Their state
+-- changes only through the narrowly-authorized RPCs below.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['receipt_sequences','receipt_number_reservations','receipts']
+  loop
+    execute format('drop policy if exists %I_select_member on %I',t,t);
+    execute format(
+      'create policy %I_select_member on %I for select to authenticated using (user_has_business_access(business_id))',
+      t,t
+    );
+    execute format('drop policy if exists %I_insert_member on %I',t,t);
+    execute format('drop policy if exists %I_update_member on %I',t,t);
+  end loop;
+end $$;
+
+revoke insert, update, delete on table receipt_sequences from anon, authenticated;
+revoke insert, update, delete on table receipt_number_reservations from anon, authenticated;
+revoke insert, update, delete on table receipts from anon, authenticated;
 
 -- Customers/expenses/templates may be deleted/archived by members if needed.
 drop policy if exists customers_delete_member on customers;

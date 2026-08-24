@@ -21,6 +21,8 @@ jobs:
         working-directory: apps/windows
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      CSC_LINK: ${{ secrets.CSC_LINK }}
+      CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -44,6 +46,12 @@ jobs:
         run: node scripts/verify-manual-whatsapp-v1.mjs
       - name: Student production safety contract
         run: node scripts/verify-student-production-release.mjs
+      - name: Require Windows code-signing credentials
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CSC_LINK) -or [string]::IsNullOrWhiteSpace($env:CSC_KEY_PASSWORD)) {
+            throw "Production installer signing is blocked until CSC_LINK and CSC_KEY_PASSWORD are configured as GitHub Actions secrets."
+          }
       - name: Build production Windows installer
         run: npm run release:production:win
       - name: Verify installer and write SHA-256
@@ -51,6 +59,8 @@ jobs:
         run: |
           $installer = Get-ChildItem -Path release -Filter "Maptehot-LaHatzlaha-*-Setup.exe" | Select-Object -First 1
           if (-not $installer) { throw "Windows installer was not produced" }
+          $signature = Get-AuthenticodeSignature -FilePath $installer.FullName
+          if ($signature.Status -ne "Valid" -or -not $signature.SignerCertificate) { throw "Windows installer is not Authenticode-signed with a valid certificate" }
           $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $($installer.Name)" | Set-Content -Encoding ascii release/SHA256SUMS.txt
           Write-Host "Installer: $($installer.FullName)"

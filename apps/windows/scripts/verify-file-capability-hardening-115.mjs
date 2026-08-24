@@ -4,7 +4,7 @@ const handlers=fs.readFileSync("apps/desktop/electron/ipc/databaseHandlers.ts","
 const security=fs.readFileSync("apps/desktop/electron/ipc/security.ts","utf8");
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 const checks=[
-  ["version",pkg.version==="1.1.5"],
+  ["version",pkg.version==="1.1.6"],
   ["exact packaged renderer",security.includes('path.join(app.getAppPath(), "dist", "index.html")')&&security.includes('return filePath === expectedIndex')],
   ["dev sender only unpackaged",security.includes('!app.isPackaged && url.origin === DEV_ORIGIN')],
   ["file size limit",handlers.includes('MAX_USER_FILE_BYTES = 10 * 1024 * 1024')],

@@ -22,6 +22,28 @@ interface BackupEnvelope {
 }
 
 const sha256=(value:Buffer|string)=>createHash("sha256").update(value).digest("hex");
+const MAX_BACKUP_COMPRESSED_BYTES=256*1024*1024;
+const MAX_BACKUP_FILES=5_000;
+const MAX_BACKUP_FILE_BYTES=100*1024*1024;
+const MAX_BACKUP_TOTAL_BYTES=1024*1024*1024;
+const allowedRoots=new Set(["database","receipts","legacy-receipts","branding","expenses"]);
+
+function validateArchivePath(raw:string):string{
+  if(typeof raw!=="string"||!raw||raw.includes("\0")||raw.includes("\\"))throw new Error("UNSAFE_ARCHIVE_PATH");
+  if(path.posix.isAbsolute(raw)||/^[A-Za-z]:/.test(raw))throw new Error("UNSAFE_ARCHIVE_PATH");
+  const normalized=path.posix.normalize(raw);
+  const parts=normalized.split("/");
+  if(normalized==="."||normalized.startsWith("../")||parts.some(part=>!part||part==="."||part==="..")||!allowedRoots.has(parts[0]??""))throw new Error("UNSAFE_ARCHIVE_PATH");
+  if(parts[0]==="database"&&(normalized!=="database/mk-receipt.sqlite"||parts.length!==2))throw new Error("UNSAFE_ARCHIVE_PATH");
+  return normalized;
+}
+
+function archiveDestination(targetRoot:string,archivePath:string):string{
+  const root=path.resolve(targetRoot);
+  const output=path.resolve(root,...archivePath.split("/"));
+  if(!output.startsWith(`${root}${path.sep}`))throw new Error("UNSAFE_ARCHIVE_PATH");
+  return output;
+}
 
 function walk(root:string, prefix:string):PackedFile[]{
   if(!fs.existsSync(root)) return [];
@@ -89,11 +111,22 @@ export class BackupService {
 
   inspect(filePath:string):BackupInspection{
     try{
+      const stat=fs.statSync(filePath);
+      if(!stat.isFile()||stat.size>MAX_BACKUP_COMPRESSED_BYTES)throw new Error("BACKUP_FILE_TOO_LARGE");
       const compressed=fs.readFileSync(filePath); const parsed=JSON.parse(gunzipSync(compressed).toString("utf8")) as BackupEnvelope;
       if(parsed.format!=="MK_RECEIPT_BACKUP"||parsed.formatVersion!==1||!Array.isArray(parsed.files)) throw new Error("INVALID_FORMAT");
+      if(parsed.files.length>MAX_BACKUP_FILES)throw new Error("BACKUP_TOO_MANY_FILES");
       const manifest=parsed.files.map(({path,size,sha256})=>({path,size,sha256}));
       if(sha256(JSON.stringify(manifest))!==parsed.manifestSha256) throw new Error("MANIFEST_MISMATCH");
-      for(const file of parsed.files){const content=Buffer.from(file.contentBase64,"base64");if(content.length!==file.size||sha256(content)!==file.sha256)throw new Error("HASH_MISMATCH");}
+      let totalBytes=0;
+      for(const file of parsed.files){
+        validateArchivePath(file.path);
+        if(!Number.isSafeInteger(file.size)||file.size<0||file.size>MAX_BACKUP_FILE_BYTES)throw new Error("BACKUP_FILE_TOO_LARGE");
+        const content=Buffer.from(file.contentBase64,"base64");
+        totalBytes+=content.length;
+        if(totalBytes>MAX_BACKUP_TOTAL_BYTES)throw new Error("BACKUP_TOTAL_TOO_LARGE");
+        if(content.length!==file.size||sha256(content)!==file.sha256)throw new Error("HASH_MISMATCH");
+      }
       return {valid:true,filePath,formatVersion:parsed.formatVersion,appVersion:parsed.appVersion,schemaVersion:parsed.schemaVersion,createdAt:parsed.createdAt,backupType:parsed.backupType,receiptCount:parsed.receiptCount,highestReceiptNumber:parsed.highestReceiptNumber,businessName:parsed.businessName,fileSize:compressed.length,errorCode:null};
     }catch(error){return {valid:false,filePath,formatVersion:null,appVersion:null,schemaVersion:null,createdAt:null,backupType:null,receiptCount:0,highestReceiptNumber:0,businessName:null,fileSize:fs.existsSync(filePath)?fs.statSync(filePath).size:0,errorCode:error instanceof Error?error.message:"INVALID_BACKUP"};}
   }
@@ -102,7 +135,7 @@ export class BackupService {
     const inspection=this.inspect(filePath); if(!inspection.valid) throw new Error("INVALID_BACKUP_FILE");
     const parsed=JSON.parse(gunzipSync(fs.readFileSync(filePath)).toString("utf8")) as BackupEnvelope;
     fs.rmSync(targetRoot,{recursive:true,force:true}); fs.mkdirSync(targetRoot,{recursive:true});
-    for(const file of parsed.files){const output=path.join(targetRoot,...file.path.split("/"));fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,Buffer.from(file.contentBase64,"base64"));}
+    for(const file of parsed.files){const output=archiveDestination(targetRoot,validateArchivePath(file.path));fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,Buffer.from(file.contentBase64,"base64"));}
     return inspection;
   }
 }

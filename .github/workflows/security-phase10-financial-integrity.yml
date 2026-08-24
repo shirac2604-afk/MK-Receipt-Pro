@@ -1,0 +1,33 @@
+name: Security Phase 10 Financial Integrity
+
+on:
+  pull_request:
+    paths:
+      - apps/android/cloud/sql/002_auth_rls.sql
+      - apps/android/cloud/sql/004_receipt_issuance.sql
+      - apps/android/src/data/supabase/ReceiptRepository.ts
+      - apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts
+      - supabase/migrations/20260823211133_security_phase10_receipt_write_boundary.sql
+      - scripts/verify-security-phase10.py
+      - .github/workflows/security-phase10-financial-integrity.yml
+  push:
+    branches: [main]
+    paths:
+      - apps/android/cloud/sql/002_auth_rls.sql
+      - apps/android/cloud/sql/004_receipt_issuance.sql
+      - apps/android/src/data/supabase/ReceiptRepository.ts
+      - apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts
+      - supabase/migrations/20260823211133_security_phase10_receipt_write_boundary.sql
+      - scripts/verify-security-phase10.py
+      - .github/workflows/security-phase10-financial-integrity.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify financial receipt write boundary
+        run: python3 scripts/verify-security-phase10.py

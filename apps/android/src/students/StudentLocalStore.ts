@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const KEY="@mk-receipt-pro/student-test-v1";
+const LEGACY_KEY="@mk-receipt-pro/student-test-v1";
 export type MobileAttendance="scheduled"|"attended"|"absent";
 export type MobilePayment="unpaid"|"paid";
 export type MobileStudent={id:string;displayName:string;phone:string;schoolGrade:string;guardianName:string;guardianPhone:string;focusNotes:string;defaultPriceAgorot:number;createdAt:string;updatedAt:string};
@@ -10,23 +10,18 @@ export type MobileLesson={id:string;seriesId:string|null;kind:"individual"|"grou
 type State={version:2;students:MobileStudent[];groups:MobileGroup[];lessons:MobileLesson[]};
 
 const empty=():State=>({version:2,students:[],groups:[],lessons:[]});
+let volatileState=empty();
 const id=(prefix:string)=>`${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,10)}`;
 const now=()=>new Date().toISOString();
 function asMoney(value:number){if(!Number.isInteger(value)||value<0||value>100_000_000)throw new Error("יש להזין מחיר תקין.");return value;}
-function normalizeV2(raw:any):State{return{version:2,students:raw.students.map((x:any)=>({...x,guardianName:x.guardianName??"",guardianPhone:x.guardianPhone??"",focusNotes:x.focusNotes??""})),groups:raw.groups.map((x:any)=>({...x,defaultPriceAgorot:Number(x.defaultPriceAgorot)||0})),lessons:raw.lessons.map((x:any)=>({...x,cancelled:Boolean(x.cancelled),lessonSummary:x.lessonSummary??"",homework:x.homework??"",participants:Array.isArray(x.participants)?x.participants:[]}))};}
-function migrate(raw:any):State{
- if(raw?.version===2&&Array.isArray(raw.students)&&Array.isArray(raw.groups)&&Array.isArray(raw.lessons))return normalizeV2(raw);
- if(raw?.version===1&&Array.isArray(raw.students)&&Array.isArray(raw.groups)&&Array.isArray(raw.lessons)){
-  const students:MobileStudent[]=raw.students.map((x:any)=>({...x,guardianName:"",guardianPhone:"",focusNotes:""}));
-  const groups:MobileGroup[]=raw.groups.map((x:any)=>({...x,defaultPriceAgorot:0}));
-  const groupMap=new Map(groups.map(x=>[x.id,x]));
-  const lessons:MobileLesson[]=raw.lessons.map((x:any)=>{const ids=x.kind==="group"?(groupMap.get(x.groupId)?.studentIds??[]):[x.studentId].filter(Boolean);return{id:x.id,seriesId:null,kind:x.kind,studentId:x.studentId??null,groupId:x.groupId??null,title:x.title,startsAt:x.startsAt,endsAt:x.endsAt,cancelled:false,lessonSummary:"",homework:"",participants:ids.map((studentId:string)=>({studentId,attendance:x.attendance??"scheduled",payment:x.payment??"unpaid",amountAgorot:Number(x.amountAgorot)||0,paidAt:x.payment==="paid"?x.updatedAt??now():null})),createdAt:x.createdAt??now(),updatedAt:x.updatedAt??now()};});
-  return{version:2,students,groups,lessons};
- }
- return empty();
+const clone=(state:State):State=>JSON.parse(JSON.stringify(state)) as State;
+async function read():Promise<State>{return clone(volatileState);}
+async function write(state:State){volatileState=clone(state);}
+
+export async function clearLegacyStudentTestData():Promise<void>{
+ volatileState=empty();
+ await AsyncStorage.removeItem(LEGACY_KEY);
 }
-async function read():Promise<State>{try{const raw=await AsyncStorage.getItem(KEY);if(!raw)return empty();return migrate(JSON.parse(raw));}catch{return empty();}}
-async function write(state:State){await AsyncStorage.setItem(KEY,JSON.stringify(state));}
 
 export const StudentLocalStore={
  async listStudents(){return (await read()).students.sort((a,b)=>a.displayName.localeCompare(b.displayName,"he"));},
@@ -51,5 +46,5 @@ export const StudentLocalStore={
  async cancelLesson(lessonId:string){const state=await read(),lesson=state.lessons.find(x=>x.id===lessonId);if(!lesson)throw new Error("השיעור לא נמצא.");lesson.cancelled=true;lesson.updatedAt=now();await write(state);return lesson;},
  async saveLessonNotes(lessonId:string,lessonSummary:string,homework:string){const state=await read(),lesson=state.lessons.find(x=>x.id===lessonId);if(!lesson)throw new Error("השיעור לא נמצא.");lesson.lessonSummary=lessonSummary.trim().slice(0,4000);lesson.homework=homework.trim().slice(0,4000);lesson.updatedAt=now();await write(state);return lesson;},
  async listOpenPayments(){const state=await read(),students=new Map(state.students.map(x=>[x.id,x]));return state.lessons.filter(lesson=>!lesson.cancelled).flatMap(lesson=>lesson.participants.filter(p=>p.attendance==="attended"&&p.payment==="unpaid"&&p.amountAgorot>0).map(participant=>({lesson,participant,student:students.get(participant.studentId)!}))).filter(x=>x.student).sort((a,b)=>a.lesson.startsAt.localeCompare(b.lesson.startsAt));},
- async reset(){await AsyncStorage.removeItem(KEY);}
+ async reset(){await clearLegacyStudentTestData();}
 };

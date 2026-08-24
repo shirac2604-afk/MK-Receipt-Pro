@@ -1,6 +1,6 @@
 {
   "name": "mk-receipt-pro",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "private": true,
   "description": "MK Receipt Pro — מערכת שולחנית לניהול קבלות, הוצאות, לקוחות, דיווחים וגיבוי לעוסק פטור",
   "main": "dist-electron/apps/desktop/electron/main/main.js",
@@ -30,7 +30,8 @@
     "check:reports": "node scripts/verify-reports.mjs",
     "test:reports-smoke": "node scripts/reports-smoke.mjs",
     "check:backups": "node scripts/verify-backups.mjs",
-    "test:backups-smoke": "node scripts/backups-smoke.mjs",
+    "test:backups-smoke": "node --experimental-transform-types scripts/backups-smoke.mjs",
+    "test:pin-rate-limit-smoke": "node --experimental-transform-types scripts/pin-rate-limit-smoke.mjs",
     "check:health": "node scripts/verify-health-security.mjs",
     "test:health-smoke": "node scripts/health-smoke.mjs",
     "check:polish": "node scripts/verify-dashboard-help.mjs",
@@ -110,13 +111,15 @@
     "check:final-parity": "node scripts/verify-final-parity-cloud35.mjs",
     "check:final-parity-fix": "node scripts/verify-final-parity-fix-351.mjs",
     "check:production-hardening": "node scripts/verify-production-hardening-v36.mjs",
-    "release:production:win": "npm run check:production-hardening && npm run check:sidebar-ui && npm run check:security-input && npm run check:customer-create && npm run check:intrusion-hardening && npm run check:device-management && npm run check:file-capability-hardening && npm run build && electron-builder --win nsis --x64",
+    "release:production:win": "npm run check:production-hardening && npm run check:sidebar-ui && npm run check:security-input && npm run check:customer-create && npm run check:intrusion-hardening && npm run check:device-management && npm run check:file-capability-hardening && npm run check:windows-signing-contract && npm run check:renderer-privacy-defaults && npm run test:backups-smoke && npm run test:pin-rate-limit-smoke && npm run build && electron-builder --win nsis --x64",
     "check:sidebar-ui": "node scripts/verify-sidebar-ui-rc12.mjs",
     "check:security-input": "node scripts/verify-security-input-hardening.mjs",
     "check:customer-create": "node scripts/verify-customer-create-112fix.mjs",
     "check:intrusion-hardening": "node scripts/verify-intrusion-hardening-113.mjs",
     "check:device-management": "node scripts/verify-device-management-114.mjs",
-    "check:file-capability-hardening": "node scripts/verify-file-capability-hardening-115.mjs"
+    "check:file-capability-hardening": "node scripts/verify-file-capability-hardening-115.mjs",
+    "check:windows-signing-contract": "node scripts/verify-windows-signing-contract.mjs",
+    "check:renderer-privacy-defaults": "node scripts/verify-renderer-privacy-defaults.mjs"
   },
   "dependencies": {
     "react": "19.1.0",

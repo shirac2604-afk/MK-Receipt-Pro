@@ -262,7 +262,7 @@ export class SupabaseCloudService {
     const storageKey=`${current.businessId}/${receiptId}/receipt-${receiptNumber}.pdf`;
     const {error:uploadError}=await this.client.storage.from("receipt-documents").upload(storageKey,bytes,{contentType:"application/pdf",upsert:true});
     if(uploadError)throw new Error(`CLOUD_RECEIPT_PDF_UPLOAD_FAILED:${uploadError.message}`);
-    const {error:updateError}=await this.client.from("receipts").update({pdf_storage_key:storageKey,updated_at:new Date().toISOString()}).eq("business_id",current.businessId).eq("id",receiptId);
+    const {error:updateError}=await this.client.rpc("link_receipt_pdf_storage_key",{p_business_id:current.businessId,p_receipt_id:receiptId,p_pdf_storage_key:storageKey});
     if(updateError)throw new Error(`CLOUD_RECEIPT_PDF_LINK_FAILED:${updateError.message}`);
     return storageKey;
   }

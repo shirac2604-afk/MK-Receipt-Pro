@@ -6,16 +6,23 @@ import type { BusinessSettingsInput, BusinessSettingsRecord, OnboardingStatus } 
 import type { BusinessSettingsRepository } from "../../database/src/repositories/BusinessSettingsRepository";
 
 function clean(value?: string): string | null { const result = value?.trim(); return result ? result : null; }
+const MAX_PIN_FAILURES=5;
+const PIN_LOCK_BASE_MS=30_000;
+const PIN_LOCK_MAX_MS=15*60_000;
 function hashPin(pin: string, saltHex?: string): { salt: string; hash: string } {
   const salt = saltHex ? Buffer.from(saltHex, "hex") : randomBytes(16);
   return { salt: salt.toString("hex"), hash: scryptSync(pin, salt, 32).toString("hex") };
 }
 
 export class SettingsService {
+  private failedPinAttempts=0;
+  private pinLockedUntil=0;
+
   constructor(
     private readonly connection: DatabaseConnection,
     private readonly repository: BusinessSettingsRepository,
     private readonly brandingFolder: string,
+    private readonly now: () => number = () => Date.now(),
   ) {}
 
   getStatus(): OnboardingStatus {
@@ -65,10 +72,35 @@ export class SettingsService {
 
   verifyPin(pin: string): boolean {
     const raw = this.repository.getPinCredentials();
-    if (!raw?.pinHash || !raw.pinSalt) return true;
+    if (!raw?.pinHash || !raw.pinSalt) {
+      this.resetPinAttempts();
+      return true;
+    }
+    const currentTime=this.now();
+    if(this.pinLockedUntil>currentTime)throw new Error("PIN_LOCKED");
+    if(!/^\d{4,8}$/.test(pin))return this.recordPinFailure(currentTime);
     const candidate = Buffer.from(hashPin(pin, raw.pinSalt).hash, "hex");
     const expected = Buffer.from(raw.pinHash, "hex");
-    return candidate.length === expected.length && timingSafeEqual(candidate, expected);
+    const matches=candidate.length === expected.length && timingSafeEqual(candidate, expected);
+    if(matches){
+      this.resetPinAttempts();
+      return true;
+    }
+    return this.recordPinFailure(currentTime);
+  }
+
+  private recordPinFailure(currentTime:number):false{
+    this.failedPinAttempts+=1;
+    if(this.failedPinAttempts>=MAX_PIN_FAILURES){
+      const exponent=Math.min(this.failedPinAttempts-MAX_PIN_FAILURES,5);
+      this.pinLockedUntil=currentTime+Math.min(PIN_LOCK_BASE_MS*(2**exponent),PIN_LOCK_MAX_MS);
+    }
+    return false;
+  }
+
+  private resetPinAttempts():void{
+    this.failedPinAttempts=0;
+    this.pinLockedUntil=0;
   }
 
   private validate(input: BusinessSettingsInput): void {

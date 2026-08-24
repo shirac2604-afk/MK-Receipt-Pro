@@ -7,7 +7,7 @@ import DashboardScreen from "../screens/DashboardScreen";
 import ReceiptsScreen from "../screens/ReceiptsScreen";
 import CustomersScreen from "../screens/CustomersScreen";
 import ExpensesScreen from "../screens/ExpensesScreen";
-import StudentHubScreen from "../screens/StudentHubScreen";
+import StudentDataProtectionScreen from "../screens/StudentDataProtectionScreen";
 import MoreScreen from "../screens/MoreScreen";
 import {theme} from "../theme/theme";
 
@@ -43,7 +43,7 @@ export default function AppNavigator(){
    <Tab.Screen name="ראשי" component={DashboardScreen}/>
    <Tab.Screen name="קבלות" component={ReceiptsScreen}/>
    <Tab.Screen name="לקוחות" component={CustomersScreen}/>
-   <Tab.Screen name="תלמידים" component={StudentHubScreen}/>
+   <Tab.Screen name="תלמידים" component={StudentDataProtectionScreen}/>
    <Tab.Screen name="הוצאות" component={ExpensesScreen}/>
    <Tab.Screen name="עוד" component={MoreScreen}/>
   </Tab.Navigator>
