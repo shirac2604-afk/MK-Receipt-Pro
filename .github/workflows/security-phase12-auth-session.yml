@@ -45,9 +45,6 @@ jobs:
 
   android-typecheck:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/android
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -57,14 +54,13 @@ jobs:
           cache-dependency-path: apps/android/package-lock.json
       - name: Install Android dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: apps/android
       - name: Type-check Android
         run: npm run check
+        working-directory: apps/android
 
   windows-typecheck:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/windows
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -74,5 +70,7 @@ jobs:
           cache-dependency-path: apps/windows/package-lock.json
       - name: Install Windows dependencies without lifecycle scripts
         run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: apps/windows
       - name: Type-check Windows
         run: npm run typecheck
+        working-directory: apps/windows
