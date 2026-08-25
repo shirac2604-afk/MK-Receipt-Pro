@@ -183,10 +183,13 @@ function errorResult(error: unknown): ApiResult<never> {
     const description=parts[2]||"";
     return apiFailure("DATABASE_OPERATION_FAILED", `Google דחתה את שלב קבלת ההרשאה. שגיאה: ${googleError}${description?` — ${description}`:""}${statusPart?` (HTTP ${statusPart})`:""}`, false);
   }
+  if (/^GOOGLE_DRIVE_[A-Z_]+_FAILED_403$/.test(code)) return apiFailure("DATABASE_OPERATION_FAILED", "Google אישרה את החשבון, אך Google Drive API אינו זמין לפרויקט OAuth הזה. יש להפעיל את Google Drive API באותו פרויקט Google Cloud ולנסות שוב.", false);
+  if (code === "GOOGLE_TOKEN_REFRESH_FAILED_400"||code === "GOOGLE_TOKEN_REFRESH_FAILED_401") return apiFailure("DATABASE_OPERATION_FAILED", "הרשאת Google Drive פגה או בוטלה. נתק את החיבור במחשב הזה והתחבר מחדש.", false);
   if (code.startsWith("GOOGLE_")) return apiFailure("DATABASE_OPERATION_FAILED", `פעולת Google Drive לא הושלמה. קוד: ${code}`, true);
   if (code === "CLOUD_CREDENTIALS_REQUIRED") return apiFailure("DATABASE_OPERATION_FAILED", "יש להזין אימייל וסיסמה לחשבון הענן.", false);
   if (code.startsWith("CLOUD_AUTH_FAILED:")) return apiFailure("DATABASE_OPERATION_FAILED", "ההתחברות לחשבון הענן נכשלה. בדוק אימייל וסיסמה.", false);
   if (code === "CLOUD_NO_BUSINESS_MEMBERSHIP") return apiFailure("DATABASE_OPERATION_FAILED", "החשבון מחובר אך אינו משויך לעסק בענן.", false);
+  if (code === "CLOUD_DEVICE_REVOKED") return apiFailure("DATABASE_OPERATION_FAILED", "המחשב הזה נותק מהעסק. כדי לחבר אותו מחדש יש להתחבר שוב עם אימייל וסיסמה.", false);
   if (code.startsWith("CLOUD_")) return apiFailure("DATABASE_OPERATION_FAILED", `פעולת הענן לא הושלמה: ${code}`, true);
 
   return apiFailure("DATABASE_OPERATION_FAILED", "לא הצלחנו להשלים את הפעולה. הנתונים הקיימים לא שונו.");

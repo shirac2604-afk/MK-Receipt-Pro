@@ -69,7 +69,7 @@ export class SupabaseCloudService {
   async initialize():Promise<void>{
     const {data,error}=await this.client.auth.getSession();
     if(error){this.status={...this.status,message:error.message};return;}
-    if(data.session)await this.refresh();
+    if(data.session)await this.refresh(false);
   }
 
   getStatus():SupabaseCloudStatus{return {...this.status};}
@@ -79,7 +79,7 @@ export class SupabaseCloudService {
     const {data,error}=await this.client.auth.signInWithPassword({email:email.trim().toLowerCase(),password});
     if(error)throw new Error(`CLOUD_AUTH_FAILED:${error.message}`);
     if(!data.user)throw new Error("CLOUD_AUTH_EMPTY_USER");
-    return this.refresh();
+    return this.refresh(true);
   }
 
   async signOut():Promise<SupabaseCloudStatus>{
@@ -89,7 +89,7 @@ export class SupabaseCloudService {
     return this.getStatus();
   }
 
-  async refresh():Promise<SupabaseCloudStatus>{
+  async refresh(allowDeviceReenroll=false):Promise<SupabaseCloudStatus>{
     const {data:userData,error:userError}=await this.client.auth.getUser();
     if(userError||!userData.user){
       this.status={connected:false,email:null,userId:null,businessId:null,businessName:null,deviceId:null,receipts:0,customers:0,expenses:0,message:userError?.message??"אין Session פעיל"};
@@ -106,7 +106,17 @@ export class SupabaseCloudService {
       .select("id,business_name").eq("id",businessId).single();
     if(businessError)throw new Error(`CLOUD_BUSINESS_PROFILE_FAILED:${businessError.message}`);
 
-    const deviceId=await this.ensureWindowsDevice(businessId);
+    let deviceId:string;
+    try{
+      deviceId=await this.ensureWindowsDevice(businessId,allowDeviceReenroll);
+    }catch(error){
+      if(error instanceof Error&&error.message.includes("CLOUD_DEVICE_REVOKED")){
+        await this.client.auth.signOut({scope:"local"}).catch(()=>{});
+        this.status={connected:false,email:null,userId:null,businessId:null,businessName:null,deviceId:null,receipts:0,customers:0,expenses:0,message:"המחשב נותק מהעסק. כדי לחבר אותו מחדש נדרשת התחברות עם סיסמה."};
+        return this.getStatus();
+      }
+      throw error;
+    }
     const [receipts,customers,expenses]=await Promise.all([
       this.count("receipts",businessId),this.count("customers",businessId),this.count("expenses",businessId)
     ]);
@@ -580,26 +590,48 @@ export class SupabaseCloudService {
     return count??0;
   }
 
+  private deviceKeyPath():string{return path.join(this.userDataPath,"cloud","windows-device.json");}
+
+  private saveDeviceKey(deviceKey:string):void{
+    const filePath=this.deviceKeyPath();
+    fs.mkdirSync(path.dirname(filePath),{recursive:true});
+    fs.writeFileSync(filePath,JSON.stringify({deviceKey},null,2),"utf8");
+  }
+
   private getOrCreateDeviceKey():string{
-    const filePath=path.join(this.userDataPath,"cloud","windows-device.json");
+    const filePath=this.deviceKeyPath();
     try{
       const parsed=JSON.parse(fs.readFileSync(filePath,"utf8")) as {deviceKey?:string};
       if(parsed.deviceKey)return parsed.deviceKey;
     }catch{}
     const deviceKey=crypto.randomUUID();
-    fs.mkdirSync(path.dirname(filePath),{recursive:true});
-    fs.writeFileSync(filePath,JSON.stringify({deviceKey},null,2),"utf8");
+    this.saveDeviceKey(deviceKey);
     return deviceKey;
   }
 
-  private async ensureWindowsDevice(businessId:string):Promise<string>{
+  private async registerWindowsDevice(businessId:string,deviceKey:string):Promise<string>{
     const {data,error}=await this.client.rpc("register_device",{
       p_business_id:businessId,
-      p_device_key:this.getOrCreateDeviceKey(),
+      p_device_key:deviceKey,
       p_platform:"windows",
       p_display_name:"מפתחות להצלחה Windows"
     });
-    if(error)throw new Error(`CLOUD_DEVICE_REGISTRATION_FAILED:${error.message}`);
+    if(error){
+      if(error.message.includes("DEVICE_REVOKED"))throw new Error("CLOUD_DEVICE_REVOKED");
+      throw new Error(`CLOUD_DEVICE_REGISTRATION_FAILED:${error.message}`);
+    }
     return String(data);
+  }
+
+  private async ensureWindowsDevice(businessId:string,allowDeviceReenroll:boolean):Promise<string>{
+    const deviceKey=this.getOrCreateDeviceKey();
+    try{return await this.registerWindowsDevice(businessId,deviceKey);}
+    catch(error){
+      if(!(error instanceof Error)||!error.message.includes("CLOUD_DEVICE_REVOKED")||!allowDeviceReenroll)throw error;
+      const replacementKey=crypto.randomUUID();
+      const deviceId=await this.registerWindowsDevice(businessId,replacementKey);
+      this.saveDeviceKey(replacementKey);
+      return deviceId;
+    }
   }
 }

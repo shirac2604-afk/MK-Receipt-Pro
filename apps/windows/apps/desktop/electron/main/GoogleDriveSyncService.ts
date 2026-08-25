@@ -50,6 +50,12 @@ export class GoogleDriveSyncService {
   private resolveClientId():string|null{
     const env=process.env.MK_GOOGLE_OAUTH_CLIENT_ID?.trim();
     if(env&&env.endsWith(".apps.googleusercontent.com"))return env;
+    try{
+      const calendarConfig=path.join(this.userDataPath,"student-module","google-calendar-config.json");
+      const parsed=JSON.parse(fs.readFileSync(calendarConfig,"utf8")) as {clientId?:string};
+      const configured=parsed.clientId?.trim();
+      if(configured&&configured.endsWith(".apps.googleusercontent.com"))return configured;
+    }catch{}
     const candidates=[
       path.join(this.resourcesPath,"google","oauth-client.json"),
       path.join(process.cwd(),"resources","google","oauth-client.json")
@@ -73,10 +79,13 @@ export class GoogleDriveSyncService {
     if(!normalized)throw new Error("GOOGLE_OAUTH_APP_NOT_CONFIGURED");
     if(!safeStorage.isEncryptionAvailable())throw new Error("SECURE_STORAGE_UNAVAILABLE");
     this.runtimeState="syncing";this.message="ממתין לאישור בחשבון Google";
+    let oauthServer:ReturnType<typeof http.createServer>|null=null;
+    try{
     const verifier=crypto.randomBytes(48).toString("base64url");
     const challenge=crypto.createHash("sha256").update(verifier).digest("base64url");
     const csrf=crypto.randomBytes(24).toString("base64url");
     const server=http.createServer();
+    oauthServer=server;
     await new Promise<void>((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",()=>resolve())});
     const port=(server.address() as AddressInfo).port;
     const redirectUri=`http://127.0.0.1:${port}/oauth2callback`;
@@ -129,8 +138,17 @@ export class GoogleDriveSyncService {
       await this.forcePush();
     }
     return this.getStatus();
+    }catch(error){
+      this.runtimeState="error";
+      this.message=error instanceof Error?error.message:"GOOGLE_DRIVE_CONNECT_FAILED";
+      throw error;
+    }finally{
+      if(oauthServer?.listening)oauthServer.close();
+    }
   }
   async disconnect():Promise<CloudSyncStatus>{
+    if(this.pushTimer){clearTimeout(this.pushTimer);this.pushTimer=null;}
+    if(this.running)await this.running.catch(()=>{});
     this.state=null;this.runtimeState="disconnected";this.message=null;
     try{fs.rmSync(this.statePath(),{force:true})}catch{}
     return this.getStatus();
@@ -138,7 +156,14 @@ export class GoogleDriveSyncService {
   schedulePush():void{
     if(!this.state)return;
     if(this.pushTimer)clearTimeout(this.pushTimer);
-    this.pushTimer=setTimeout(()=>{void this.syncNow()},1400);
+    this.pushTimer=setTimeout(()=>{
+      this.pushTimer=null;
+      void this.syncNow().catch(error=>{
+        if(!this.state)return;
+        this.runtimeState="error";
+        this.message=error instanceof Error?error.message:"GOOGLE_SYNC_FAILED";
+      });
+    },1400);
   }
   async initializeAndSync():Promise<void>{
     if(!this.state)return;
@@ -213,7 +238,7 @@ export class GoogleDriveSyncService {
   }
   private async accessToken():Promise<string>{
     if(!this.state)throw new Error("GOOGLE_DRIVE_NOT_CONNECTED");
-    const clientId=this.resolveClientId()??this.state.clientId;
+    const clientId=this.state.clientId;
     const body=new URLSearchParams({client_id:clientId,refresh_token:this.decryptRefreshToken(),grant_type:"refresh_token"});
     const res=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
     if(!res.ok)throw new Error(`GOOGLE_TOKEN_REFRESH_FAILED_${res.status}`);

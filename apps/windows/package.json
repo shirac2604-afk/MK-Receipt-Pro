@@ -111,7 +111,7 @@
     "check:final-parity": "node scripts/verify-final-parity-cloud35.mjs",
     "check:final-parity-fix": "node scripts/verify-final-parity-fix-351.mjs",
     "check:production-hardening": "node scripts/verify-production-hardening-v36.mjs",
-    "release:production:win": "npm run check:upgrade-identity && npm run check:device-revocation-integrity && npm run check:production-hardening && npm run check:sidebar-ui && npm run check:security-input && npm run check:customer-create && npm run check:intrusion-hardening && npm run check:device-management && npm run check:file-capability-hardening && npm run check:windows-signing-contract && npm run check:renderer-privacy-defaults && npm run test:backups-smoke && npm run test:pin-rate-limit-smoke && npm run build && electron-builder --win nsis --x64",
+    "release:production:win": "npm run check:upgrade-identity && npm run check:device-revocation-integrity && npm run check:production-hardening && npm run check:sidebar-ui && npm run check:security-input && npm run check:customer-create && npm run check:intrusion-hardening && npm run check:device-management && npm run check:google-drive-connection && npm run check:file-capability-hardening && npm run check:windows-signing-contract && npm run check:renderer-privacy-defaults && npm run test:backups-smoke && npm run test:pin-rate-limit-smoke && npm run build && electron-builder --win nsis --x64",
     "check:upgrade-identity": "node scripts/verify-upgrade-identity.mjs",
     "check:device-revocation-integrity": "node scripts/verify-device-revocation-integrity.mjs",
     "check:sidebar-ui": "node scripts/verify-sidebar-ui-rc12.mjs",
@@ -121,7 +121,8 @@
     "check:device-management": "node scripts/verify-device-management-114.mjs",
     "check:file-capability-hardening": "node scripts/verify-file-capability-hardening-115.mjs",
     "check:windows-signing-contract": "node scripts/verify-windows-signing-contract.mjs",
-    "check:renderer-privacy-defaults": "node scripts/verify-renderer-privacy-defaults.mjs"
+    "check:renderer-privacy-defaults": "node scripts/verify-renderer-privacy-defaults.mjs",
+    "check:google-drive-connection": "node scripts/verify-google-drive-connection-v116.mjs"
   },
   "dependencies": {
     "react": "19.1.0",

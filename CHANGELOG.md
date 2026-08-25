@@ -2,6 +2,21 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-25 — Google Drive connection and durable device disconnection
+
+- Google Drive uses the configured Google Calendar Desktop OAuth client ID before the packaged fallback.
+- OAuth remains a public-client PKCE flow; no Google client secret is copied into the Drive service.
+- Token refresh remains bound to the client ID that originally issued the refresh token.
+- Disconnecting Drive cancels queued sync work, waits for an active sync, and leaves Google Calendar connected.
+- Device removal now creates a revocation tombstone instead of deleting a row that the remote computer could recreate.
+- Revoked devices are hidden from the active-device list, cannot register again silently, and cannot reserve receipt numbers.
+- Windows checks for revocation every 30 seconds and signs out the revoked computer locally; reconnecting requires an explicit password sign-in.
+- Android and Windows sign-out now use local-session scope so disconnecting one device does not log out every device.
+- Direct insert/update/delete access to `devices` is denied; guarded RPCs own the lifecycle.
+- Supabase migration verified on `MK-Receipt-Pro-Phase9-Staging`.
+- Google Drive connection checks: 9/9; Windows device management checks: 16/16; Android device management checks: 10/10.
+
+
 ## 2026-08-25 — Device revocation preserves receipt history
 - ניתוק מכשיר אינו מוחק עוד את רשומת המכשיר, הזמנות מספרי קבלה או קבלות קיימות.
 - המכשיר מסומן כמנותק, ולכן אינו יכול להתחבר מחדש או לשמור מספרי קבלה חדשים.
