@@ -3,10 +3,11 @@ import {Alert,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-n
 import {useAuth} from "../context/AuthContext";
 import {theme} from "../theme/theme";
 import {testSupabaseConnection,type SupabaseDiagnostic} from "../services/SupabaseDiagnostics";
-import {MIN_NEW_PASSWORD_LENGTH,validateNewPassword,type NewPasswordValidationError} from "../auth/passwordPolicy";
+import {MAX_PASSWORD_LENGTH,MIN_NEW_PASSWORD_LENGTH,validateNewPassword,type NewPasswordValidationError} from "../auth/passwordPolicy";
 
 const passwordErrorMessages:Record<NewPasswordValidationError,string>={
   AUTH_PASSWORD_TOO_SHORT:`סיסמה חדשה חייבת להכיל לפחות ${MIN_NEW_PASSWORD_LENGTH} תווים.`,
+  AUTH_PASSWORD_TOO_LONG:`סיסמה חדשה יכולה להכיל עד ${MAX_PASSWORD_LENGTH} תווים.`,
   AUTH_PASSWORD_TOO_COMMON:"הסיסמה נפוצה מדי. יש לבחור סיסמה אחרת.",
   AUTH_PASSWORD_CONTAINS_EMAIL:"אין להשתמש בשם האימייל כחלק מהסיסמה."
 };
