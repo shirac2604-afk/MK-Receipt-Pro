@@ -1,0 +1,32 @@
+name: Security Phase 11 RPC Surface
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - supabase/migrations/**
+      - apps/android/src/**
+      - apps/windows/apps/**
+      - scripts/verify-security-phase11.py
+      - .github/workflows/security-phase11-rpc-surface.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - supabase/migrations/**
+      - apps/android/src/**
+      - apps/windows/apps/**
+      - scripts/verify-security-phase11.py
+      - .github/workflows/security-phase11-rpc-surface.yml
+
+permissions:
+  contents: read
+
+jobs:
+  rpc-surface-static-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify privileged RPC exposure policy
+        run: python3 scripts/verify-security-phase11.py
