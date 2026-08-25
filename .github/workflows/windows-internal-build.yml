@@ -1,0 +1,68 @@
+name: Windows Internal Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-internal-installer:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    env:
+      # This workflow is deliberately for controlled internal testing only.
+      # The production workflow remains the only route for a signed installer.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.13.1"
+      - name: Select guarded production cloud configuration
+        shell: pwsh
+        run: |
+          Copy-Item apps/desktop/electron/main/SupabaseCloudConfig.production.ts apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_TEST_MODE=false' -Quiet)) { throw "Production mode is missing" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_RECEIPTS_ENABLED=false' -Quiet)) { throw "Receipt isolation is missing" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'REMINDER_AUTO_DISPATCH_ENABLED=false' -Quiet)) { throw "Automatic reminder delivery must remain disabled" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'noimclnzzuxcszdotmby.supabase.co' -Quiet)) { throw "Production cloud is missing" }
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Google Calendar sync contract
+        run: node scripts/verify-google-calendar-sync-v1.mjs
+      - name: Manual WhatsApp contract
+        run: node scripts/verify-manual-whatsapp-v1.mjs
+      - name: Student production safety contract
+        run: node scripts/verify-student-production-release.mjs
+      - name: Build internal Windows installer
+        run: npm run release:production:win
+      - name: Verify installer and write SHA-256
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path release -Filter "Maptehot-LaHatzlaha-*-Setup.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows installer was not produced" }
+          $signature = Get-AuthenticodeSignature -FilePath $installer.FullName
+          if ($signature.Status -eq "Valid") { throw "Internal build must not be published as a signed production installer" }
+          $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content -Encoding ascii release/SHA256SUMS.txt
+          @(
+            "INTERNAL TEST BUILD — NOT FOR PUBLIC DISTRIBUTION",
+            "This installer is intentionally unsigned.",
+            "Install only on devices you control and obtain it only from this GitHub Actions artifact.",
+            "SHA-256: $hash"
+          ) | Set-Content -Encoding utf8 release/INTERNAL-BUILD-NOTICE.txt
+      - name: Upload internal installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: MK-Receipt-Pro-Windows-Internal
+          path: |
+            apps/windows/release/Maptehot-LaHatzlaha-*-Setup.exe
+            apps/windows/release/SHA256SUMS.txt
+            apps/windows/release/INTERNAL-BUILD-NOTICE.txt
+          if-no-files-found: error
+          retention-days: 7
