@@ -1,13 +1,6 @@
 name: Student Module Windows Production Build
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - apps/windows/**
-      - supabase/functions/lesson-reminder-dispatch/**
-      - .github/workflows/student-module-windows-production-build.yml
   workflow_dispatch:
 
 permissions:

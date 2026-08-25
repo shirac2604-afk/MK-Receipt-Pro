@@ -2,13 +2,6 @@ name: Windows Internal Build
 
 on:
   workflow_dispatch:
-  # Starts the first internal build when this guarded workflow is published.
-  # Subsequent builds remain manual.
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/windows-internal-build.yml
 
 permissions:
   contents: read
