@@ -7,6 +7,18 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, validateSupabaseConfig } from "
 import type { PaymentMethod, ReceiptRecord, ReceiptSearchFilters, ReceiptSearchResult, CustomerRecord, CustomerProfile, CustomerCreateInput, CustomerUpdateInput, CustomerDuplicateQuery, CustomerDuplicateMatch, ReceiptCoreStatus, DateRangeReport, AnnualReport, MonthlyReportRow, ExpenseInput, ExpenseUpdateInput, ExpenseSearchFilters, ExpenseRecord, ExpenseSummary, BusinessSettingsInput, BusinessSettingsRecord, CancelReceiptResult, SupabaseCloudDevice } from "../../../../packages/database/src/types";
 import type { LessonRecord } from "../../../../packages/database/src/studentTypes";
 
+const MAX_CLOUD_EXPENSE_ATTACHMENT_BYTES=10*1024*1024;
+type VerifiedExpenseAttachmentExtension=".pdf"|".png"|".jpg"|".webp";
+
+function verifyCloudExpenseAttachment(bytes:Buffer):VerifiedExpenseAttachmentExtension{
+  if(bytes.length<=0||bytes.length>MAX_CLOUD_EXPENSE_ATTACHMENT_BYTES)throw new Error("CLOUD_EXPENSE_ATTACHMENT_INVALID");
+  if(bytes.length>=5&&bytes.subarray(0,5).toString("ascii")==="%PDF-")return ".pdf";
+  if(bytes.length>=8&&bytes.subarray(0,8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])))return ".png";
+  if(bytes.length>=3&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff)return ".jpg";
+  if(bytes.length>=12&&bytes.subarray(0,4).toString("ascii")==="RIFF"&&bytes.subarray(8,12).toString("ascii")==="WEBP")return ".webp";
+  throw new Error("CLOUD_EXPENSE_ATTACHMENT_INVALID");
+}
+
 export interface SupabaseCloudStatus {
   connected:boolean;
   email:string|null;
@@ -52,6 +64,8 @@ export class SupabaseCloudService {
   private readonly client:SupabaseClient;
   private readonly userDataPath:string;
   private status:SupabaseCloudStatus={connected:false,email:null,userId:null,businessId:null,businessName:null,deviceId:null,receipts:0,customers:0,expenses:0,message:"לא מחובר לענן המשותף"};
+  private activeDeviceValidatedAt=0;
+  private activeDeviceCheck:Promise<void>|null=null;
 
   constructor(userDataPath:string){
     validateSupabaseConfig();
@@ -85,6 +99,7 @@ export class SupabaseCloudService {
   async signOut():Promise<SupabaseCloudStatus>{
     const {error}=await this.client.auth.signOut({scope:"local"});
     if(error)throw new Error(`CLOUD_SIGNOUT_FAILED:${error.message}`);
+    this.activeDeviceValidatedAt=0;
     this.status={connected:false,email:null,userId:null,businessId:null,businessName:null,deviceId:null,receipts:0,customers:0,expenses:0,message:"החשבון נותק מהמחשב הזה"};
     return this.getStatus();
   }
@@ -131,10 +146,31 @@ export class SupabaseCloudService {
       receipts,customers,expenses,
       message:"Windows מחובר לאותו עסק בענן של Android"
     };
+    this.activeDeviceValidatedAt=Date.now();
     return this.getStatus();
   }
 
   getClient():SupabaseClient{return this.client;}
+
+  async assertCurrentDeviceActive(maxAgeMs=10000):Promise<void>{
+    const current=this.status;
+    if(!current.connected||!current.businessId||!current.deviceId)return;
+    if(maxAgeMs>0&&Date.now()-this.activeDeviceValidatedAt<maxAgeMs)return;
+    if(this.activeDeviceCheck)return this.activeDeviceCheck;
+    const check=this.verifyCurrentDeviceActive(current.businessId,current.deviceId);
+    this.activeDeviceCheck=check;
+    try{await check;}finally{if(this.activeDeviceCheck===check)this.activeDeviceCheck=null;}
+  }
+
+  private async verifyCurrentDeviceActive(businessId:string,deviceId:string):Promise<void>{
+    const {data,error}=await this.client.from("devices").select("id").eq("business_id",businessId).eq("id",deviceId).is("revoked_at",null).maybeSingle();
+    if(error)throw new Error(`CLOUD_DEVICE_STATUS_CHECK_FAILED:${error.message}`);
+    if(data?.id){this.activeDeviceValidatedAt=Date.now();return;}
+    await this.client.auth.signOut({scope:"local"}).catch(()=>{});
+    this.activeDeviceValidatedAt=0;
+    this.status={connected:false,email:null,userId:null,businessId:null,businessName:null,deviceId:null,receipts:0,customers:0,expenses:0,message:"המחשב נותק מהעסק. כדי לחבר אותו מחדש נדרשת התחברות עם סיסמה."};
+    throw new Error("CLOUD_DEVICE_REVOKED");
+  }
 
   private requireBusinessId(message="CLOUD_CONNECTION_REQUIRED"):string{
     if(!this.status.connected||!this.status.businessId)throw new Error(message);
@@ -146,6 +182,7 @@ export class SupabaseCloudService {
   }
 
   async listCustomers():Promise<CustomerRecord[]>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_CUSTOMERS");
     const {data,error}=await this.client.from("customers").select("id,display_name,phone,email,notes,created_at,updated_at").eq("business_id",businessId).eq("is_archived",false).order("display_name",{ascending:true});
     if(error)throw new Error(`CLOUD_CUSTOMERS_LIST_FAILED:${error.message}`);
@@ -153,6 +190,7 @@ export class SupabaseCloudService {
   }
 
   async listLessonsForGoogleCalendar(fromIso:string,toIso:string):Promise<LessonRecord[]>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_LESSONS");
     const from=new Date(fromIso),to=new Date(toIso);
     if(Number.isNaN(from.getTime())||Number.isNaN(to.getTime())||to<=from)throw new Error("INVALID_LESSON_RANGE");
@@ -168,6 +206,7 @@ export class SupabaseCloudService {
   }
 
   async getCustomerProfile(customerId:string):Promise<CustomerProfile>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_CUSTOMERS");
     const {data:row,error}=await this.client.from("customers").select("id,display_name,phone,email,notes,created_at,updated_at").eq("business_id",businessId).eq("id",customerId).eq("is_archived",false).single();
     if(error||!row)throw new Error(`CLOUD_CUSTOMER_LOOKUP_FAILED:${error?.message??"NOT_FOUND"}`);
@@ -205,6 +244,7 @@ export class SupabaseCloudService {
   }
 
   async createCustomer(input:CustomerCreateInput):Promise<CustomerRecord>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_CUSTOMERS");
     const displayName=input.displayName.trim();
     if(displayName.length<2||displayName.length>160)throw new Error("INVALID_CUSTOMER");
@@ -218,6 +258,7 @@ export class SupabaseCloudService {
   }
 
   async updateCustomer(input:CustomerUpdateInput):Promise<CustomerRecord>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_CUSTOMERS");
     const displayName=input.displayName.trim();
     if(!input.id.trim()||displayName.length<2)throw new Error("INVALID_CUSTOMER");
@@ -246,6 +287,7 @@ export class SupabaseCloudService {
   }
 
   async issueReceipt(input:CloudReceiptIssueInput):Promise<CloudReceiptIssueResult>{
+    await this.assertCurrentDeviceActive();
     const current=this.status;
     if(!current.connected||!current.businessId||!current.deviceId)throw new Error("CLOUD_CONNECTION_REQUIRED_FOR_RECEIPT");
     const customerId=await this.ensureCustomerForReceipt(input);
@@ -266,6 +308,7 @@ export class SupabaseCloudService {
   }
 
   async uploadReceiptPdf(receiptId:string,receiptNumber:number,pdfPath:string):Promise<string>{
+    await this.assertCurrentDeviceActive();
     const current=this.status;
     if(!current.connected||!current.businessId)throw new Error("CLOUD_CONNECTION_REQUIRED_FOR_PDF");
     const bytes=fs.readFileSync(pdfPath);
@@ -302,6 +345,7 @@ export class SupabaseCloudService {
   }
 
   async searchReceipts(filters:ReceiptSearchFilters):Promise<ReceiptSearchResult>{
+    await this.assertCurrentDeviceActive();
     const current=this.status;
     if(!current.connected||!current.businessId)throw new Error("CLOUD_CONNECTION_REQUIRED_FOR_HISTORY");
     let query=this.client.from("receipts")
@@ -333,6 +377,7 @@ export class SupabaseCloudService {
   }
 
   async getReceiptCoreStatus():Promise<ReceiptCoreStatus>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_DASHBOARD");
     const [{count,error:countError},{data:sequence,error:sequenceError},{data:latest,error:latestError}]=await Promise.all([
       this.client.from("receipts").select("id",{count:"exact",head:true}).eq("business_id",businessId),
@@ -346,6 +391,7 @@ export class SupabaseCloudService {
   }
 
   async getRangeReport(filters:{fromDate?:string;toDate?:string}):Promise<DateRangeReport>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_REPORTS");
     let query=this.client.from("receipts").select("payment_date,amount_agorot,status").eq("business_id",businessId);
     if(filters.fromDate)query=query.gte("payment_date",filters.fromDate);
@@ -366,6 +412,7 @@ export class SupabaseCloudService {
   }
 
   async getAnnualReport(year:number):Promise<AnnualReport>{
+    await this.assertCurrentDeviceActive();
     const range=await this.getRangeReport({fromDate:`${year}-01-01`,toDate:`${year}-12-31`});
     const byMonth=new Map(range.months.map(item=>[item.month,item]));
     const months:Array<MonthlyReportRow>=Array.from({length:12},(_,index)=>{const month=`${year}-${String(index+1).padStart(2,"0")}`;return byMonth.get(month)??{month,incomeAgorot:0,activeReceiptCount:0,cancelledReceiptCount:0};});
@@ -373,6 +420,7 @@ export class SupabaseCloudService {
   }
 
   async getReceiptById(receiptId:string):Promise<ReceiptRecord>{
+    await this.assertCurrentDeviceActive();
     const current=this.status;
     if(!current.connected||!current.businessId)throw new Error("CLOUD_CONNECTION_REQUIRED_FOR_HISTORY");
     const {data,error}=await this.client.from("receipts")
@@ -384,6 +432,7 @@ export class SupabaseCloudService {
 
 
   async cancelReceipt(receiptId:string,reason:string):Promise<CancelReceiptResult>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_CANCELLATION");
     const cleanReason=reason.trim();
     if(!receiptId.trim()||cleanReason.length<5)throw new Error("INVALID_CANCELLATION_REASON");
@@ -396,6 +445,7 @@ export class SupabaseCloudService {
   }
 
   async getReceiptPdfUrl(receiptId:string,kind:"original"|"cancellation"="original"):Promise<string>{
+    await this.assertCurrentDeviceActive();
     const receipt=await this.getReceiptById(receiptId);
     const key=kind==="cancellation"?receipt.cancellationPdfPath:receipt.originalPdfPath;
     if(!key)throw new Error("PDF_NOT_FOUND");
@@ -405,6 +455,7 @@ export class SupabaseCloudService {
   }
 
   async downloadReceiptPdf(receiptId:string):Promise<{receipt:ReceiptRecord;filePath:string}>{
+    await this.assertCurrentDeviceActive();
     const receipt=await this.getReceiptById(receiptId);
     if(!receipt.originalPdfPath)throw new Error("PDF_NOT_FOUND");
     const {data,error}=await this.client.storage.from("receipt-documents").download(receipt.originalPdfPath);
@@ -428,6 +479,7 @@ export class SupabaseCloudService {
   }
 
   async listExpenses(filters:ExpenseSearchFilters={}):Promise<ExpenseSummary>{
+    await this.assertCurrentDeviceActive();
     const current=this.requireConnected();
     let query=this.client.from("expenses").select("*").eq("business_id",current.businessId);
     if(filters.fromDate)query=query.gte("expense_date",filters.fromDate);
@@ -443,6 +495,7 @@ export class SupabaseCloudService {
   }
 
   async addExpense(input:ExpenseInput):Promise<ExpenseRecord>{
+    await this.assertCurrentDeviceActive();
     const current=this.requireConnected();
     const supplier=input.supplierName.trim(),category=input.category.trim();
     if(!supplier||!input.expenseDate||!category||!Number.isInteger(input.amountAgorot)||input.amountAgorot<=0)throw new Error("INVALID_EXPENSE_INPUT");
@@ -457,6 +510,7 @@ export class SupabaseCloudService {
   }
 
   async updateExpense(input:ExpenseUpdateInput):Promise<ExpenseRecord>{
+    await this.assertCurrentDeviceActive();
     const current=this.requireConnected();
     const supplier=input.supplierName.trim(),category=input.category.trim();
     if(!input.id||!supplier||!input.expenseDate||!category||!Number.isInteger(input.amountAgorot)||input.amountAgorot<=0)throw new Error("INVALID_EXPENSE_INPUT");
@@ -473,6 +527,7 @@ export class SupabaseCloudService {
   }
 
   async deleteExpense(id:string):Promise<boolean>{
+    await this.assertCurrentDeviceActive();
     const current=this.requireConnected();
     const existing=await this.getExpense(id);
     if(existing.attachmentPath){const {error}=await this.client.storage.from("expense-attachments").remove([existing.attachmentPath]);if(error)console.warn("Cloud expense attachment delete failed",error);}
@@ -483,14 +538,24 @@ export class SupabaseCloudService {
   }
 
   async openExpenseAttachment(id:string):Promise<string>{
+    await this.assertCurrentDeviceActive();
     const expense=await this.getExpense(id);
     if(!expense.attachmentPath)throw new Error("EXPENSE_ATTACHMENT_NOT_FOUND");
     const {data,error}=await this.client.storage.from("expense-attachments").download(expense.attachmentPath);
     if(error||!data)throw new Error(`CLOUD_EXPENSE_ATTACHMENT_DOWNLOAD_FAILED:${error?.message??"empty"}`);
     const bytes=Buffer.from(await data.arrayBuffer());
-    const ext=path.extname(expense.attachmentOriginalName??expense.attachmentPath)||".bin";
-    const folder=path.join(this.userDataPath,"cloud-expenses");fs.mkdirSync(folder,{recursive:true});
-    const filePath=path.join(folder,`expense-${expense.id}${ext}`);fs.writeFileSync(filePath,bytes);return filePath;
+    const ext=verifyCloudExpenseAttachment(bytes);
+    const folder=path.join(this.userDataPath,"cloud-expenses");
+    fs.mkdirSync(folder,{recursive:true});
+    const filePath=path.join(folder,`expense-${crypto.randomUUID()}${ext}`);
+    const tempPath=path.join(folder,`.download-${crypto.randomUUID()}.tmp`);
+    try{
+      fs.writeFileSync(tempPath,bytes,{flag:"wx",mode:0o600});
+      fs.renameSync(tempPath,filePath);
+      return filePath;
+    }finally{
+      try{fs.rmSync(tempPath,{force:true});}catch{}
+    }
   }
 
   private async getExpense(id:string):Promise<ExpenseRecord>{
@@ -523,6 +588,7 @@ export class SupabaseCloudService {
 
 
   async getBusinessSettings(local:BusinessSettingsRecord|null):Promise<BusinessSettingsRecord|null>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_BUSINESS_PROFILE");
     const {data,error}=await this.client.from("businesses").select("*").eq("id",businessId).single();
     if(error)throw new Error(`CLOUD_BUSINESS_PROFILE_FAILED:${error.message}`);
@@ -553,6 +619,7 @@ export class SupabaseCloudService {
   }
 
   async saveBusinessSettings(input:BusinessSettingsInput):Promise<void>{
+    await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_BUSINESS_PROFILE");
     let logoStorageKey:string|null=null;
     if(input.logoPath&&fs.existsSync(input.logoPath)){
@@ -571,6 +638,7 @@ export class SupabaseCloudService {
   }
 
   async listDevices():Promise<SupabaseCloudDevice[]>{
+    await this.assertCurrentDeviceActive();
     const {businessId}=this.requireConnected();
     const {data,error}=await this.client.from("devices").select("id,platform,display_name,last_seen_at,created_at").eq("business_id",businessId).is("revoked_at",null).order("last_seen_at",{ascending:false});
     if(error)throw new Error(`CLOUD_DEVICE_LIST_FAILED:${error.message}`);
@@ -578,6 +646,7 @@ export class SupabaseCloudService {
   }
 
   async revokeDevice(targetDeviceId:string):Promise<void>{
+    await this.assertCurrentDeviceActive();
     const {businessId,deviceId}=this.requireConnected();
     if(!targetDeviceId||targetDeviceId===deviceId)throw new Error("CANNOT_REVOKE_CURRENT_DEVICE");
     const {error}=await this.client.rpc("revoke_device",{p_business_id:businessId,p_device_id:targetDeviceId,p_current_device_id:deviceId});

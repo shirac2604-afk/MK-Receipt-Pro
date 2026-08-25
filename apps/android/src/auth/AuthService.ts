@@ -1,4 +1,5 @@
 import {supabase} from "../lib/supabase";
+import {validateNewPassword} from "./passwordPolicy";
 
 export const AuthService={
   async signIn(email:string,password:string){
@@ -7,6 +8,8 @@ export const AuthService={
     return data.session;
   },
   async signUp(email:string,password:string){
+    const passwordError=validateNewPassword(email,password);
+    if(passwordError)throw new Error(passwordError);
     const {data,error}=await supabase.auth.signUp({email:email.trim().toLowerCase(),password});
     if(error)throw error;
     return data;

@@ -15,6 +15,9 @@
 - Phase 6 hardens Android image/content boundaries. Expense attachments and business logos are validated using a JPEG/PNG/WebP allowlist, decoded byte limits and file magic bytes before upload/use.
 - Phase 6 pins business-logo signed URLs to the trusted Supabase HTTPS host and storage signed-object path, rejects redirects, and validates the downloaded response MIME, decoded size and magic bytes.
 - Android auth remains URL-independent: `detectSessionInUrl:false`, SecureStore uses `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`, and the current Expo configuration exposes no custom `scheme` or Android `intentFilters` deep-link entry point.
+- Phase 12 separates registration password quality from sign-in compatibility. Android sign-up enforces an eight-character minimum plus basic offline common/email-derived password rejection, while existing sign-in passwords remain accepted for Supabase verification.
+- Phase 12 revalidates the active Windows device before sensitive cloud service operations and every 15 seconds in the Electron main process, clearing the local cloud session when the device was revoked.
+- Phase 12 treats cloud-downloaded expense attachments as untrusted: 10 MB limit, PDF/PNG/JPEG/WebP magic-byte validation, content-derived extension, atomic controlled-directory write and IPC revalidation before OS open.
 
 ## Windows local-file capability rule
 
@@ -44,4 +47,4 @@ Never commit service-role keys, secret keys, passwords, auth tokens, `.env` file
 
 ## Release rule
 
-Security-sensitive changes should pass the project security and regression checks before release packaging. Windows releases that touch file selection or file ingestion must also pass `npm run check:file-capability-hardening`. Android `npm run release:check` must include `verify:android-boundary-hardening` before release packaging.
+Security-sensitive changes should pass the project security and regression checks before release packaging. Windows releases that touch cloud sessions or file ingestion must pass `npm run check:cloud-session-hardening` and `npm run check:file-capability-hardening`. Android `npm run release:check` must include `verify:auth-password-policy` and `verify:android-boundary-hardening` before release packaging.
