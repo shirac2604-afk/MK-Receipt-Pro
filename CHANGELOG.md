@@ -2,6 +2,14 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-25 — Security Phase 12 / Auth and cloud session hardening
+
+- Android registration now uses an eight-character minimum, basic offline common-password checks and email-derived password rejection; existing sign-in compatibility is preserved.
+- Windows now revalidates the active device before sensitive cloud operations and through a 15-second main-process monitor, so remote revocation clears the local connected session outside the backup screen.
+- Cloud expense downloads now enforce a 10 MB limit, PDF/PNG/JPEG/WebP signatures, content-derived extensions, controlled atomic writes and a second IPC validation before Windows opens the file.
+- Added Phase 12 static verification and a dedicated GitHub Actions gate.
+- No Android/Windows build and no Supabase Production configuration change were performed in this source phase.
+
 ## 2026-08-25 — Google Drive connection and durable device disconnection
 
 - Google Drive uses the configured Google Calendar Desktop OAuth client ID before the packaged fallback.

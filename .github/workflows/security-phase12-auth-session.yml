@@ -1,0 +1,78 @@
+name: Security Phase 12 Auth and Session
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/android/src/auth/**
+      - apps/android/src/screens/AuthScreen.tsx
+      - apps/android/scripts/verify-auth-password-policy.mjs
+      - apps/android/package.json
+      - apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts
+      - apps/windows/apps/desktop/electron/main/main.ts
+      - apps/windows/apps/desktop/electron/ipc/databaseHandlers.ts
+      - apps/windows/scripts/verify-cloud-session-hardening.mjs
+      - apps/windows/package.json
+      - scripts/verify-security-phase12.py
+      - .github/workflows/security-phase12-auth-session.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - apps/android/src/auth/**
+      - apps/android/src/screens/AuthScreen.tsx
+      - apps/android/scripts/verify-auth-password-policy.mjs
+      - apps/android/package.json
+      - apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts
+      - apps/windows/apps/desktop/electron/main/main.ts
+      - apps/windows/apps/desktop/electron/ipc/databaseHandlers.ts
+      - apps/windows/scripts/verify-cloud-session-hardening.mjs
+      - apps/windows/package.json
+      - scripts/verify-security-phase12.py
+      - .github/workflows/security-phase12-auth-session.yml
+
+permissions:
+  contents: read
+
+jobs:
+  auth-session-static-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Verify Phase 12 controls
+        run: python3 scripts/verify-security-phase12.py
+
+  android-typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/android/package-lock.json
+      - name: Install Android dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Type-check Android
+        run: npm run check
+
+  windows-typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/windows/package-lock.json
+      - name: Install Windows dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Type-check Windows
+        run: npm run typecheck
