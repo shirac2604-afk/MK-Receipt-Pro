@@ -2,6 +2,17 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-25 — Security Phase 14 / Source and lockfile integrity
+
+- Restored complete Android and Windows npm lockfiles after both committed files were found to contain tool-output truncation markers and invalid JSON.
+- Aligned lockfile package metadata with Android `1.0.8` and Windows `1.1.7` while preserving the current direct dependency sets.
+- Added a repository-wide tracked JSON and truncation-marker verifier.
+- Added a dedicated Phase 14 workflow with exact `npm ci` installs and TypeScript checks for both applications.
+- Changed the existing Phase 8 supply-chain workflow from `npm install` to `npm ci`, preventing CI from silently repairing or rewriting damaged lockfiles.
+- Aligned four Android Expo SDK 57 packages to the compatible patch versions reported by `expo-doctor` and regenerated the lockfile on GitHub Actions.
+- Updated the student-reminder gate to validate the Expo Notifications SDK 57 version family instead of pinning a stale patch number.
+- No APK, Windows installer, Supabase setting or Production deployment was changed.
+
 ## 2026-08-25 — Security Phase 13 / Authenticated password change
 
 - Added a signed-in password-change flow to Android and Windows.

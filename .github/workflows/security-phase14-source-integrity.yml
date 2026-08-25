@@ -1,0 +1,60 @@
+name: Security Phase 14 Source Integrity
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.json"
+      - scripts/verify-source-integrity.py
+      - .github/workflows/security-phase14-source-integrity.yml
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "**/*.json"
+      - scripts/verify-source-integrity.py
+      - .github/workflows/security-phase14-source-integrity.yml
+
+permissions:
+  contents: read
+
+jobs:
+  source-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate tracked JSON and npm lock metadata
+        run: python3 scripts/verify-source-integrity.py
+
+  android-reproducible-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/android/package-lock.json
+      - name: Install Android exactly from package-lock
+        working-directory: apps/android
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Type-check Android
+        working-directory: apps/android
+        run: npm run check
+
+  windows-reproducible-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/windows/package-lock.json
+      - name: Install Windows exactly from package-lock
+        working-directory: apps/windows
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Type-check Windows
+        working-directory: apps/windows
+        run: npm run typecheck

@@ -68,8 +68,9 @@ MK-Receipt-Pro/
 - `.env.example` מכיל רק `YOUR_PROJECT` ו-`YOUR_PUBLISHABLE_KEY` placeholders.
 - GitHub Actions פעילים משתמשים ב-`actions/checkout` נעוץ ל-SHA `11d5960a326750d5838078e36cf38b85af677262` ולא ב-floating `@v4`.
 - **Windows production dependency audit: PASS / 0 vulnerabilities** ב-`npm audit --omit=dev --audit-level=high`. במהלך `npm install` קיימות אזהרות על dev/build transitive packages ישנים, אך production audit עבר 0.
-- **Android production dependency audit: FAIL — 18 vulnerabilities: 11 High, 7 Moderate.** הממצאים מגיעים בעיקר דרך Expo/Metro transitive dependencies כגון `image-size`, `postcss` ו-`uuid`. npm מציע `npm audit fix --force`, אך ההצעה קופצת ל-Expo 57 ולכן היא שינוי breaking ולא מבוצעת אוטומטית.
-- **אין להריץ `npm audit fix --force` על Android ללא branch, Expo compatibility migration, full release checks, EAS build והתקנה ידנית.**
+- **Android שודרג בצורה מבוקרת ל-Expo 57 ו-React Native 0.86.2.** השדרוג עבר Expo Doctor, release gate מלא, TypeScript, EAS APK ובדיקה ידנית. Gate האספקה מאפשר רק advisory IDs מתועדים של `image-size` וחוסם כל ממצא חדש או שינוי במדיניות.
+- **אין להריץ `npm audit fix --force` על Android.** ממצאים חדשים נבדקים בענף נפרד עם compatibility review, בדיקות מלאות ובדיקת מכשיר.
+- **שלמות lockfiles:** Android ו-Windows משתמשים ב-lockfiles מלאים ותקינים; Phase 14 מריץ JSON integrity ו-`npm ci` כדי למנוע תיקון שקט או שכתוב של dependency state ב-CI.
 
 ## Supabase — מצב Security
 - RLS פעיל ב-`businesses`, `business_members`, `customers`, `receipts`, `expenses`, `devices`, `receipt_sequences`, `receipt_number_reservations`.
@@ -100,7 +101,7 @@ MK-Receipt-Pro/
 - Device Management — 8/8
 - Android Boundary Hardening — 11/11
 - TypeScript — PASS
-- Supply-chain audit — **known dependency finding: 18 vulnerabilities (11 High, 7 Moderate)**; remediation pending controlled Expo upgrade investigation.
+- Supply-chain audit — **PASS תחת מדיניות advisory מתועדת**; Expo 57 פעיל, advisory IDs בלתי צפויים נכשלים, ונתיבי asset מושפעים חסומים ב-build gate.
 
 ## פקודות בדיקה
 ### Windows
@@ -141,11 +142,10 @@ npx eas-cli@latest build -p android --profile production-apk
 - לא מריצים dependency `--force` upgrade בלי branch ובדיקות מלאות.
 
 ## משימות פעילות — לפי סדר
-1. **Phase 8 Android dependency remediation:** לבדוק מסלול עדכון Expo/Metro בטוח שמסיר את High findings בלי לפגוע באפליקציה; לבצע רק ב-branch חדש, עם `release:check`, TypeScript, EAS APK build והתקנה ידנית.
-2. לבצע בדיקה ידנית של Windows 1.1.5-security.5: אסמכתה, החלפת אסמכתה, לוגו חדש ולוגו קיים; לאחר מכן build/install verification.
-3. לבצע ידנית Device Management ולנתק את Android שנרשם ב-9.8; לוודא count=3.
-4. כאשר קיימת אפשרות Staging ללא עלות מתאימה — לבצע Tenant Isolation A/B מלא. אין לבצע cross-tenant destructive test ב-Production.
-5. לאחר השלמת Security/Release readiness להכין Google Play AAB, Data Safety, Privacy Policy ו-Windows Production release.
+1. להשלים את Phase 14: lockfile integrity, exact `npm ci`, TypeScript ו-supply-chain CI.
+2. לבצע בדיקה ידנית של שינוי הסיסמה ב-Staging ב-Android וב-Windows לפני שינוי הגדרות Auth ב-Production.
+3. לתכנן שחזור סיסמה נפרד עם קוד/קישור מאומת, הגבלת ניסיונות ובדיקות lifecycle; אין להוסיף deep link לא מאומת.
+4. לאחר השלמת Security/Release readiness להכין Google Play AAB, Data Safety, Privacy Policy ו-Windows Production release.
 
 ## מסמכי המשך
 - `CHANGELOG.md` — היסטוריית שינויים.

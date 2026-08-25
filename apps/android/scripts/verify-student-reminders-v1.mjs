@@ -15,7 +15,7 @@ const checks=[
  [panel.includes('מצב בדיקה בלבד')&&panel.includes('אין WhatsApp, SMS או שליחה חיצונית'),"explicit simulation mode UI"],
  [panel.includes('היסטוריית תזכורות')&&panel.includes('נסה שוב'),"history and retry UI"],
  [hub.includes('ReminderSimulationPanel')&&hub.includes('students={students}'),"reminder panel wired to student hub"],
- [pkg.dependencies?.['expo-notifications']==='~57.0.13',"Expo Notifications SDK 57 dependency"],
+ [/^~57\.0\.\d+$/.test(pkg.dependencies?.['expo-notifications']??''),"Expo Notifications SDK 57 dependency"],
  [app.expo.plugins.some(x=>Array.isArray(x)&&x[0]==='expo-notifications'),"Expo Notifications config plugin"],
  [notifications.includes('scheduleNotificationAsync')&&notifications.includes('cancelScheduledNotificationAsync'),"local notification schedule and cancel paths"],
  [notifications.includes('requestPermissionsAsync')&&notifications.includes('setNotificationChannelAsync'),"notification permission and Android channel"],

@@ -20,6 +20,8 @@
 - Phase 12 treats cloud-downloaded expense attachments as untrusted: 10 MB limit, PDF/PNG/JPEG/WebP magic-byte validation, content-derived extension, atomic controlled-directory write and IPC revalidation before OS open.
 - Phase 13 adds authenticated password changes to Android and Windows. The clients verify the current password, require the reauthenticated user ID to match the active user, enforce the 8–128 character policy and only then call Supabase `updateUser`.
 - Windows password changes also require an immediate active-device validation. Electron exposes a typed IPC operation and maps authentication failures to fixed renderer-safe messages.
+- Phase 14 restores complete Android and Windows npm lockfiles after committed tool-output truncation made both files invalid JSON. A repository-wide integrity gate now rejects malformed tracked JSON, truncation markers and package/lock metadata drift.
+- Security and type-check workflows that validate dependency state use `npm ci`, so CI fails instead of silently regenerating a damaged lockfile.
 
 ## Windows local-file capability rule
 
@@ -54,3 +56,5 @@ Never commit service-role keys, secret keys, passwords, auth tokens, `.env` file
 Security-sensitive changes should pass the project security and regression checks before release packaging. Windows releases that touch cloud sessions or file ingestion must pass `npm run check:cloud-session-hardening` and `npm run check:file-capability-hardening`. Android `npm run release:check` must include `verify:auth-password-policy` and `verify:android-boundary-hardening` before release packaging.
 
 Password-management changes must also pass Android `npm run verify:password-change`, Windows `npm run check:password-change`, both TypeScript checks and the Phase 13 static gate before release packaging.
+
+Any dependency, package manifest or lockfile change must pass `python3 scripts/verify-source-integrity.py`, exact Android and Windows `npm ci` installs and the Phase 14 CI gate before release packaging.
