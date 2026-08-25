@@ -9,6 +9,7 @@
 - Added a repository-wide tracked JSON and truncation-marker verifier.
 - Added a dedicated Phase 14 workflow with exact `npm ci` installs and TypeScript checks for both applications.
 - Changed the existing Phase 8 supply-chain workflow from `npm install` to `npm ci`, preventing CI from silently repairing or rewriting damaged lockfiles.
+- Aligned four Android Expo SDK 57 packages to the compatible patch versions reported by `expo-doctor` and regenerated the lockfile on GitHub Actions.
 - No APK, Windows installer, Supabase setting or Production deployment was changed.
 
 ## 2026-08-25 — Security Phase 13 / Authenticated password change

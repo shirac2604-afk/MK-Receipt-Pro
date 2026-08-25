@@ -18,6 +18,7 @@ No application feature, Supabase configuration, installer, APK or Production dep
 ## Recovery evidence
 
 - Android lockfile restored from the last complete Git object and aligned to package version `1.0.8`.
+- Android Expo packages were aligned to the SDK 57-compatible patch versions reported by `expo-doctor`, and GitHub Actions regenerated the resulting lockfile.
 - Windows lockfile restored from the last complete Git object and aligned to package version `1.1.7`.
 - Direct dependencies and development dependencies match the current package manifests.
 - The Phase 14 static gate rejects the previously committed corrupted files.
