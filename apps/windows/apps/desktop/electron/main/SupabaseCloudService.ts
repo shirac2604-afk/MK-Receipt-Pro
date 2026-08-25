@@ -562,7 +562,7 @@ export class SupabaseCloudService {
 
   async listDevices():Promise<SupabaseCloudDevice[]>{
     const {businessId}=this.requireConnected();
-    const {data,error}=await this.client.from("devices").select("id,platform,display_name,last_seen_at,created_at").eq("business_id",businessId).order("last_seen_at",{ascending:false});
+    const {data,error}=await this.client.from("devices").select("id,platform,display_name,last_seen_at,created_at").eq("business_id",businessId).is("revoked_at",null).order("last_seen_at",{ascending:false});
     if(error)throw new Error(`CLOUD_DEVICE_LIST_FAILED:${error.message}`);
     return (data??[]).map((row:any)=>({id:String(row.id),platform:row.platform,displayName:row.display_name?String(row.display_name):null,lastSeenAt:String(row.last_seen_at),createdAt:String(row.created_at)}));
   }

@@ -9,7 +9,7 @@ const exactPackagedRenderer=sec.includes('path.join(app.getAppPath(), "dist", "i
 const configuredSupabaseUrl=cloudConfig.match(/SUPABASE_URL="([^"]+)"/)?.[1]??"";
 const configuredSupabaseHost=configuredSupabaseUrl?new URL(configuredSupabaseUrl).hostname.toLowerCase():"";
 const tests=[
- ["version",pkg.version==="1.1.6"],
+ ["version",/^\d+\.\d+\.\d+$/.test(pkg.version)],
  ["packaged build ignores dev server",main.includes('const devServerUrl=!app.isPackaged?process.env.VITE_DEV_SERVER_URL:undefined')&&main.includes('if(devServerUrl==="http://127.0.0.1:5173")')],
  ["production devtools disabled",main.includes('devTools:!app.isPackaged')],
  ["permissions denied",main.includes('setPermissionRequestHandler')&&main.includes('setPermissionCheckHandler')],

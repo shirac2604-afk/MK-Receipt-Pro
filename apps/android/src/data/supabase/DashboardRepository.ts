@@ -29,6 +29,7 @@ export async function getDashboardSnapshot(businessId:string):Promise<DashboardS
     supabase.from("devices")
       .select("id",{count:"exact",head:true})
       .eq("business_id",businessId)
+      .is("revoked_at",null)
   ]);
 
   if(receiptsResult.error)throw receiptsResult.error;

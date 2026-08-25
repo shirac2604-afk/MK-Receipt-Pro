@@ -45,6 +45,7 @@ export async function listBusinessDevices(businessId:string):Promise<CloudDevice
  const {data,error}=await supabase.from("devices")
    .select("id,platform,display_name,last_seen_at,created_at")
    .eq("business_id",businessId)
+   .is("revoked_at",null)
    .order("last_seen_at",{ascending:false});
  if(error)throw error;
  return (data??[]).map((row:any)=>({
@@ -63,4 +64,3 @@ export async function revokeBusinessDevice(businessId:string,deviceId:string,cur
  });
  if(error)throw error;
 }
-

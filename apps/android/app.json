@@ -2,7 +2,7 @@
   "expo": {
     "name": "MK Receipt Pro",
     "slug": "mk-receipt-pro-android",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "android": {

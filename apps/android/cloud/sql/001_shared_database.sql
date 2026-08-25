@@ -31,6 +31,7 @@ create table if not exists devices (
   display_name text,
   last_seen_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
+  revoked_at timestamptz,
   unique (business_id, device_key)
 );
 
@@ -124,6 +125,8 @@ create table if not exists receipts (
   unique (business_id, receipt_number)
 );
 create index if not exists receipts_business_number_idx on receipts(business_id, receipt_number desc);
+create index if not exists receipt_number_reservations_device_id_idx
+  on receipt_number_reservations(device_id);
 
 create table if not exists sync_mutations (
   mutation_id uuid primary key,

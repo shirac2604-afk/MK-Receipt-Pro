@@ -15,8 +15,8 @@ const pdfSvc=read("src/services/ReceiptPdfService.ts");
 
 const expo57=typeof pkg.dependencies.expo==="string"&&/^\^?57\./.test(pkg.dependencies.expo.replace(/^~/,""));
 const productionContext=
-  pkg.version==="1.0.7"&&
-  app.expo.version==="1.0.7"&&
+  /^\d+\.\d+\.\d+$/.test(pkg.version)&&
+  pkg.version===app.expo.version&&
   app.expo.android?.versionCode===9&&
   expo57&&
   pkg.dependencies["react-native"]==="0.86.2";

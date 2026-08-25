@@ -166,11 +166,15 @@ begin
     raise exception 'BUSINESS_ACCESS_DENIED';
   end if;
 
-  if not exists(
-    select 1 from devices
-    where id=p_device_id and business_id=p_business_id
-  ) then
-    raise exception 'DEVICE_NOT_REGISTERED';
+  perform 1
+  from devices d
+  where d.id=p_device_id
+    and d.business_id=p_business_id
+    and d.revoked_at is null
+  for key share;
+
+  if not found then
+    raise exception 'DEVICE_REVOKED_OR_NOT_REGISTERED';
   end if;
 
   insert into receipt_sequences(business_id,next_number,last_issued_number)
@@ -226,7 +230,20 @@ begin
   values(p_business_id,p_device_key,p_platform,p_display_name,now())
   on conflict(business_id,device_key)
   do update set last_seen_at=now(),display_name=excluded.display_name
+  where devices.revoked_at is null
   returning id into v_id;
+
+  if v_id is null then
+    if exists(
+      select 1 from devices d
+      where d.business_id=p_business_id
+        and d.device_key=p_device_key
+        and d.revoked_at is not null
+    ) then
+      raise exception 'DEVICE_REVOKED';
+    end if;
+    raise exception 'DEVICE_REGISTRATION_FAILED';
+  end if;
 
   return v_id;
 end;
@@ -234,3 +251,63 @@ $$;
 
 revoke all on function register_device(uuid,text,text,text) from public,anon;
 grant execute on function register_device(uuid,text,text,text) to authenticated;
+
+-- Preserve receipt history when an owner/admin revokes a device. The device is
+-- disabled instead of deleted because consumed reservations are linked to receipts.
+create or replace function revoke_device(
+  p_business_id uuid,
+  p_device_id uuid,
+  p_current_device_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_revoked_at timestamptz;
+begin
+  if (select auth.uid()) is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+
+  if not exists(
+    select 1 from business_members bm
+    where bm.business_id=p_business_id
+      and bm.user_id=(select auth.uid())
+      and bm.role in ('owner','admin')
+  ) then
+    raise exception 'ADMIN_REQUIRED';
+  end if;
+
+  if p_current_device_id is not null and p_device_id=p_current_device_id then
+    raise exception 'CANNOT_REVOKE_CURRENT_DEVICE';
+  end if;
+
+  select d.revoked_at into v_revoked_at
+  from devices d
+  where d.id=p_device_id and d.business_id=p_business_id
+  for update;
+
+  if not found then
+    raise exception 'DEVICE_NOT_FOUND';
+  end if;
+
+  if v_revoked_at is not null then
+    return;
+  end if;
+
+  update devices
+  set revoked_at=now()
+  where id=p_device_id and business_id=p_business_id;
+
+  update receipt_number_reservations
+  set status='cancelled'
+  where business_id=p_business_id
+    and device_id=p_device_id
+    and status='reserved';
+end;
+$$;
+
+revoke all on function revoke_device(uuid,uuid,uuid) from public,anon;
+grant execute on function revoke_device(uuid,uuid,uuid) to authenticated;

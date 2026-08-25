@@ -1,6 +1,6 @@
 {
   "name": "mk-receipt-pro",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "private": true,
   "description": "MK Receipt Pro — מערכת שולחנית לניהול קבלות, הוצאות, לקוחות, דיווחים וגיבוי לעוסק פטור",
   "main": "dist-electron/apps/desktop/electron/main/main.js",
@@ -111,7 +111,9 @@
     "check:final-parity": "node scripts/verify-final-parity-cloud35.mjs",
     "check:final-parity-fix": "node scripts/verify-final-parity-fix-351.mjs",
     "check:production-hardening": "node scripts/verify-production-hardening-v36.mjs",
-    "release:production:win": "npm run check:production-hardening && npm run check:sidebar-ui && npm run check:security-input && npm run check:customer-create && npm run check:intrusion-hardening && npm run check:device-management && npm run check:file-capability-hardening && npm run check:windows-signing-contract && npm run check:renderer-privacy-defaults && npm run test:backups-smoke && npm run test:pin-rate-limit-smoke && npm run build && electron-builder --win nsis --x64",
+    "release:production:win": "npm run check:upgrade-identity && npm run check:device-revocation-integrity && npm run check:production-hardening && npm run check:sidebar-ui && npm run check:security-input && npm run check:customer-create && npm run check:intrusion-hardening && npm run check:device-management && npm run check:file-capability-hardening && npm run check:windows-signing-contract && npm run check:renderer-privacy-defaults && npm run test:backups-smoke && npm run test:pin-rate-limit-smoke && npm run build && electron-builder --win nsis --x64",
+    "check:upgrade-identity": "node scripts/verify-upgrade-identity.mjs",
+    "check:device-revocation-integrity": "node scripts/verify-device-revocation-integrity.mjs",
     "check:sidebar-ui": "node scripts/verify-sidebar-ui-rc12.mjs",
     "check:security-input": "node scripts/verify-security-input-hardening.mjs",
     "check:customer-create": "node scripts/verify-customer-create-112fix.mjs",
