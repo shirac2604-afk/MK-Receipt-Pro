@@ -1,6 +1,6 @@
 # Security Phase 8 — Secrets & Supply Chain
 
-Status: **static secret/workflow hardening complete; Android dependency remediation pending**.
+Status: **static secret/workflow hardening complete; Expo upgrade completed; documented upstream Android build-tool advisories remain monitored**.
 
 ## Completed controls
 - `.gitignore` blocks `.env`, keys, keystores, APK/AAB/EXE/MSI artifacts and logs.
@@ -12,7 +12,7 @@ Status: **static secret/workflow hardening complete; Android dependency remediat
 - The completed Phase 5 write workflow was retired to reduce standing `contents: write` automation.
 - Windows and Android production dependency audits run independently.
 
-## Audit results — 2026-08-12
+## Original audit results — 2026-08-12
 - Static secrets / blocked files / action pinning: **PASS**.
 - Windows `npm audit --omit=dev --audit-level=high`: **PASS / 0 vulnerabilities**.
 - Android `npm audit --omit=dev --audit-level=high`: **FAIL — 18 vulnerabilities (11 High, 7 Moderate)**.
@@ -21,6 +21,14 @@ Status: **static secret/workflow hardening complete; Android dependency remediat
 
 ## Android remediation rule
 Do **not** run `npm audit fix --force` on the production baseline. Remediation requires a dedicated branch, Expo compatibility review, dependency alignment, `release:check`, TypeScript, EAS APK build and manual device installation/testing before merge or release.
+
+## Current Android status — 2026-08-25
+
+- Android now uses Expo 57 and React Native 0.86.2.
+- The controlled upgrade passed Expo Doctor, the complete release gate, TypeScript, EAS APK build and manual device regression testing.
+- The supply-chain gate permits only the explicitly documented `image-size` advisories and rejects new advisory IDs, critical/moderate/low findings or a different root advisory package.
+- Source assets using the affected ICNS/JXL/HEIF/HEIC parser paths remain blocked by the build-asset safety gate.
+- Phase 14 restored the complete Android and Windows lockfiles and requires exact `npm ci` installation in CI.
 
 ## Secrets/history note
 The current-tree scan is clean for the patterns covered by the Phase 8 gate. A clean current tree does not by itself prove that no secret ever existed in all historical Git objects. If a real secret is ever suspected to have been committed, rotate/revoke it first and then perform dedicated history remediation.
