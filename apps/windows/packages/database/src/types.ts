@@ -251,3 +251,4 @@ export interface SupabaseCloudDevice { id:string; platform:"windows"|"android"; 
 
 export interface SupabaseCloudStatus { connected:boolean; email:string|null; userId:string|null; businessId:string|null; businessName:string|null; deviceId:string|null; receipts:number; customers:number; expenses:number; message:string|null; }
 export interface SupabaseCloudConnectInput { email:string; password:string; }
+export interface SupabaseCloudPasswordChangeInput { currentPassword:string; newPassword:string; }

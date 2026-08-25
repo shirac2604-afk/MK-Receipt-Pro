@@ -8,6 +8,7 @@ type AuthValue={
  loading:boolean;
  signIn:(email:string,password:string)=>Promise<void>;
  signUp:(email:string,password:string)=>Promise<void>;
+ changePassword:(currentPassword:string,newPassword:string)=>Promise<void>;
  signOut:()=>Promise<void>;
 };
 
@@ -28,6 +29,7 @@ export function AuthProvider({children}:{children:React.ReactNode}){
   session,loading,
   signIn:async(email,password)=>{await AuthService.signIn(email,password)},
   signUp:async(email,password)=>{await AuthService.signUp(email,password)},
+  changePassword:async(currentPassword,newPassword)=>{await AuthService.changePassword(currentPassword,newPassword)},
   signOut:async()=>{await AuthService.signOut()}
  }),[session,loading]);
 

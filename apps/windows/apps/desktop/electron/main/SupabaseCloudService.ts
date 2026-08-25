@@ -4,6 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, validateSupabaseConfig } from "./SupabaseCloudConfig";
+import {MAX_PASSWORD_LENGTH,validateNewPassword} from "./passwordPolicy";
 import type { PaymentMethod, ReceiptRecord, ReceiptSearchFilters, ReceiptSearchResult, CustomerRecord, CustomerProfile, CustomerCreateInput, CustomerUpdateInput, CustomerDuplicateQuery, CustomerDuplicateMatch, ReceiptCoreStatus, DateRangeReport, AnnualReport, MonthlyReportRow, ExpenseInput, ExpenseUpdateInput, ExpenseSearchFilters, ExpenseRecord, ExpenseSummary, BusinessSettingsInput, BusinessSettingsRecord, CancelReceiptResult, SupabaseCloudDevice } from "../../../../packages/database/src/types";
 import type { LessonRecord } from "../../../../packages/database/src/studentTypes";
 
@@ -102,6 +103,29 @@ export class SupabaseCloudService {
     this.activeDeviceValidatedAt=0;
     this.status={connected:false,email:null,userId:null,businessId:null,businessName:null,deviceId:null,receipts:0,customers:0,expenses:0,message:"החשבון נותק מהמחשב הזה"};
     return this.getStatus();
+  }
+
+  async changePassword(currentPassword:string,newPassword:string):Promise<void>{
+    if(!currentPassword)throw new Error("AUTH_CURRENT_PASSWORD_REQUIRED");
+    if(currentPassword.length>MAX_PASSWORD_LENGTH)throw new Error("AUTH_CURRENT_PASSWORD_INVALID");
+    if(currentPassword===newPassword)throw new Error("AUTH_PASSWORD_UNCHANGED");
+    await this.assertCurrentDeviceActive(0);
+    if(!this.status.connected||!this.status.userId)throw new Error("AUTH_SESSION_REQUIRED");
+    const {data:current,error:currentError}=await this.client.auth.getUser();
+    if(currentError||!current.user?.email||current.user.id!==this.status.userId)throw new Error("AUTH_SESSION_REQUIRED");
+    const passwordError=validateNewPassword(current.user.email,newPassword);
+    if(passwordError)throw new Error(passwordError);
+    const {data:verified,error:verifyError}=await this.client.auth.signInWithPassword({
+      email:current.user.email.trim().toLowerCase(),
+      password:currentPassword
+    });
+    if(verifyError||!verified.user)throw new Error("AUTH_CURRENT_PASSWORD_INVALID");
+    if(verified.user.id!==current.user.id){
+      await this.signOut().catch(()=>{});
+      throw new Error("AUTH_IDENTITY_CHANGED");
+    }
+    const {error:updateError}=await this.client.auth.updateUser({password:newPassword});
+    if(updateError)throw new Error("AUTH_PASSWORD_CHANGE_FAILED");
   }
 
   async refresh(allowDeviceReenroll=false):Promise<SupabaseCloudStatus>{

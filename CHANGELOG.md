@@ -2,6 +2,16 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-25 — Security Phase 13 / Authenticated password change
+
+- Added a signed-in password-change flow to Android and Windows.
+- Both clients require the current password, revalidate the current Supabase user and require the reauthenticated user ID to match before calling `updateUser`.
+- Windows additionally forces an active-device check before the operation.
+- New passwords are bounded to 8–128 characters and use the Phase 12 common/email-derived checks.
+- Added masked confirmation UI, sanitized IPC errors, release-gate verifiers and a dedicated GitHub Actions workflow.
+- Password recovery remains deferred until a verified deep-link/callback trust model is designed.
+- No build, Supabase Auth setting or Production deployment was changed.
+
 ## 2026-08-25 — Security Phase 12 / Auth and cloud session hardening
 
 - Android registration now uses an eight-character minimum, basic offline common-password checks and email-derived password rejection; existing sign-in compatibility is preserved.
