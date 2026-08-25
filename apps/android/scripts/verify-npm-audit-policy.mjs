@@ -39,17 +39,21 @@ const advisoryIds = new Set(
   [...jsonText.matchAll(/GHSA-[0-9A-Za-z-]+/g)].map((match) => match[0])
 );
 
-const advisoriesOk =
-  advisoryIds.size === EXPECTED_ADVISORIES.size &&
-  [...EXPECTED_ADVISORIES].every((id) => advisoryIds.has(id));
-
 const imageSizePresent = Boolean(audit?.vulnerabilities?.["image-size"]);
+const cleanAudit =
+  advisoryIds.size === 0 &&
+  Object.keys(audit?.vulnerabilities ?? {}).length === 0;
+const documentedOnly =
+  advisoryIds.size === EXPECTED_ADVISORIES.size &&
+  [...EXPECTED_ADVISORIES].every((id) => advisoryIds.has(id)) &&
+  imageSizePresent;
+const advisoriesOk = cleanAudit || documentedOnly;
 
 console.log(severityOk ? "PASS" : "FAIL", "npm audit has no critical, moderate, or low advisories");
-console.log(advisoriesOk ? "PASS" : "FAIL", "only documented image-size advisories remain");
-console.log(imageSizePresent ? "PASS" : "FAIL", "image-size is the remaining root advisory package");
+console.log(advisoriesOk ? "PASS" : "FAIL", "audit is clean or contains only documented image-size advisories");
+console.log(cleanAudit || imageSizePresent ? "PASS" : "FAIL", "no unexpected root advisory package is present");
 
-if (!severityOk || !advisoriesOk || !imageSizePresent) {
+if (!severityOk || !advisoriesOk || (!cleanAudit && !imageSizePresent)) {
   console.error("Audit policy changed. Review new or changed npm advisories before release.");
   process.exit(1);
 }
