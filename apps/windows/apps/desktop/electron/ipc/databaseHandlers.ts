@@ -188,6 +188,15 @@ function errorResult(error: unknown): ApiResult<never> {
   if (code.startsWith("GOOGLE_")) return apiFailure("DATABASE_OPERATION_FAILED", `פעולת Google Drive לא הושלמה. קוד: ${code}`, true);
   if (code === "CLOUD_CREDENTIALS_REQUIRED") return apiFailure("DATABASE_OPERATION_FAILED", "יש להזין אימייל וסיסמה לחשבון הענן.", false);
   if (code.startsWith("CLOUD_AUTH_FAILED:")) return apiFailure("DATABASE_OPERATION_FAILED", "ההתחברות לחשבון הענן נכשלה. בדוק אימייל וסיסמה.", false);
+  if (code === "AUTH_CURRENT_PASSWORD_REQUIRED") return apiFailure("INVALID_INPUT", "יש להזין את הסיסמה הנוכחית.", false);
+  if (code === "AUTH_CURRENT_PASSWORD_INVALID") return apiFailure("DATABASE_OPERATION_FAILED", "הסיסמה הנוכחית אינה נכונה.", false);
+  if (code === "AUTH_PASSWORD_UNCHANGED") return apiFailure("INVALID_INPUT", "הסיסמה החדשה חייבת להיות שונה מהסיסמה הנוכחית.", false);
+  if (code === "AUTH_PASSWORD_TOO_SHORT") return apiFailure("INVALID_INPUT", "הסיסמה החדשה חייבת להכיל לפחות 8 תווים.", false);
+  if (code === "AUTH_PASSWORD_TOO_LONG") return apiFailure("INVALID_INPUT", "הסיסמה החדשה יכולה להכיל עד 128 תווים.", false);
+  if (code === "AUTH_PASSWORD_TOO_COMMON") return apiFailure("INVALID_INPUT", "הסיסמה החדשה נפוצה מדי. יש לבחור סיסמה אחרת.", false);
+  if (code === "AUTH_PASSWORD_CONTAINS_EMAIL") return apiFailure("INVALID_INPUT", "הסיסמה החדשה לא יכולה לכלול את החלק הראשון של כתובת האימייל.", false);
+  if (code === "AUTH_SESSION_REQUIRED"||code === "AUTH_IDENTITY_CHANGED") return apiFailure("DATABASE_OPERATION_FAILED", "החיבור לחשבון השתנה. יש להתנתק ולהתחבר מחדש לפני שינוי הסיסמה.", false);
+  if (code === "AUTH_PASSWORD_CHANGE_FAILED") return apiFailure("DATABASE_OPERATION_FAILED", "שינוי הסיסמה לא הושלם. הסיסמה הקיימת נשארה ללא שינוי.", true);
   if (code === "CLOUD_NO_BUSINESS_MEMBERSHIP") return apiFailure("DATABASE_OPERATION_FAILED", "החשבון מחובר אך אינו משויך לעסק בענן.", false);
   if (code === "CLOUD_DEVICE_REVOKED") return apiFailure("DATABASE_OPERATION_FAILED", "המחשב הזה נותק מהעסק. כדי לחבר אותו מחדש יש להתחבר שוב עם אימייל וסיסמה.", false);
   if (code.startsWith("CLOUD_")) return apiFailure("DATABASE_OPERATION_FAILED", `פעולת הענן לא הושלמה: ${code}`, true);
@@ -388,6 +397,7 @@ export function registerDatabaseHandlers(databaseService: DatabaseService, cloud
 
   ipcMain.handle("cloud-account:get-status", (event) => handle(event, () => supabaseCloud.getStatus()));
   ipcMain.handle("cloud-account:connect", (event,input) => handle(event, () => supabaseCloud.signIn(String(input?.email||""),String(input?.password||"")), input));
+  ipcMain.handle("cloud-account:change-password", (event,input) => handle(event, () => supabaseCloud.changePassword(String(input?.currentPassword||""),String(input?.newPassword||"")), input));
   ipcMain.handle("cloud-account:disconnect", (event) => handle(event, () => supabaseCloud.signOut()));
   ipcMain.handle("cloud-account:refresh", (event) => handle(event, () => supabaseCloud.refresh()));
   ipcMain.handle("cloud-account:list-devices", (event) => handle(event, () => supabaseCloud.listDevices()));

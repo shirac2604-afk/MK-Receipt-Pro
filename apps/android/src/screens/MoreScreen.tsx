@@ -12,7 +12,7 @@ import {sanitizeDigits,sanitizePhone,validEmail,validPhone} from "../securityVal
 
 export default function MoreScreen(){
  const {businessId,deviceId,role}=useBusiness();
- const {session,signOut}=useAuth();
+ const {session,changePassword,signOut}=useAuth();
  const [businessName,setBusinessName]=useState("");
  const [ownerName,setOwnerName]=useState("");
  const [businessNumber,setBusinessNumber]=useState("");
@@ -25,6 +25,10 @@ export default function MoreScreen(){
  const [pickedLogo,setPickedLogo]=useState<PickedBusinessLogo|null>(null);
  const [busy,setBusy]=useState(false);
  const [devices,setDevices]=useState<CloudDevice[]>([]);
+ const [currentPassword,setCurrentPassword]=useState("");
+ const [newPassword,setNewPassword]=useState("");
+ const [newPasswordConfirmation,setNewPasswordConfirmation]=useState("");
+ const [passwordBusy,setPasswordBusy]=useState(false);
 
  async function load(){
   if(!businessId)return;
@@ -82,6 +86,18 @@ export default function MoreScreen(){
   finally{setBusy(false)}
  }
 
+ async function submitPasswordChange(){
+  if(!currentPassword||!newPassword||!newPasswordConfirmation){Alert.alert("חסרים פרטים","יש למלא את שלושת שדות הסיסמה.");return}
+  if(newPassword!==newPasswordConfirmation){Alert.alert("הסיסמאות אינן תואמות","יש להזין שוב את אותה סיסמה חדשה.");return}
+  setPasswordBusy(true);
+  try{
+   await changePassword(currentPassword,newPassword);
+   setCurrentPassword("");setNewPassword("");setNewPasswordConfirmation("");
+   Alert.alert("הסיסמה שונתה","מההתחברות הבאה יש להשתמש בסיסמה החדשה.");
+  }catch(e){Alert.alert("שינוי הסיסמה נכשל",formatUnknownError(e))}
+  finally{setPasswordBusy(false)}
+ }
+
  return <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
   <Text style={s.title}>הגדרות העסק</Text>
   <Text style={s.subtitle}>הפרטים האלה יופיעו בקבלות ב־Android ובהמשך גם ב־Windows.</Text>
@@ -114,6 +130,14 @@ export default function MoreScreen(){
    <View style={s.sectionHeader}><Ionicons name="cloud-done-outline" size={22} color={theme.primary}/><Text style={s.cardTitle}>חשבון ענן ומכשירים</Text></View>
    <Text style={s.note}>מחובר כעת: {session?.user.email??"—"}</Text>
    <Text style={s.note}>כל מכשיר שמתחבר עם אותו חשבון עובד מול אותו עסק, אותם נתונים ואותו רצף קבלות.</Text>
+   <View style={s.passwordPanel}>
+    <Text style={s.passwordTitle}>שינוי סיסמת החשבון</Text>
+    <Text style={s.note}>כדי להגן על החשבון, יש לאמת תחילה את הסיסמה הנוכחית.</Text>
+    <TextInput style={s.input} value={currentPassword} onChangeText={setCurrentPassword} maxLength={128} placeholder="סיסמה נוכחית" secureTextEntry autoCapitalize="none" autoCorrect={false} textAlign="right"/>
+    <TextInput style={s.input} value={newPassword} onChangeText={setNewPassword} maxLength={128} placeholder="סיסמה חדשה — לפחות 8 תווים" secureTextEntry autoCapitalize="none" autoCorrect={false} textAlign="right"/>
+    <TextInput style={s.input} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} maxLength={128} placeholder="אימות הסיסמה החדשה" secureTextEntry autoCapitalize="none" autoCorrect={false} textAlign="right"/>
+    <Pressable style={s.primaryButton} onPress={()=>void submitPasswordChange()} disabled={passwordBusy||busy}><Text style={s.primaryText}>{passwordBusy?"משנה סיסמה…":"שינוי סיסמה"}</Text></Pressable>
+   </View>
    <View style={s.devices}>
     {devices.map(d=><View key={d.id} style={s.deviceRow}>
       <Ionicons name={d.platform==="windows"?"desktop-outline":"phone-portrait-outline"} size={22} color={d.id===deviceId?theme.primary:theme.muted}/>
@@ -148,6 +172,8 @@ const s=StyleSheet.create({
  secondaryText:{color:theme.primary,fontWeight:"700"},
  primaryButton:{backgroundColor:theme.primary,borderRadius:12,padding:14,alignItems:"center"},primaryText:{color:"#fff",fontWeight:"800"},
  note:{color:theme.muted,textAlign:"right",lineHeight:20},
+ passwordPanel:{gap:9,paddingTop:12,marginTop:4,borderTopWidth:1,borderTopColor:theme.border},
+ passwordTitle:{fontSize:16,fontWeight:"800",color:theme.text,textAlign:"right"},
  sectionHeader:{flexDirection:"row",alignItems:"center",justifyContent:"flex-end",gap:7},
  devices:{gap:7,marginTop:4},deviceRow:{flexDirection:"row-reverse",alignItems:"center",gap:10,backgroundColor:"#F8FAFC",borderRadius:12,padding:11},
  deviceTitle:{fontWeight:"800",color:theme.text,textAlign:"right"},deviceMeta:{fontSize:11,color:theme.muted,textAlign:"right",marginTop:2},

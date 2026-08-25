@@ -698,3 +698,4 @@ button:focus-visible{
 }
 
 .cloud-device-list{display:grid;gap:8px;margin:12px 0}.cloud-device-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc}.cloud-device-row>div{display:grid;gap:3px}.cloud-device-row small{color:#64748b}.ghost-button.danger{color:#b42318;border-color:#f0c7c3}
+.cloud-password-panel{display:grid;grid-template-columns:minmax(190px,1.1fr) repeat(3,minmax(150px,1fr)) auto;gap:10px;align-items:end;margin:14px 0;padding:14px;border:1px solid #d8e2e8;border-radius:14px;background:#f8fafc}.cloud-password-panel>div{display:grid;gap:5px;align-self:center}.cloud-password-panel>div small{color:#64748b;line-height:1.4}.cloud-password-panel .field{margin:0}@media(max-width:1200px){.cloud-password-panel{grid-template-columns:1fr 1fr}.cloud-password-panel>div{grid-column:1/-1}}@media(max-width:720px){.cloud-password-panel{grid-template-columns:1fr}}

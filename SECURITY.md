@@ -18,6 +18,8 @@
 - Phase 12 separates registration password quality from sign-in compatibility. Android sign-up enforces an eight-character minimum plus basic offline common/email-derived password rejection, while existing sign-in passwords remain accepted for Supabase verification.
 - Phase 12 revalidates the active Windows device before sensitive cloud service operations and every 15 seconds in the Electron main process, clearing the local cloud session when the device was revoked.
 - Phase 12 treats cloud-downloaded expense attachments as untrusted: 10 MB limit, PDF/PNG/JPEG/WebP magic-byte validation, content-derived extension, atomic controlled-directory write and IPC revalidation before OS open.
+- Phase 13 adds authenticated password changes to Android and Windows. The clients verify the current password, require the reauthenticated user ID to match the active user, enforce the 8–128 character policy and only then call Supabase `updateUser`.
+- Windows password changes also require an immediate active-device validation. Electron exposes a typed IPC operation and maps authentication failures to fixed renderer-safe messages.
 
 ## Windows local-file capability rule
 
@@ -32,6 +34,8 @@ A MIME value supplied by an Android picker or HTTP response is not sufficient pr
 Supabase signed storage URLs used outside the Supabase SDK must pass `assertTrustedSupabaseSignedUrl` before opening/fetching. Security-sensitive downloads should reject redirects and validate the returned content before rendering it.
 
 Do not add an Android custom URL scheme or intent filter without designing and testing a dedicated deep-link trust model first. Auth tokens must not be accepted implicitly from incoming URLs.
+
+Password recovery remains outside the current client boundary. Do not add `resetPasswordForEmail`, a custom callback protocol or a recovery deep link without redirect allowlisting, recovery-state validation, token lifecycle checks and cross-platform tests.
 
 ## Release status
 
@@ -48,3 +52,5 @@ Never commit service-role keys, secret keys, passwords, auth tokens, `.env` file
 ## Release rule
 
 Security-sensitive changes should pass the project security and regression checks before release packaging. Windows releases that touch cloud sessions or file ingestion must pass `npm run check:cloud-session-hardening` and `npm run check:file-capability-hardening`. Android `npm run release:check` must include `verify:auth-password-policy` and `verify:android-boundary-hardening` before release packaging.
+
+Password-management changes must also pass Android `npm run verify:password-change`, Windows `npm run check:password-change`, both TypeScript checks and the Phase 13 static gate before release packaging.
