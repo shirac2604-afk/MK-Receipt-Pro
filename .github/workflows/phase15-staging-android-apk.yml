@@ -1,0 +1,40 @@
+name: Phase 15 Staging Android APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-submit-staging-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_NO_VCS: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.13.1"
+      - name: Select Phase 15 Staging configuration
+        run: cp src/config/supabasePublic.staging.ts src/config/supabasePublic.ts
+      - name: Install dependencies
+        run: npm --prefix "$GITHUB_WORKSPACE/apps/android" ci --no-audit --no-fund
+      - name: Verify Staging release gates
+        env:
+          PHASE15_EXPECT_STAGING: "1"
+        run: npm run verify:direct-supabase && npm run release:check
+      - name: Require Expo build token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "Staging Android build is blocked until EXPO_TOKEN is configured as a GitHub Actions secret."
+            exit 1
+          fi
+      - name: Initialize the MK Receipt Pro Expo project
+        run: npx eas-cli@22.2.0 init --account shirac --non-interactive
+      - name: Submit internal Staging APK build to Expo
+        run: npx eas-cli@22.2.0 build --platform android --profile production-apk --non-interactive --no-wait
