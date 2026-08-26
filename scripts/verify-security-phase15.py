@@ -68,6 +68,8 @@ def main() -> None:
             "Staging test guidance must document the callback, template, and Production guardrail")
     require("Edge Function" not in docs and "functions/v1" not in docs,
             "Staging guidance must not depend on the unsupported HTML Edge Function design")
+    require(not (ROOT / ".github/workflows/one-time-phase15-link-migration.yml").exists(),
+            "Phase 15 must not retain an auto-migration workflow with write access")
 
     print("PASS: Phase 15 static security gate")
 
