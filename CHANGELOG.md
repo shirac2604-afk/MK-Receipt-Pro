@@ -2,6 +2,14 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-26 — Phase 15 Staging build routing
+
+- Confirmed that Supabase project `ymcmmvnfrfntmllytpyu` is `MK-Receipt-Pro-Phase9-Staging`; the exact password-recovery callback was allowlisted there.
+- Android Phase 15 source now targets that Staging project and excludes the Production project.
+- Added a dedicated Windows Staging configuration and a manual unsigned GitHub Actions installer workflow, including SHA-256 verification.
+- Corrected the Android direct-Supabase verifier so it checks the diagnostic label that is actually rendered.
+- Documented the Staging-only upgrade route. No Production setting, `main` branch, stable Android package or stable Windows app ID was changed.
+
 ## 2026-08-26 — Security Phase 15 / Password recovery (Staging-ready)
 
 - Prepared an in-place upgrade build: Android version `1.0.9` / `versionCode` 10 and Windows version `1.1.8`. Android package `il.mkreceiptpro.android` and Windows appId `il.co.mkreceipt.desktop` remain unchanged.
