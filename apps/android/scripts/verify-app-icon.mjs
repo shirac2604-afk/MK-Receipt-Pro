@@ -10,7 +10,7 @@ const checks=[
  [app.expo.android?.adaptiveIcon?.foregroundImage==="./assets/adaptive-icon-foreground.png","adaptive foreground configured"],
  [app.expo.android?.adaptiveIcon?.backgroundColor==="#F6F7F9","adaptive background configured"],
  [fs.existsSync("assets/adaptive-icon-foreground.png"),"adaptive foreground exists"],
- [app.expo.android?.versionCode===9,"Android versionCode 9"],
+ [app.expo.android?.versionCode===10,"Android versionCode 10"],
 ];
 let ok=0; for(const [pass,label] of checks){console.log(pass?"PASS":"FAIL",label); if(pass)ok++;}
 console.log(`Android app icon: ${ok}/${checks.length}`); if(ok!==checks.length) process.exit(1);
