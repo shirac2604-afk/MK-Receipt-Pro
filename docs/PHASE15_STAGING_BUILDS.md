@@ -19,3 +19,7 @@ The Android source default remains Production. The manual **Phase 15 Staging And
 ## Release boundary
 
 No Production Auth setting, Supabase URL, app identifier, or `main` branch is changed by these builds. After both manual recovery tests pass, review separately before any Production release.
+
+## Personal Production build
+
+Password recovery is deliberately disabled and hidden in the personal Production Android and Windows builds. It remains available only in the isolated Staging build configurations; Production does not need the recovery redirect URL.
