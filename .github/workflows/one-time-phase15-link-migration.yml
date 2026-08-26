@@ -1,0 +1,89 @@
+name: One-time Phase 15 link migration
+
+on:
+  push:
+    branches: [security/phase15-password-recovery]
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ !contains(github.event.head_commit.message, 'chore(auth): apply Phase 15 link migration') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply migration and commit
+        env:
+          RESET_URL: https://ymcmmvnfrfntmllytpyu.supabase.co/functions/v1/password-reset
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re, os
+
+          root=Path('.')
+
+          p=root/'apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts'
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'const RECOVERY_TOKEN_RE=.*?function verifyCloudExpenseAttachment', 'const PASSWORD_RESET_REDIRECT_URL="'+os.environ['RESET_URL']+'";\n\nfunction verifyCloudExpenseAttachment', s, count=1, flags=re.S)
+          s=re.sub(r'\n  private recoveryLastRequestAt=0;\n  private recoveryRequestWindowStartedAt=0;\n  private recoveryRequestCount=0;\n  private recoveryVerifyWindowStartedAt=0;\n  private recoveryVerifyAttemptCount=0;', '', s, count=1)
+          s=re.sub(r'  async requestPasswordRecovery\(rawEmail:string\):Promise<void>\{.*?\n  \}\n\n  async completePasswordRecovery.*?\n  \}\n', '''  async requestPasswordRecovery(rawEmail:string):Promise<void>{\n    const email=normalizeRecoveryEmail(rawEmail);\n    const recoveryClient=createEphemeralRecoveryClient();\n    try{\n      const {error}=await recoveryClient.auth.resetPasswordForEmail(email,{redirectTo:PASSWORD_RESET_REDIRECT_URL});\n      if(error)throw new Error("AUTH_RECOVERY_REQUEST_FAILED");\n    }finally{\n      await recoveryClient.auth.signOut({scope:"local"}).catch(()=>{});\n    }\n  }\n''', s, count=1, flags=re.S)
+          s=re.sub(r'\n  private assertRecoveryRequestAllowed.*?\n  }\n\n  private assertRecoveryVerificationAllowed.*?\n  }\n', '\n', s, count=1, flags=re.S)
+          if 'verifyOtp' in s or 'RECOVERY_TOKEN_RE' in s:
+              raise SystemExit('legacy Windows OTP code remains after migration')
+          # keep the shared email normalizer + ephemeral client, now used only for link requests
+          p.write_text(s,encoding='utf-8')
+
+          p=root/'apps/windows/apps/desktop/renderer/src/main.tsx'
+          s=p.read_text(encoding='utf-8')
+          start=s.index('function SharedCloudAccountCard(')
+          end=s.index('\nfunction ', start+20)
+          if end<=start: raise SystemExit('could not locate end of SharedCloudAccountCard')
+          new='''function SharedCloudAccountCard({setToast}:{setToast:(toast:Toast)=>void}){\n const[status,setStatus]=useState<SupabaseCloudStatus|null>(null),[devices,setDevices]=useState<SupabaseCloudDevice[]>([]),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[currentPassword,setCurrentPassword]=useState(""),[newPassword,setNewPassword]=useState(""),[newPasswordConfirmation,setNewPasswordConfirmation]=useState(""),[recoveryOpen,setRecoveryOpen]=useState(false),[recoverySent,setRecoverySent]=useState(false),[working,setWorking]=useState(false);\n async function load(){try{const r=unwrap(await window.mkApi.cloudAccount.getStatus());setStatus(r);if(r.email)setEmail(r.email);if(r.connected)setDevices(unwrap(await window.mkApi.cloudAccount.listDevices()));else setDevices([])}catch(e){setToast({kind:"error",message:e instanceof Error?e.message:"לא ניתן לטעון את מצב הענן."})}}\n useEffect(()=>{void load();const id=setInterval(()=>void window.mkApi.cloudAccount.refresh().then(result=>{if(result.success){setStatus(result.data);if(!result.data.connected)setDevices([])}}),30000);return()=>clearInterval(id)},[]);\n async function connect(){if(!email.trim()||!password){setToast({kind:"error",message:"יש להזין אימייל וסיסמה."});return}setWorking(true);try{const r=unwrap(await window.mkApi.cloudAccount.connect({email:email.trim(),password}));setStatus(r);setPassword("");setToast({kind:"success",message:`Windows חובר לעסק ${r.businessName||"בענן"}.`})}catch(e){setToast({kind:"error",message:e instanceof Error?e.message:"החיבור לענן נכשל."})}finally{setWorking(false)}}\n async function requestPasswordRecovery(){if(!email.trim()){setToast({kind:"error",message:"יש להזין את כתובת האימייל של החשבון."});return}setWorking(true);try{unwrap(await window.mkApi.cloudAccount.requestPasswordRecovery({email:email.trim()}));setRecoverySent(true);setToast({kind:"success",message:"אם קיימת כתובת חשבון תואמת, נשלח אליה קישור מאובטח לשינוי הסיסמה."})}catch(e){setToast({kind:"error",message:e instanceof Error?e.message:"לא ניתן להתחיל את תהליך השחזור."})}finally{setWorking(false)}}\n async function changePassword(){if(!currentPassword||!newPassword||!newPasswordConfirmation){setToast({kind:"error",message:"יש למלא את שלושת שדות הסיסמה."});return}if(newPassword!==newPasswordConfirmation){setToast({kind:"error",message:"אימות הסיסמה החדשה אינו תואם."});return}setWorking(true);try{unwrap(await window.mkApi.cloudAccount.changePassword({currentPassword,newPassword}));setCurrentPassword("");setNewPassword("");setNewPasswordConfirmation("");setToast({kind:"success",message:"הסיסמה שונתה. מההתחברות הבאה יש להשתמש בסיסמה החדשה."})}catch(e){setToast({kind:"error",message:e instanceof Error?e.message:"שינוי הסיסמה נכשל."})}finally{setWorking(false)}}\n async function refresh(){setWorking(true);try{setStatus(unwrap(await window.mkApi.cloudAccount.refresh()));setDevices(unwrap(await window.mkApi.cloudAccount.listDevices()));setToast({kind:"success",message:"מצב הענן עודכן."})}catch(e){setToast({kind:"error",message:e instanceof Error?e.message:"הרענון נכשל."})}finally{setWorking(false)}}\n async function revokeDevice(d:SupabaseCloudDevice){if(!status?.deviceId||d.id===status.deviceId)return;if(!window.confirm(`לנתק את ${d.displayName||d.platform} מהעסק?`))return;setWorking(true);try{unwrap(await window.mkApi.cloudAccount.revokeDevice(d.id));setDevices(unwrap(await window.mkApi.cloudAccount.listDevices()));setToast({kind:"success",message:"המכשיר נותק בהצלחה."})}catch(e){setToast({kind:"error",message:e instanceof Error?e.message:"ניתוק המכשיר נכשל."})}finally{setWorking(false)}}\n async function disconnect(){if(!window.confirm("לנתק את המחשב הזה מהענן המשותף? רק החיבור במחשב הזה ייסגר."))return;setWorking(true);try{setStatus(unwrap(await window.mkApi.cloudAccount.disconnect()));setDevices([]);setToast({kind:"success",message:"חשבון הענן נותק מהמחשב הזה בלבד."})}catch(e){setToast({kind:"error",message:e instanceof Error?e.message:"הניתוק נכשל."})}finally{setWorking(false)}}\n return <section className="cloud-sync-panel shared-cloud-panel"><div className="cloud-sync-head"><div><p className="eyebrow">Windows + Android</p><h2>הענן המשותף של העסק</h2><p>{status?.connected?`מחובר ל־${status.businessName||"העסק"} • ${status.email||""}`:"התחבר עם אותו אימייל וסיסמה שבהם משתמשים באפליקציית Android."}</p></div><span className={`cloud-state-pill ${status?.connected?"idle":"disconnected"}`}>{status?.connected?"מחובר":"לא מחובר"}</span></div>\n {!status?.connected?<div className="google-connect-card shared-cloud-login"><label className="field"><span>אימייל</span><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="name@example.com"/></label><label className="field"><span>סיסמה</span><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="••••••••"/></label><button className="primary-button" disabled={working} onClick={()=>void connect()}>{working?"מתחבר…":"חבר את Windows לענן"}</button><button className="ghost-button" disabled={working} onClick={()=>{setRecoveryOpen(v=>!v);setRecoverySent(false)}}>שכחתי סיסמה</button>{recoveryOpen?<div className="cloud-password-panel"><div><strong>שחזור סיסמה באמצעות קישור מאובטח</strong><small>{recoverySent?"נשלח קישור מאובטח לתיבת הדואר. פתחי אותו כדי לקבוע סיסמה חדשה.":"אם קיימת כתובת חשבון תואמת, יישלח אליה קישור מאובטח."}</small></div><button className="secondary-button" disabled={working} onClick={()=>void requestPasswordRecovery()}>{working?"שולח קישור…":recoverySent?"שליחת קישור חדש":"שליחת קישור לשחזור"}</button>{recoverySent?<small>החלפת הסיסמה מתבצעת בדף השחזור המאובטח שנפתח מהאימייל.</small>:null}</div>:null}</div>:<><div className="backup-grid shared-cloud-counts"><article className="backup-card"><span>קבלות בענן</span><strong>{status.receipts}</strong></article><article className="backup-card"><span>לקוחות בענן</span><strong>{status.customers}</strong></article><article className="backup-card"><span>הוצאות בענן</span><strong>{status.expenses}</strong></article></div><div className="cloud-password-panel"><div><strong>שינוי סיסמת החשבון</strong><small>נדרש אימות של הסיסמה הנוכחית. הסיסמה החדשה חייבת להכיל לפחות 8 תווים.</small></div><label className="field"><span>סיסמה נוכחית</span><input type="password" autoComplete="current-password" maxLength={128} value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)}/></label><label className="field"><span>סיסמה חדשה</span><input type="password" autoComplete="new-password" maxLength={128} value={newPassword} onChange={e=>setNewPassword(e.target.value)}/></label><label className="field"><span>אימות סיסמה חדשה</span><input type="password" autoComplete="new-password" maxLength={128} value={newPasswordConfirmation} onChange={e=>setNewPasswordConfirmation(e.target.value)}/></label><button className="secondary-button" disabled={working} onClick={()=>void changePassword()}>{working?"מבצעת…":"שינוי סיסמה"}</button></div><div className="cloud-device-list">{devices.map(d=><div className="cloud-device-row" key={d.id}><div><strong>{d.displayName|| (d.platform==="windows"?"Windows":"Android")}{d.id===status.deviceId?" · המכשיר הזה":""}</strong><small>נרשם: {new Date(d.createdAt).toLocaleString("he-IL")} · פעילות אחרונה: {new Date(d.lastSeenAt).toLocaleString("he-IL")}</small></div>{d.id!==status.deviceId?<button className="ghost-button danger" disabled={working} onClick={()=>void revokeDevice(d)}>נתק</button>:null}</div>)}</div><div className="backup-actions"><button className="secondary-button" disabled={working} onClick={()=>void refresh()}>רענן מצב</button><button className="ghost-button" disabled={working} onClick={()=>void disconnect()}>נתק מהמחשב</button></div></>}\n </section>\n}\n'''
+          p.write_text(s[:start]+new+s[end:],encoding='utf-8')
+
+          p=root/'apps/windows/apps/desktop/electron/ipc/databaseHandlers.ts'
+          s=p.read_text(encoding='utf-8')
+          s=re.sub(r'\n  if \(code === "AUTH_RECOVERY_CODE_INVALID"\).*?\n  if \(code === "AUTH_RECOVERY_GLOBAL_SIGNOUT_FAILED"\).*?\n', '\n', s, count=1, flags=re.S)
+          s=s.replace('  ipcMain.handle("cloud-account:recover-password", (event,input) => handle(event, () => supabaseCloud.completePasswordRecovery(String(input?.email||""),String(input?.token||""),String(input?.newPassword||"")), input));\n','')
+          p.write_text(s,encoding='utf-8')
+
+          for rel in ['apps/windows/apps/desktop/electron/preload/preload.ts','apps/windows/apps/desktop/renderer/src/global.d.ts']:
+            p=root/rel; s=p.read_text(encoding='utf-8')
+            s=s.replace(', SupabaseCloudPasswordRecoveryRequestInput, SupabaseCloudPasswordRecoveryConfirmInput', ', SupabaseCloudPasswordRecoveryRequestInput')
+            s=s.replace('SupabaseCloudPasswordRecoveryRequestInput, SupabaseCloudPasswordRecoveryConfirmInput', 'SupabaseCloudPasswordRecoveryRequestInput')
+            s=re.sub(r',recoverPassword:\(input:SupabaseCloudPasswordRecoveryConfirmInput\)=>invoke\("cloud-account:recover-password",input\)', '', s)
+            p.write_text(s,encoding='utf-8')
+
+          p=root/'apps/windows/packages/database/src/types.ts'; s=p.read_text(encoding='utf-8'); s=re.sub(r'\nexport interface SupabaseCloudPasswordRecoveryConfirmInput \{[^\n]*\}', '', s); p.write_text(s,encoding='utf-8')
+
+          p=root/'apps/windows/apps/desktop/electron/main/SupabaseCloudService.ts'; s=p.read_text(encoding='utf-8')
+          # no stale client-side throttling or OTP symbols
+          if 'completePasswordRecovery' in s or 'verifyOtp' in s: raise SystemExit('Windows AuthService migration incomplete')
+
+          p=root/'apps/windows/scripts/verify-password-change.mjs'; s=p.read_text(encoding='utf-8'); s=s.replace('[service.includes("async requestPasswordRecovery")&&service.includes("async completePasswordRecovery"),"password recovery is delegated to the dedicated Phase 15 flow"]','[service.includes("async requestPasswordRecovery")&&service.includes("PASSWORD_RESET_REDIRECT_URL"),"password recovery uses the dedicated Phase 15 reset-link flow"]'); p.write_text(s,encoding='utf-8')
+          p=root/'apps/windows/scripts/verify-password-recovery.mjs'; p.write_text('''import fs from "node:fs";\n\nconst service=fs.readFileSync("apps/desktop/electron/main/SupabaseCloudService.ts","utf8");\nconst handlers=fs.readFileSync("apps/desktop/electron/ipc/databaseHandlers.ts","utf8");\nconst preload=fs.readFileSync("apps/desktop/electron/preload/preload.ts","utf8");\nconst renderer=fs.readFileSync("apps/desktop/renderer/src/main.tsx","utf8");\nconst pkg=JSON.parse(fs.readFileSync("package.json","utf8"));\n\nconst checks=[\n [service.includes("createEphemeralRecoveryClient")&&service.includes("persistSession:false")&&service.includes("autoRefreshToken:false"),"recovery client does not persist a session"],\n [service.includes("resetPasswordForEmail(email,{redirectTo:PASSWORD_RESET_REDIRECT_URL})"),"Windows recovery uses the controlled HTTPS reset page"],\n [!service.includes("verifyOtp")&&!service.includes("RECOVERY_TOKEN_RE"),"Windows recovery no longer verifies an OTP locally"],\n [handlers.includes("cloud-account:request-password-recovery")&&!handlers.includes("cloud-account:recover-password"),"trusted IPC exposes only reset-link recovery request"],\n [preload.includes("requestPasswordRecovery:(input:SupabaseCloudPasswordRecoveryRequestInput)")&&!preload.includes("recoverPassword:"),"preload exposes only the request operation"],\n [renderer.includes("שחזור סיסמה באמצעות קישור מאובטח")&&renderer.includes("שליחת קישור לשחזור"),"Windows UI explains the reset-link flow"],\n [String(pkg.scripts?.["release:production:win"]||"").includes("check:password-recovery"),"Windows release gate includes password recovery checks"]\n];\nfor(const [ok,label] of checks)console.log(`${ok?"PASS":"FAIL"} ${label}`);\nconst passed=checks.filter(([ok])=>ok).length;\nconsole.log(`Windows password recovery: ${passed}/${checks.length}`);\nif(passed!==checks.length)process.exit(1);\n''',encoding='utf-8')
+
+          # Update docs/README/security text only if the old OTP wording exists.
+          for rel in ['README.md','SECURITY.md','CHANGELOG.md']:
+            p=root/rel; s=p.read_text(encoding='utf-8')
+            s=s.replace('שחזור מבוסס קוד חד־פעמי','שחזור באמצעות קישור מאובטח').replace('שחזור מבוסס קוד חד-פעמי','שחזור באמצעות קישור מאובטח')
+            s=s.replace('using an ephemeral, non-persistent Supabase Auth client.','using an ephemeral, non-persistent Supabase Auth client.')
+            s=s.replace('The client does not add a custom callback protocol, Android URL scheme, intent filter, deep link or redirect allowlist. Recovery must first be enabled and tested on Staging using the `{{ .Token }}` reset-password email template.','The clients do not add a custom callback protocol, Android URL scheme or intent filter. Recovery uses the controlled Staging HTTPS reset page and must be tested there before any Production change.')
+            s=s.replace('OTP verification to the normalized email address, reuses the existing password policy and globally signs out sessions after an update.','the Supabase reset-link flow with the existing password policy and a dedicated HTTPS reset page.')
+            p.write_text(s,encoding='utf-8')
+
+          # Remove this one-time workflow after the migration so it cannot run again.
+          (root/'.github/workflows/one-time-phase15-link-migration.yml').unlink()
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "chore(auth): apply Phase 15 link migration" || exit 0
+          git push origin HEAD:security/phase15-password-recovery
