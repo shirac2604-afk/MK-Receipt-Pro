@@ -18,6 +18,7 @@
 כל שינוי מתועד ב־GitHub לפני שהוא נחשב הושלם: commit ברור, PR עם בדיקות והשפעת השדרוג, ועדכון `CHANGELOG.md` והמסמך הרלוונטי. הכלל המלא נמצא ב־[`docs/CHANGE_DOCUMENTATION_POLICY.md`](docs/CHANGE_DOCUMENTATION_POLICY.md).
 
 ### גרסאות
+- **שדרוג Phase 15 המיועד ל־Staging:** Android 1.0.9 (`versionCode` 10) ו־Windows 1.1.8. אלו עדכונים על גבי ההתקנה הקיימת; מזהי האפליקציות לא משתנים.
 - **Windows Production שנבדק ידנית:** 1.1.4 — Security Device Management.
 - **Windows source/security baseline:** 1.1.5-security.5 — Phase 5 Local File Capabilities. מוזג ל-`main`, עבר CI, עדיין דורש build/install ובדיקה ידנית לפני קידום ל-Production.
 - **Android Production:** 1.0.5 — Security Device Management.
