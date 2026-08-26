@@ -12,6 +12,7 @@
 - callback יחיד ומוגבל מוגדר בשתי הפלטפורמות: `mkreceiptpro://auth/recovery`. ב-Staging בלבד יש להוסיף אותו ל־Supabase Redirect URLs; אין שינוי ב-Production.
 - ה־callback מאומת בקוד: scheme/host/path מדויקים, `type=recovery`, מגבלות אורך, `getUser()` ו־session בזיכרון בלבד. ב־Windows ה־URL והטוקנים אינם עוברים דרך preload/IPC.
 - לפני כל הפעלה יש לקרוא ולבצע את [תוכנית הבדיקה ל־Staging](docs/PASSWORD_RECOVERY_STAGING.md). אין למזג ל־`main` או לשנות Production ללא בדיקות Staging ואישור מפורש מחדש.
+- הוראות לבניית השדרוגים ל־Staging נמצאות ב־[Phase 15 Staging builds](docs/PHASE15_STAGING_BUILDS.md). כל build מוגבל לפרויקט ה־Staging ומתועד ב־GitHub.
 
 ### כלל תיעוד GitHub
 
