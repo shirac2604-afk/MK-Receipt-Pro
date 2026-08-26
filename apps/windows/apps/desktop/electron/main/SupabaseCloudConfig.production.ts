@@ -9,6 +9,7 @@ export const STUDENT_RELEASE_CHANNEL="production" as const;
 export const REMINDER_AUTO_DISPATCH_ENABLED=false;
 export const SUPABASE_URL="https://noimclnzzuxcszdotmby.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY="sb_publishable_teF0oR3uCfoq5RUOx1zf-g_6z96RgQO";
+export const PASSWORD_RECOVERY_ENABLED=false;
 
 export function validateSupabaseConfig():void{
  if(STUDENT_TEST_MODE)throw new Error("STUDENT_PRODUCTION_MODE_REQUIRED");
