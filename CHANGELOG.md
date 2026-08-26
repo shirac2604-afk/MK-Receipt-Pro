@@ -2,6 +2,11 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-26 — Personal Production recovery disabled
+
+- Disabled and hid the password-recovery interface in the personal Production Android and Windows builds.
+- Kept the capability enabled only in isolated Staging build configurations; no Production Supabase redirect URL or SMTP configuration is required.
+
 ## 2026-08-26 — Phase 15 Staging build routing
 
 - Confirmed that Supabase project `ymcmmvnfrfntmllytpyu` is `MK-Receipt-Pro-Phase9-Staging`; the exact password-recovery callback was allowlisted there.
