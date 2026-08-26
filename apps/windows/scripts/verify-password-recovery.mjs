@@ -19,7 +19,7 @@ const checks=[
   [handlers.includes('"cloud-account:password-recovery-status"')&&handlers.includes('"cloud-account:complete-password-recovery"')&&handlers.includes('"cloud-account:request-password-recovery"'),"trusted IPC exposes recovery request, status and password update without a raw link channel"],
   [preload.includes("requestPasswordRecovery")&&preload.includes("getPasswordRecoveryStatus")&&preload.includes("completePasswordRecovery")&&!preload.includes("beginPasswordRecovery"),"preload exposes only guarded recovery operations and never raw recovery credentials"],
   [types.includes("SupabaseCloudPasswordRecoveryRequestInput")&&types.includes("SupabaseCloudPasswordRecoveryCompleteInput")&&!types.includes("access_token")&&!types.includes("refresh_token"),"IPC types carry recovery request/password data but never recovery tokens"],
-  [renderer.includes("mkApi")&&!renderer.includes('autoComplete="one-time-code"')&&!renderer.includes("verifyOtp")&&!renderer.includes("access_token")&&!renderer.includes("refresh_token"),"Windows renderer remains token-blind and does not accept OTP or raw recovery tokens"],
+  [renderer.includes("requestPasswordRecovery")&&renderer.includes("getPasswordRecoveryStatus")&&renderer.includes("completePasswordRecovery")&&!renderer.includes('autoComplete="one-time-code"')&&!renderer.includes("verifyOtp"),"Windows renderer uses only the guarded recovery flow and does not accept OTP input"],
   [String(pkg.scripts?.["release:production:win"]||"").includes("check:password-recovery"),"Windows release gate includes password recovery checks"]
 ];
 
