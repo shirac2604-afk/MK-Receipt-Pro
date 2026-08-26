@@ -4,6 +4,7 @@
 
 ## 2026-08-26 — Security Phase 15 / Password recovery (Staging-ready)
 
+- Prepared an in-place upgrade build: Android version `1.0.9` / `versionCode` 10 and Windows version `1.1.8`. Android package `il.mkreceiptpro.android` and Windows appId `il.co.mkreceipt.desktop` remain unchanged.
 - Added a permanent GitHub change-documentation policy: every code, configuration, security, CI, build and documentation change must have a clear commit, PR context, relevant documentation and recorded verification/upgrade impact before it is considered complete.
 - Replaced the unfinished OTP recovery flow with Supabase's standard password-reset link for Android and Windows. Both clients use an ephemeral, non-persistent Auth client and the same Staging callback, `mkreceiptpro://auth/recovery`.
 - Added a bounded callback trust model: exact scheme/host/path, `type=recovery`, token-length limits, `setSession` + `getUser` verification, password policy reuse and global sign-out after update.
