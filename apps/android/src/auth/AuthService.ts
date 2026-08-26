@@ -3,18 +3,13 @@ import {supabase} from "../lib/supabase";
 import {SUPABASE_PUBLISHABLE_KEY,SUPABASE_URL} from "../config/supabasePublic";
 import {MAX_PASSWORD_LENGTH,validateNewPassword} from "./passwordPolicy";
 
-const RECOVERY_TOKEN_RE=/^\d{6,10}$/;
+const PASSWORD_RESET_REDIRECT_URL="https://ymcmmvnfrfntmllytpyu.supabase.co/functions/v1/password-reset";
 const RECOVERY_REQUEST_COOLDOWN_MS=60_000;
 const RECOVERY_REQUEST_WINDOW_MS=15*60_000;
 const MAX_RECOVERY_REQUESTS_PER_WINDOW=3;
-const RECOVERY_VERIFY_WINDOW_MS=15*60_000;
-const MAX_RECOVERY_VERIFY_ATTEMPTS_PER_WINDOW=5;
-
 let recoveryLastRequestAt=0;
 let recoveryRequestWindowStartedAt=0;
 let recoveryRequestCount=0;
-let recoveryVerifyWindowStartedAt=0;
-let recoveryVerifyAttemptCount=0;
 
 function normalizeRecoveryEmail(raw:string):string{
   const email=raw.trim().toLowerCase();
@@ -23,29 +18,13 @@ function normalizeRecoveryEmail(raw:string):string{
 }
 
 function createEphemeralRecoveryClient(){
-  return createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{
-    autoRefreshToken:false,
-    persistSession:false,
-    detectSessionInUrl:false
-  }});
+  return createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
 }
 
 function assertRecoveryRequestAllowed(now=Date.now()):void{
   if(now-recoveryLastRequestAt<RECOVERY_REQUEST_COOLDOWN_MS)throw new Error("AUTH_RECOVERY_REQUEST_COOLDOWN");
-  if(now-recoveryRequestWindowStartedAt>=RECOVERY_REQUEST_WINDOW_MS){
-    recoveryRequestWindowStartedAt=now;
-    recoveryRequestCount=0;
-  }
+  if(now-recoveryRequestWindowStartedAt>=RECOVERY_REQUEST_WINDOW_MS){recoveryRequestWindowStartedAt=now;recoveryRequestCount=0;}
   if(recoveryRequestCount>=MAX_RECOVERY_REQUESTS_PER_WINDOW)throw new Error("AUTH_RECOVERY_REQUEST_LIMIT");
-}
-
-function assertRecoveryVerificationAllowed(now=Date.now()):void{
-  if(now-recoveryVerifyWindowStartedAt>=RECOVERY_VERIFY_WINDOW_MS){
-    recoveryVerifyWindowStartedAt=now;
-    recoveryVerifyAttemptCount=0;
-  }
-  if(recoveryVerifyAttemptCount>=MAX_RECOVERY_VERIFY_ATTEMPTS_PER_WINDOW)throw new Error("AUTH_RECOVERY_VERIFY_LIMIT");
-  recoveryVerifyAttemptCount+=1;
 }
 
 export const AuthService={
@@ -69,15 +48,9 @@ export const AuthService={
     if(currentError||!current.user?.email)throw new Error("AUTH_SESSION_REQUIRED");
     const passwordError=validateNewPassword(current.user.email,newPassword);
     if(passwordError)throw new Error(passwordError);
-    const {data:verified,error:verifyError}=await supabase.auth.signInWithPassword({
-      email:current.user.email.trim().toLowerCase(),
-      password:currentPassword
-    });
+    const {data:verified,error:verifyError}=await supabase.auth.signInWithPassword({email:current.user.email.trim().toLowerCase(),password:currentPassword});
     if(verifyError||!verified.user)throw new Error("AUTH_CURRENT_PASSWORD_INVALID");
-    if(verified.user.id!==current.user.id){
-      await supabase.auth.signOut({scope:"local"}).catch(()=>{});
-      throw new Error("AUTH_IDENTITY_CHANGED");
-    }
+    if(verified.user.id!==current.user.id){await supabase.auth.signOut({scope:"local"}).catch(()=>{});throw new Error("AUTH_IDENTITY_CHANGED");}
     const {error:updateError}=await supabase.auth.updateUser({password:newPassword});
     if(updateError)throw new Error("AUTH_PASSWORD_CHANGE_FAILED");
   },
@@ -86,38 +59,13 @@ export const AuthService={
     assertRecoveryRequestAllowed();
     const recoveryClient=createEphemeralRecoveryClient();
     try{
-      const {error}=await recoveryClient.auth.resetPasswordForEmail(email);
+      const {error}=await recoveryClient.auth.resetPasswordForEmail(email,{redirectTo:PASSWORD_RESET_REDIRECT_URL});
       if(error)throw new Error("AUTH_RECOVERY_REQUEST_FAILED");
       const now=Date.now();
       recoveryLastRequestAt=now;
       recoveryRequestWindowStartedAt=recoveryRequestWindowStartedAt||now;
       recoveryRequestCount+=1;
-      recoveryVerifyWindowStartedAt=now;
-      recoveryVerifyAttemptCount=0;
-    }finally{
-      await recoveryClient.auth.signOut({scope:"local"}).catch(()=>{});
-    }
-  },
-  async completePasswordRecovery(rawEmail:string,token:string,newPassword:string){
-    const email=normalizeRecoveryEmail(rawEmail);
-    if(!RECOVERY_TOKEN_RE.test(token))throw new Error("AUTH_RECOVERY_CODE_INVALID");
-    const passwordError=validateNewPassword(email,newPassword);
-    if(passwordError)throw new Error(passwordError);
-    assertRecoveryVerificationAllowed();
-    const recoveryClient=createEphemeralRecoveryClient();
-    try{
-      const {data:verified,error:verifyError}=await recoveryClient.auth.verifyOtp({email,token,type:"recovery"});
-      const verifiedEmail=verified.user?.email?.trim().toLowerCase();
-      if(verifyError||!verified.user||verifiedEmail!==email)throw new Error("AUTH_RECOVERY_CODE_INVALID");
-      const {error:updateError}=await recoveryClient.auth.updateUser({password:newPassword});
-      if(updateError)throw new Error("AUTH_RECOVERY_UPDATE_FAILED");
-      const {error:signOutError}=await recoveryClient.auth.signOut({scope:"global"});
-      if(signOutError)throw new Error("AUTH_RECOVERY_GLOBAL_SIGNOUT_FAILED");
-      recoveryVerifyAttemptCount=0;
-    }finally{
-      await recoveryClient.auth.signOut({scope:"local"}).catch(()=>{});
-      await supabase.auth.signOut({scope:"local"}).catch(()=>{});
-    }
+    }finally{await recoveryClient.auth.signOut({scope:"local"}).catch(()=>{});}
   },
   async signOut(){
     const {error}=await supabase.auth.signOut({scope:"local"});
