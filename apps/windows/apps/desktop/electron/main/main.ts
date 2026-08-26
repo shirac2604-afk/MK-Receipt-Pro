@@ -25,16 +25,31 @@ let mainWindow: BrowserWindow | null = null;
 let reminderTimer:NodeJS.Timeout|null=null;
 let googleCalendarTimer:NodeJS.Timeout|null=null;
 let deviceRevocationTimer:NodeJS.Timeout|null=null;
+const RECOVERY_PROTOCOL="mkreceiptpro";
+let pendingRecoveryUrl:string|null=findRecoveryUrl(process.argv);
+let activeCloudService:SupabaseCloudService|null=null;
 const databaseService = new DatabaseService();
+function findRecoveryUrl(argv:string[]):string|null{for(const candidate of argv){if(candidate.startsWith(`${RECOVERY_PROTOCOL}://`))return candidate;}return null;}
+function focusMainWindow():void{if(!mainWindow)return;if(mainWindow.isMinimized())mainWindow.restore();mainWindow.show();mainWindow.focus();}
+async function receiveRecoveryUrl(url:string):Promise<void>{
+ if(!activeCloudService){pendingRecoveryUrl=url;return;}
+ try{await activeCloudService.beginPasswordRecovery(url);focusMainWindow();}
+ catch{console.warn("[Password recovery] rejected an invalid recovery link");}
+}
+if(!app.requestSingleInstanceLock())app.quit();
+app.on("second-instance",(_event,commandLine)=>{const url=findRecoveryUrl(commandLine);if(url)void receiveRecoveryUrl(url);else focusMainWindow();});
+app.on("open-url",(event,url)=>{event.preventDefault();void receiveRecoveryUrl(url);});
 function isTrustedExternalUrl(rawUrl:string):boolean{try{const url=new URL(rawUrl);if(url.protocol==="mailto:")return true;if(url.protocol!=="https:")return false;return new Set(["wa.me","accounts.google.com",new URL(SUPABASE_URL).hostname.toLowerCase()]).has(url.hostname.toLowerCase())}catch{return false}}
 function createMainWindow():void{mainWindow=new BrowserWindow({width:1180,height:760,minWidth:980,minHeight:650,show:false,backgroundColor:"#f6f8f7",title:appTitle,autoHideMenuBar:true,icon:path.join(process.resourcesPath,"installer","app-icon.ico"),webPreferences:{preload:path.join(__dirname,"../preload/preload.js"),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,devTools:!app.isPackaged,navigateOnDragDrop:false}});mainWindow.setMenuBarVisibility(false);mainWindow.webContents.session.setPermissionRequestHandler((_webContents,_permission,callback)=>callback(false));mainWindow.webContents.session.setPermissionCheckHandler(()=>false);mainWindow.webContents.setWindowOpenHandler(({url})=>{if(isTrustedExternalUrl(url))void shell.openExternal(url);return{action:"deny"}});mainWindow.webContents.on("will-navigate",(event,url)=>{const currentUrl=mainWindow?.webContents.getURL();if(currentUrl&&url!==currentUrl)event.preventDefault()});const devServerUrl=!app.isPackaged?process.env.VITE_DEV_SERVER_URL:undefined;if(devServerUrl==="http://127.0.0.1:5173")void mainWindow.loadURL(devServerUrl);else void mainWindow.loadFile(path.join(__dirname,"../../../../../dist/index.html"));mainWindow.once("ready-to-show",()=>mainWindow?.show());mainWindow.on("closed",()=>{mainWindow=null})}
 app.whenReady().then(async()=>{
  Menu.setApplicationMenu(null);
+ if(process.platform==="win32"&&!app.isPackaged)app.setAsDefaultProtocolClient(RECOVERY_PROTOCOL,process.execPath,[process.argv[1]]);
  const userData=app.getPath("userData");
  databaseService.initialize(userData,app.getPath("documents"),process.resourcesPath);
  const cloudSync=new GoogleDriveSyncService(userData,databaseService,process.resourcesPath);
  databaseService.setAutomaticCloudSyncHook(()=>{if(!STUDENT_TEST_MODE)cloudSync.schedulePush();});
  const supabaseCloud=new SupabaseCloudService(userData);
+ activeCloudService=supabaseCloud;
  const localStudentStore=new LocalStudentTestStore(userData);
  const googleCalendar=new GoogleCalendarService(userData);
  if(!STUDENT_TEST_MODE)await supabaseCloud.initialize();
@@ -66,6 +81,7 @@ app.whenReady().then(async()=>{
  googleCalendarTimer=setInterval(()=>{void autoSyncGoogle();},60000);
  setTimeout(()=>{void autoSyncGoogle();},5000).unref();
  createMainWindow();
- app.on("activate",()=>{if(BrowserWindow.getAllWindows().length===0)createMainWindow()});
+ if(pendingRecoveryUrl){const url=pendingRecoveryUrl;pendingRecoveryUrl=null;await receiveRecoveryUrl(url);}
+  app.on("activate",()=>{if(BrowserWindow.getAllWindows().length===0)createMainWindow()});
 });
 app.on("before-quit",()=>{if(reminderTimer)clearInterval(reminderTimer);if(googleCalendarTimer)clearInterval(googleCalendarTimer);if(deviceRevocationTimer)clearInterval(deviceRevocationTimer);databaseService.close()});app.on("window-all-closed",()=>{if(process.platform!=="darwin")app.quit()});

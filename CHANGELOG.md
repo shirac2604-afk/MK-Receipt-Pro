@@ -4,11 +4,10 @@
 
 ## 2026-08-26 — Security Phase 15 / Password recovery (Staging-ready)
 
-- Added code-based password recovery for Android and Windows using an ephemeral, non-persistent Supabase Auth client.
-- Recovery binds OTP verification to the normalized email address, reuses the existing password policy and globally signs out sessions after an update.
-- Added neutral request messaging, masked confirmation UI, bounded token format, and local cooldown/attempt controls. Server-side rate limiting remains an Auth configuration responsibility.
-- Added static recovery validators, a Phase 15 GitHub Actions gate, and Staging-only activation/test instructions.
-- No Supabase Auth setting, Production deployment, installer or release build was changed.
+- Replaced the unfinished OTP recovery flow with Supabase's standard password-reset link for Android and Windows. Both clients use an ephemeral, non-persistent Auth client and the same Staging callback, `mkreceiptpro://auth/recovery`.
+- Added a bounded callback trust model: exact scheme/host/path, `type=recovery`, token-length limits, `setSession` + `getUser` verification, password policy reuse and global sign-out after update.
+- Windows registers the protocol in its installer, accepts the link only in the Electron main process, and never exposes recovery URLs or tokens to preload/IPC. The renderer receives only a recovery-ready state and submits a new password through the existing guarded IPC path.
+- Removed the unsupported HTML Edge Function design after confirming that Supabase rewrites non-custom-domain HTML function responses to `text/plain`. Updated static checks and Staging-only instructions. No Production Auth setting, SMTP setting, installer, or release build was changed.
 
 ## 2026-08-25 — Security Phase 14 / Source and lockfile integrity
 

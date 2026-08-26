@@ -16,11 +16,15 @@ const passwordErrorMessages:Record<NewPasswordValidationError,string>={
 const recoveryErrorMessages:Record<string,string>={
  AUTH_RECOVERY_REQUEST_COOLDOWN:"כדי להגן על החשבון, יש להמתין דקה לפני בקשה נוספת.",
  AUTH_RECOVERY_REQUEST_LIMIT:"בוצעו יותר מדי בקשות לשחזור. יש לנסות שוב מאוחר יותר.",
- AUTH_RECOVERY_REQUEST_FAILED:"לא ניתן להתחיל כרגע את תהליך השחזור. יש לנסות שוב מאוחר יותר."
+ AUTH_RECOVERY_REQUEST_FAILED:"לא ניתן להתחיל כרגע את תהליך השחזור. יש לנסות שוב מאוחר יותר.",
+ AUTH_RECOVERY_INVALID_LINK:"קישור השחזור אינו תקף או שפג תוקפו. יש לבקש קישור חדש.",
+ AUTH_RECOVERY_SESSION_INVALID:"קישור השחזור אינו תקף או שפג תוקפו. יש לבקש קישור חדש.",
+ AUTH_RECOVERY_PASSWORD_UPDATE_FAILED:"לא ניתן לעדכן את הסיסמה. יש לבקש קישור חדש ולנסות שוב.",
+ AUTH_RECOVERY_SIGNOUT_FAILED:"הסיסמה עודכנה, אך ניתוק ההתחברויות לא הושלם. יש לבקש קישור חדש ולנסות שוב."
 };
 
 export default function AuthScreen(){
- const {signIn,signUp}=useAuth();
+ const {signIn,signUp,recoveryActive,completePasswordRecovery,clearPasswordRecovery}=useAuth();
  const [email,setEmail]=useState("");
  const [password,setPassword]=useState("");
  const [busy,setBusy]=useState(false);
@@ -29,6 +33,8 @@ export default function AuthScreen(){
  const [recoveryOpen,setRecoveryOpen]=useState(false);
  const [recoveryBusy,setRecoveryBusy]=useState(false);
  const [recoverySent,setRecoverySent]=useState(false);
+ const [recoveryPassword,setRecoveryPassword]=useState("");
+ const [recoveryPasswordConfirmation,setRecoveryPasswordConfirmation]=useState("");
 
  async function diagnose(){
    setDiagBusy(true);
@@ -66,6 +72,28 @@ export default function AuthScreen(){
   }finally{setRecoveryBusy(false)}
  }
 
+ async function completeRecovery(){
+  if(!recoveryPassword||!recoveryPasswordConfirmation){Alert.alert("חסרים פרטים","יש למלא את שתי הסיסמאות.");return;}
+  if(recoveryPassword!==recoveryPasswordConfirmation){Alert.alert("אימות סיסמה","הסיסמאות אינן תואמות.");return;}
+  setRecoveryBusy(true);
+  try{await completePasswordRecovery(recoveryPassword);setRecoveryPassword("");setRecoveryPasswordConfirmation("");Alert.alert("הסיסמה עודכנה","הסיסמה עודכנה וכל ההתחברויות נותקו. אפשר להתחבר מחדש.");}
+  catch(e){const code=e instanceof Error?e.message:"";const isPolicyError=Object.prototype.hasOwnProperty.call(passwordErrorMessages,code);Alert.alert("שחזור סיסמה",isPolicyError?passwordErrorMessages[code as NewPasswordValidationError]:recoveryErrorMessages[code]||recoveryErrorMessages.AUTH_RECOVERY_PASSWORD_UPDATE_FAILED);}
+  finally{setRecoveryBusy(false)}
+ }
+
+ if(recoveryActive)return <ScrollView contentContainerStyle={s.wrap} keyboardShouldPersistTaps="handled">
+  <Text style={s.logo}>MK Receipt Pro</Text>
+  <Text style={s.title}>בחירת סיסמה חדשה</Text>
+  <View style={s.recoveryPanel}>
+   <Text style={s.recoveryTitle}>קישור השחזור אומת</Text>
+   <Text style={s.passwordHint}>בחרי סיסמה חדשה. אין להזין קוד שחזור באפליקציה.</Text>
+   <TextInput style={s.input} value={recoveryPassword} onChangeText={setRecoveryPassword} secureTextEntry autoComplete="new-password" maxLength={MAX_PASSWORD_LENGTH} placeholder="סיסמה חדשה"/>
+   <TextInput style={s.input} value={recoveryPasswordConfirmation} onChangeText={setRecoveryPasswordConfirmation} secureTextEntry autoComplete="new-password" maxLength={MAX_PASSWORD_LENGTH} placeholder="אימות הסיסמה"/>
+   <Pressable style={s.primary} disabled={recoveryBusy} onPress={()=>void completeRecovery()}><Text style={s.primaryText}>{recoveryBusy?"מעדכן…":"עדכון סיסמה"}</Text></Pressable>
+   <Pressable style={s.secondary} disabled={recoveryBusy} onPress={()=>void clearPasswordRecovery()}><Text style={s.secondaryText}>ביטול</Text></Pressable>
+  </View>
+ </ScrollView>;
+
  return <ScrollView contentContainerStyle={s.wrap} keyboardShouldPersistTaps="handled">
   <Text style={s.logo}>MK Receipt Pro</Text>
   <Text style={s.version}>Android Foundation 5.2</Text>
@@ -90,9 +118,9 @@ export default function AuthScreen(){
   <Pressable style={s.recoveryToggle} disabled={busy||recoveryBusy} onPress={()=>{setRecoveryOpen(v=>!v);setRecoverySent(false)}}><Text style={s.secondaryText}>שכחתי סיסמה</Text></Pressable>
   {recoveryOpen?<View style={s.recoveryPanel}>
     <Text style={s.recoveryTitle}>שחזור סיסמה באמצעות קישור מאובטח</Text>
-    <Text style={s.passwordHint}>{recoverySent?"נשלח קישור מאובטח לתיבת הדואר. פתחי אותו כדי לקבוע סיסמה חדשה.":"הזיני את כתובת האימייל של החשבון ושלחי בקשת שחזור. אם קיימת כתובת תואמת, יישלח אליה קישור מאובטח."}</Text>
+    <Text style={s.passwordHint}>{recoverySent?"נשלח קישור מאובטח לתיבת הדואר. פתחי אותו באפליקציה כדי לקבוע סיסמה חדשה.":"הזיני את כתובת האימייל של החשבון ושלחי בקשת שחזור. אם קיימת כתובת תואמת, יישלח אליה קישור מאובטח."}</Text>
     <Pressable style={s.secondaryButton} disabled={recoveryBusy} onPress={()=>void requestRecovery()}><Text style={s.secondaryText}>{recoveryBusy?"שולח קישור…":recoverySent?"שלחי קישור חדש":"שליחת קישור לשחזור"}</Text></Pressable>
-    {recoverySent?<Text style={s.recoveryHint}>החלפת הסיסמה מתבצעת בדף השחזור המאובטח שנפתח מהאימייל. אין להזין כאן קוד שחזור.</Text>:null}
+    {recoverySent?<Text style={s.recoveryHint}>החלפת הסיסמה מתבצעת באפליקציה לאחר פתיחת הקישור. אין להזין כאן קוד שחזור.</Text>:null}
   </View>:null}
  </ScrollView>;
 }

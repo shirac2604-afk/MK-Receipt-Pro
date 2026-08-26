@@ -150,6 +150,14 @@
   "build": {
     "appId": "il.co.mkreceipt.desktop",
     "productName": "מפתחות להצלחה",
+    "protocols": [
+      {
+        "name": "MK Receipt Pro Password Recovery",
+        "schemes": [
+          "mkreceiptpro"
+        ]
+      }
+    ],
     "directories": {
       "output": "release"
     },

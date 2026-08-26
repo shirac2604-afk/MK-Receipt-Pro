@@ -11,7 +11,7 @@ const expo=app.expo||{};
 const checks=[
  ["session uses SecureStore",supabase.includes('expo-secure-store')&&supabase.includes('AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY')],
  ["session URL detection disabled",supabase.includes('detectSessionInUrl:false')],
- ["no Android deep-link entry point",!expo.scheme&&!expo.android?.intentFilters],
+ ["only the bounded recovery scheme is registered",expo.scheme==="mkreceiptpro"&&!expo.android?.intentFilters],
  ["shared image MIME allowlist",safeImage.includes('image/jpeg')&&safeImage.includes('image/png')&&safeImage.includes('image/webp')],
  ["image magic-byte validation",safeImage.includes('0x89,0x50,0x4e,0x47')&&safeImage.includes('0xff&&bytes[1]===0xd8')&&safeImage.includes('"RIFF"')&&safeImage.includes('"WEBP"')],
  ["decoded byte size validation",safeImage.includes('buffer.byteLength<=0||buffer.byteLength>maxBytes')],

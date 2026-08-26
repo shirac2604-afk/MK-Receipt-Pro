@@ -10,12 +10,13 @@ import type { LessonRecord } from "../../../../packages/database/src/studentType
 
 const MAX_CLOUD_EXPENSE_ATTACHMENT_BYTES=10*1024*1024;
 type VerifiedExpenseAttachmentExtension=".pdf"|".png"|".jpg"|".webp";
-const RECOVERY_TOKEN_RE=/^\d{6,10}$/;
+const PASSWORD_RESET_REDIRECT_URL="mkreceiptpro://auth/recovery";
 const RECOVERY_REQUEST_COOLDOWN_MS=60_000;
 const RECOVERY_REQUEST_WINDOW_MS=15*60_000;
 const MAX_RECOVERY_REQUESTS_PER_WINDOW=3;
-const RECOVERY_VERIFY_WINDOW_MS=15*60_000;
-const MAX_RECOVERY_VERIFY_ATTEMPTS_PER_WINDOW=5;
+const MAX_RECOVERY_LINK_LENGTH=16_384;
+const MIN_RECOVERY_TOKEN_LENGTH=20;
+const MAX_RECOVERY_TOKEN_LENGTH=4_096;
 
 function normalizeRecoveryEmail(raw:string):string{
   const email=raw.trim().toLowerCase();
@@ -29,6 +30,19 @@ function createEphemeralRecoveryClient():SupabaseClient{
     persistSession:false,
     detectSessionInUrl:false
   }});
+}
+
+function parseRecoveryLink(rawUrl:string):{access_token:string;refresh_token:string}{
+  if(rawUrl.length>MAX_RECOVERY_LINK_LENGTH)throw new Error("AUTH_RECOVERY_INVALID_LINK");
+  let url:URL;
+  try{url=new URL(rawUrl)}catch{throw new Error("AUTH_RECOVERY_INVALID_LINK");}
+  if(url.protocol!=="mkreceiptpro:"||url.hostname!=="auth"||url.pathname!=="/recovery")throw new Error("AUTH_RECOVERY_INVALID_LINK");
+  const fragment=new URLSearchParams(url.hash.slice(1));
+  const accessToken=fragment.get("access_token")||"";
+  const refreshToken=fragment.get("refresh_token")||"";
+  const valid=(value:string)=>value.length>=MIN_RECOVERY_TOKEN_LENGTH&&value.length<=MAX_RECOVERY_TOKEN_LENGTH;
+  if(fragment.get("type")!=="recovery"||!valid(accessToken)||!valid(refreshToken))throw new Error("AUTH_RECOVERY_INVALID_LINK");
+  return {access_token:accessToken,refresh_token:refreshToken};
 }
 
 function verifyCloudExpenseAttachment(bytes:Buffer):VerifiedExpenseAttachmentExtension{
@@ -90,8 +104,7 @@ export class SupabaseCloudService {
   private recoveryLastRequestAt=0;
   private recoveryRequestWindowStartedAt=0;
   private recoveryRequestCount=0;
-  private recoveryVerifyWindowStartedAt=0;
-  private recoveryVerifyAttemptCount=0;
+  private activeRecovery:{client:SupabaseClient;email:string}|null=null;
 
   constructor(userDataPath:string){
     validateSupabaseConfig();
@@ -158,39 +171,49 @@ export class SupabaseCloudService {
     this.assertRecoveryRequestAllowed();
     const recoveryClient=createEphemeralRecoveryClient();
     try{
-      const {error}=await recoveryClient.auth.resetPasswordForEmail(email);
+      const {error}=await recoveryClient.auth.resetPasswordForEmail(email,{redirectTo:PASSWORD_RESET_REDIRECT_URL});
       if(error)throw new Error("AUTH_RECOVERY_REQUEST_FAILED");
       const now=Date.now();
       this.recoveryLastRequestAt=now;
       this.recoveryRequestWindowStartedAt=this.recoveryRequestWindowStartedAt||now;
       this.recoveryRequestCount+=1;
-      this.recoveryVerifyWindowStartedAt=now;
-      this.recoveryVerifyAttemptCount=0;
     }finally{
       await recoveryClient.auth.signOut({scope:"local"}).catch(()=>{});
     }
   }
 
-  async completePasswordRecovery(rawEmail:string,token:string,newPassword:string):Promise<void>{
-    const email=normalizeRecoveryEmail(rawEmail);
-    if(!RECOVERY_TOKEN_RE.test(token))throw new Error("AUTH_RECOVERY_CODE_INVALID");
-    const passwordError=validateNewPassword(email,newPassword);
-    if(passwordError)throw new Error(passwordError);
-    this.assertRecoveryVerificationAllowed();
+  async beginPasswordRecovery(rawUrl:string):Promise<void>{
+    const session=parseRecoveryLink(rawUrl);
     const recoveryClient=createEphemeralRecoveryClient();
     try{
-      const {data:verified,error:verifyError}=await recoveryClient.auth.verifyOtp({email,token,type:"recovery"});
-      const verifiedEmail=verified.user?.email?.trim().toLowerCase();
-      if(verifyError||!verified.user||verifiedEmail!==email)throw new Error("AUTH_RECOVERY_CODE_INVALID");
-      const {error:updateError}=await recoveryClient.auth.updateUser({password:newPassword});
-      if(updateError)throw new Error("AUTH_RECOVERY_UPDATE_FAILED");
-      const {error:signOutError}=await recoveryClient.auth.signOut({scope:"global"});
-      if(signOutError)throw new Error("AUTH_RECOVERY_GLOBAL_SIGNOUT_FAILED");
-      this.recoveryVerifyAttemptCount=0;
+      const {error:setSessionError}=await recoveryClient.auth.setSession(session);
+      if(setSessionError)throw new Error("AUTH_RECOVERY_INVALID_LINK");
+      const {data,error:userError}=await recoveryClient.auth.getUser();
+      const email=data.user?.email||"";
+      if(userError||!email)throw new Error("AUTH_RECOVERY_INVALID_LINK");
+      await this.activeRecovery?.client.auth.signOut({scope:"local"}).catch(()=>{});
+      this.activeRecovery={client:recoveryClient,email};
       await this.signOut().catch(()=>{});
-    }finally{
+    }catch(error){
       await recoveryClient.auth.signOut({scope:"local"}).catch(()=>{});
+      throw error;
     }
+  }
+
+  hasPendingPasswordRecovery():boolean{return this.activeRecovery!==null;}
+
+  async completePasswordRecovery(newPassword:string):Promise<void>{
+    const recovery=this.activeRecovery;
+    if(!recovery)throw new Error("AUTH_RECOVERY_SESSION_INVALID");
+    const passwordError=validateNewPassword(recovery.email,newPassword);
+    if(passwordError)throw new Error(passwordError);
+    const {error:updateError}=await recovery.client.auth.updateUser({password:newPassword});
+    if(updateError)throw new Error("AUTH_RECOVERY_PASSWORD_UPDATE_FAILED");
+    this.activeRecovery=null;
+    const {error:globalSignOutError}=await recovery.client.auth.signOut({scope:"global"});
+    await recovery.client.auth.signOut({scope:"local"}).catch(()=>{});
+    await this.signOut().catch(()=>{});
+    if(globalSignOutError)throw new Error("AUTH_RECOVERY_SIGNOUT_FAILED");
   }
 
   async refresh(allowDeviceReenroll=false):Promise<SupabaseCloudStatus>{
@@ -258,15 +281,6 @@ export class SupabaseCloudService {
       this.recoveryRequestCount=0;
     }
     if(this.recoveryRequestCount>=MAX_RECOVERY_REQUESTS_PER_WINDOW)throw new Error("AUTH_RECOVERY_REQUEST_LIMIT");
-  }
-
-  private assertRecoveryVerificationAllowed(now=Date.now()):void{
-    if(now-this.recoveryVerifyWindowStartedAt>=RECOVERY_VERIFY_WINDOW_MS){
-      this.recoveryVerifyWindowStartedAt=now;
-      this.recoveryVerifyAttemptCount=0;
-    }
-    if(this.recoveryVerifyAttemptCount>=MAX_RECOVERY_VERIFY_ATTEMPTS_PER_WINDOW)throw new Error("AUTH_RECOVERY_VERIFY_LIMIT");
-    this.recoveryVerifyAttemptCount+=1;
   }
 
   private async verifyCurrentDeviceActive(businessId:string,deviceId:string):Promise<void>{

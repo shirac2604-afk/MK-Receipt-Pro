@@ -14,7 +14,7 @@
 - Phase 5 also canonicalizes selected paths, enforces a 10MB limit, and verifies both allowed extension and file magic bytes for PDF/PNG/JPEG/WebP before sensitive file use.
 - Phase 6 hardens Android image/content boundaries. Expense attachments and business logos are validated using a JPEG/PNG/WebP allowlist, decoded byte limits and file magic bytes before upload/use.
 - Phase 6 pins business-logo signed URLs to the trusted Supabase HTTPS host and storage signed-object path, rejects redirects, and validates the downloaded response MIME, decoded size and magic bytes.
-- Android auth remains URL-independent: `detectSessionInUrl:false`, SecureStore uses `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`, and the current Expo configuration exposes no custom `scheme` or Android `intentFilters` deep-link entry point.
+- Android keeps `detectSessionInUrl:false` and SecureStore uses `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`. Phase 15 adds only the reviewed `mkreceiptpro` scheme, with no broad Android intent filter; recovery links are parsed and verified explicitly before any session is accepted.
 - Phase 12 separates registration password quality from sign-in compatibility. Android sign-up enforces an eight-character minimum plus basic offline common/email-derived password rejection, while existing sign-in passwords remain accepted for Supabase verification.
 - Phase 12 revalidates the active Windows device before sensitive cloud service operations and every 15 seconds in the Electron main process, clearing the local cloud session when the device was revoked.
 - Phase 12 treats cloud-downloaded expense attachments as untrusted: 10 MB limit, PDF/PNG/JPEG/WebP magic-byte validation, content-derived extension, atomic controlled-directory write and IPC revalidation before OS open.
@@ -35,15 +35,15 @@ A MIME value supplied by an Android picker or HTTP response is not sufficient pr
 
 Supabase signed storage URLs used outside the Supabase SDK must pass `assertTrustedSupabaseSignedUrl` before opening/fetching. Security-sensitive downloads should reject redirects and validate the returned content before rendering it.
 
-Do not add an Android custom URL scheme or intent filter without designing and testing a dedicated deep-link trust model first. Auth tokens must not be accepted implicitly from incoming URLs.
+Do not add any Android URL scheme or intent filter beyond the reviewed `mkreceiptpro://auth/recovery` path without a dedicated trust model and cross-platform testing. Auth tokens must never be accepted implicitly from incoming URLs.
 
 ## Password recovery (Phase 15 — Staging only)
 
-Password recovery uses an ephemeral Supabase client with `persistSession: false`, `autoRefreshToken: false` and `detectSessionInUrl: false`. It requests a code without `redirectTo`, verifies the OTP only with the same normalized email, applies the existing password policy, then globally signs out all sessions. The temporary and normal local sessions are cleared whether recovery succeeds or fails.
+Password recovery uses an ephemeral Supabase client with `persistSession: false`, `autoRefreshToken: false` and `detectSessionInUrl: false`. Android and Windows request Supabase's normal reset link with the exact Staging callback `mkreceiptpro://auth/recovery`. The callback parser accepts only that scheme, `auth` host and `/recovery` path; it requires `type=recovery`, bounds both credentials, calls `setSession` and `getUser`, then holds the verified recovery session only in memory. It reuses the password policy, globally signs out sessions after a successful update, and clears local recovery state.
 
-The client does not add a custom callback protocol, Android URL scheme, intent filter, deep link or redirect allowlist. Recovery must first be enabled and tested on Staging using the `{{ .Token }}` reset-password email template. Do not change Production Auth settings or merge this phase until the documented cross-platform Staging checks pass and a fresh approval is given.
+On Windows, the Electron main process owns the link and recovery session. The renderer receives only a boolean recovery-ready state and submits a new password through the existing sender-validated, size-bounded IPC route; it never receives the URL, access token or refresh token. Recovery must first be enabled and tested on Staging using the standard `{{ .ConfirmationURL }}` reset-password template. Do not change Production Auth settings or merge this phase until the documented cross-platform Staging checks pass and a fresh approval is given.
 
-The local cooldown and failed-attempt windows are user-interface load reduction only. They are not a substitute for Supabase Auth server-side rate limits.
+The local request cooldown is user-interface load reduction only. It is not a substitute for Supabase Auth server-side rate limits.
 
 ## Release status
 

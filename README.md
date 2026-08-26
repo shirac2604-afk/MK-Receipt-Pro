@@ -8,8 +8,9 @@
 
 ### Phase 15 — שחזור סיסמה (מוכן ל־Staging בלבד)
 
-- הענף `security/phase15-password-recovery` מכיל שחזור מבוסס קוד חד־פעמי ל־Android ול־Windows.
-- אין deep link, intent filter, callback מותאם או שינוי בהגדרות Supabase/Production.
+- הענף `security/phase15-password-recovery` מכיל שחזור באמצעות קישור האיפוס המובנה של Supabase עבור Android ו-Windows. הקישור פותח את האפליקציה המותקנת ומציג בחירת סיסמה חדשה רק לאחר אימות session ההתאוששות; אין הזנת קוד.
+- callback יחיד ומוגבל מוגדר בשתי הפלטפורמות: `mkreceiptpro://auth/recovery`. ב-Staging בלבד יש להוסיף אותו ל־Supabase Redirect URLs; אין שינוי ב-Production.
+- ה־callback מאומת בקוד: scheme/host/path מדויקים, `type=recovery`, מגבלות אורך, `getUser()` ו־session בזיכרון בלבד. ב־Windows ה־URL והטוקנים אינם עוברים דרך preload/IPC.
 - לפני כל הפעלה יש לקרוא ולבצע את [תוכנית הבדיקה ל־Staging](docs/PASSWORD_RECOVERY_STAGING.md). אין למזג ל־`main` או לשנות Production ללא בדיקות Staging ואישור מפורש מחדש.
 
 ### גרסאות

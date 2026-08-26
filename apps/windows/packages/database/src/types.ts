@@ -253,4 +253,4 @@ export interface SupabaseCloudStatus { connected:boolean; email:string|null; use
 export interface SupabaseCloudConnectInput { email:string; password:string; }
 export interface SupabaseCloudPasswordChangeInput { currentPassword:string; newPassword:string; }
 export interface SupabaseCloudPasswordRecoveryRequestInput { email:string; }
-export interface SupabaseCloudPasswordRecoveryConfirmInput { email:string; token:string; newPassword:string; }
+export interface SupabaseCloudPasswordRecoveryCompleteInput { newPassword:string; }

@@ -21,10 +21,6 @@ export function formatUnknownError(error:unknown):string{
   if(raw.includes("AUTH_PASSWORD_CHANGE_FAILED"))return "שינוי הסיסמה לא הושלם. הסיסמה הקיימת נשארה ללא שינוי.";
   if(raw.includes("AUTH_RECOVERY_REQUEST_COOLDOWN"))return "כדי להגן על החשבון, יש להמתין דקה לפני בקשה נוספת.";
   if(raw.includes("AUTH_RECOVERY_REQUEST_LIMIT"))return "בוצעו יותר מדי בקשות לשחזור. יש לנסות שוב מאוחר יותר.";
-  if(raw.includes("AUTH_RECOVERY_CODE_INVALID"))return "הקוד אינו תקין או שפג תוקפו. יש לבקש קוד חדש.";
-  if(raw.includes("AUTH_RECOVERY_VERIFY_LIMIT"))return "בוצעו יותר מדי ניסיונות עם קוד שחזור. יש לבקש קוד חדש.";
-  if(raw.includes("AUTH_RECOVERY_UPDATE_FAILED"))return "לא ניתן היה לעדכן את הסיסמה. הסיסמה הקודמת נשארה ללא שינוי.";
-  if(raw.includes("AUTH_RECOVERY_GLOBAL_SIGNOUT_FAILED"))return "הסיסמה עודכנה, אך נדרש ניסיון שחזור חדש כדי להשלים את ניתוק המכשירים.";
   if(/network request failed|fetch|network|timeout|timed out/i.test(raw))return "לא ניתן להשלים את הפעולה מול הענן. בדוק את החיבור לאינטרנט ורענן את הרשימה לפני ניסיון נוסף.";
   return raw||"אירעה שגיאה לא צפויה. נסה לרענן ולבצע שוב.";
 }
