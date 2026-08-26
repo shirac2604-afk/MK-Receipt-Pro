@@ -9,6 +9,7 @@
 - Added a dedicated Windows Staging configuration and a manual unsigned GitHub Actions installer workflow, including SHA-256 verification.
 - Corrected the Android direct-Supabase verifier so it checks the diagnostic label that is actually rendered.
 - Documented the Staging-only upgrade route. No Production setting, `main` branch, stable Android package or stable Windows app ID was changed.
+- Kept Android's repository default on Production and added an isolated, manual Staging APK workflow, so merging does not repoint the main source tree to Staging.
 
 ## 2026-08-26 — Security Phase 15 / Password recovery (Staging-ready)
 
