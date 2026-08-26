@@ -1,5 +1,6 @@
-// Public client configuration for MK Receipt Pro Android.
-// These values are safe for client-side use. Never put service_role/secret keys here.
+// Production client configuration for MK Receipt Pro Android.
+// Staging APK workflows replace this file with supabasePublic.staging.ts only
+// inside their isolated build runner. Never put service_role/secret keys here.
 export const SUPABASE_URL="https://noimclnzzuxcszdotmby.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY="sb_publishable_teF0oR3uCfoq5RUOx1zf-g_6z96RgQO";
 

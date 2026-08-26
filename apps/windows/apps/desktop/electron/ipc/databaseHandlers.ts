@@ -197,6 +197,12 @@ function errorResult(error: unknown): ApiResult<never> {
   if (code === "AUTH_PASSWORD_CONTAINS_EMAIL") return apiFailure("INVALID_INPUT", "הסיסמה החדשה לא יכולה לכלול את החלק הראשון של כתובת האימייל.", false);
   if (code === "AUTH_SESSION_REQUIRED"||code === "AUTH_IDENTITY_CHANGED") return apiFailure("DATABASE_OPERATION_FAILED", "החיבור לחשבון השתנה. יש להתנתק ולהתחבר מחדש לפני שינוי הסיסמה.", false);
   if (code === "AUTH_PASSWORD_CHANGE_FAILED") return apiFailure("DATABASE_OPERATION_FAILED", "שינוי הסיסמה לא הושלם. הסיסמה הקיימת נשארה ללא שינוי.", true);
+  if (code === "AUTH_RECOVERY_REQUEST_COOLDOWN") return apiFailure("DATABASE_OPERATION_FAILED", "אם קיימת כתובת חשבון תואמת, אפשר לבקש קישור נוסף בעוד דקה.", false);
+  if (code === "AUTH_RECOVERY_REQUEST_LIMIT") return apiFailure("DATABASE_OPERATION_FAILED", "בוצעו יותר מדי בקשות לשחזור. יש לנסות שוב מאוחר יותר.", false);
+  if (code === "AUTH_RECOVERY_REQUEST_FAILED") return apiFailure("DATABASE_OPERATION_FAILED", "לא ניתן להתחיל כרגע את תהליך השחזור. יש לנסות שוב מאוחר יותר.", true);
+  if (code === "AUTH_RECOVERY_INVALID_LINK"||code === "AUTH_RECOVERY_SESSION_INVALID") return apiFailure("INVALID_INPUT", "קישור השחזור אינו תקף או שפג תוקפו. יש לבקש קישור חדש.", false);
+  if (code === "AUTH_RECOVERY_PASSWORD_UPDATE_FAILED") return apiFailure("DATABASE_OPERATION_FAILED", "לא ניתן לעדכן את הסיסמה. יש לבקש קישור חדש ולנסות שוב.", true);
+  if (code === "AUTH_RECOVERY_SIGNOUT_FAILED") return apiFailure("DATABASE_OPERATION_FAILED", "הסיסמה עודכנה, אך ניתוק ההתחברויות לא הושלם. יש לבקש קישור חדש ולנסות שוב.", true);
   if (code === "CLOUD_NO_BUSINESS_MEMBERSHIP") return apiFailure("DATABASE_OPERATION_FAILED", "החשבון מחובר אך אינו משויך לעסק בענן.", false);
   if (code === "CLOUD_DEVICE_REVOKED") return apiFailure("DATABASE_OPERATION_FAILED", "המחשב הזה נותק מהעסק. כדי לחבר אותו מחדש יש להתחבר שוב עם אימייל וסיסמה.", false);
   if (code.startsWith("CLOUD_")) return apiFailure("DATABASE_OPERATION_FAILED", `פעולת הענן לא הושלמה: ${code}`, true);
@@ -398,6 +404,9 @@ export function registerDatabaseHandlers(databaseService: DatabaseService, cloud
   ipcMain.handle("cloud-account:get-status", (event) => handle(event, () => supabaseCloud.getStatus()));
   ipcMain.handle("cloud-account:connect", (event,input) => handle(event, () => supabaseCloud.signIn(String(input?.email||""),String(input?.password||"")), input));
   ipcMain.handle("cloud-account:change-password", (event,input) => handle(event, () => supabaseCloud.changePassword(String(input?.currentPassword||""),String(input?.newPassword||"")), input));
+  ipcMain.handle("cloud-account:request-password-recovery", (event,input) => handle(event, () => supabaseCloud.requestPasswordRecovery(String(input?.email||"")), input));
+  ipcMain.handle("cloud-account:password-recovery-status", (event) => handle(event, () => supabaseCloud.hasPendingPasswordRecovery()));
+  ipcMain.handle("cloud-account:complete-password-recovery", (event,input) => handle(event, () => supabaseCloud.completePasswordRecovery(String(input?.newPassword||"")), input));
   ipcMain.handle("cloud-account:disconnect", (event) => handle(event, () => supabaseCloud.signOut()));
   ipcMain.handle("cloud-account:refresh", (event) => handle(event, () => supabaseCloud.refresh()));
   ipcMain.handle("cloud-account:list-devices", (event) => handle(event, () => supabaseCloud.listDevices()));

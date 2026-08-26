@@ -18,9 +18,9 @@ The Android and Windows source trees now contain a dedicated password-change flo
 
 ## Recovery boundary
 
-“Forgot password” is intentionally not implemented in this phase. Supabase recovery uses `resetPasswordForEmail` and a verified redirect back to the client before `updateUser` is allowed. Android currently has no custom scheme or intent filter, and both clients intentionally use `detectSessionInUrl:false`.
+“Forgot password” was intentionally not implemented in this phase. Phase 15 supersedes this recovery boundary only: it uses the Staging-only callback `mkreceiptpro://auth/recovery` for the installed Android and Windows applications. Both clients keep `detectSessionInUrl:false` and establish the recovery session only after explicit route, type, length and user verification.
 
-Do not add a recovery callback URL, custom protocol or Android deep link until a separate trust model covers redirect allowlisting, recovery-state validation, token handling, replay/expiry behavior and cross-platform manual tests.
+The recovery session is non-persistent, validates the authenticated user before `updateUser`, and globally signs out after success. On Windows the main process owns the callback and no recovery token crosses preload/IPC. Do not broaden the custom protocol or Android callback surface without a separate trust model and cross-platform manual tests.
 
 ## Supabase rollout boundary
 

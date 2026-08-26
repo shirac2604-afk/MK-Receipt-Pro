@@ -4,9 +4,22 @@
 
 > **זהו דף הבית של הפרויקט.** בכל חזרה לפרויקט יש לקרוא קודם את README, אחר כך `CHANGELOG.md`, `WORKFLOW.md`, `SECURITY.md`, `SECURITY_PHASE7.md`, `SECURITY_PHASE8.md` ו-`SOURCE_BACKUP_MANIFEST.md`.
 
-## מצב נוכחי — 12.08.2026
+## מצב נוכחי — 26.08.2026
+
+### Phase 15 — שחזור סיסמה (מוכן ל־Staging בלבד)
+
+- הענף `security/phase15-password-recovery` מכיל שחזור באמצעות קישור האיפוס המובנה של Supabase עבור Android ו-Windows. הקישור פותח את האפליקציה המותקנת ומציג בחירת סיסמה חדשה רק לאחר אימות session ההתאוששות; אין הזנת קוד.
+- callback יחיד ומוגבל מוגדר בשתי הפלטפורמות: `mkreceiptpro://auth/recovery`. ב-Staging בלבד יש להוסיף אותו ל־Supabase Redirect URLs; אין שינוי ב-Production.
+- ה־callback מאומת בקוד: scheme/host/path מדויקים, `type=recovery`, מגבלות אורך, `getUser()` ו־session בזיכרון בלבד. ב־Windows ה־URL והטוקנים אינם עוברים דרך preload/IPC.
+- לפני כל הפעלה יש לקרוא ולבצע את [תוכנית הבדיקה ל־Staging](docs/PASSWORD_RECOVERY_STAGING.md). אין למזג ל־`main` או לשנות Production ללא בדיקות Staging ואישור מפורש מחדש.
+- הוראות לבניית השדרוגים ל־Staging נמצאות ב־[Phase 15 Staging builds](docs/PHASE15_STAGING_BUILDS.md). כל build מוגבל לפרויקט ה־Staging ומתועד ב־GitHub.
+
+### כלל תיעוד GitHub
+
+כל שינוי מתועד ב־GitHub לפני שהוא נחשב הושלם: commit ברור, PR עם בדיקות והשפעת השדרוג, ועדכון `CHANGELOG.md` והמסמך הרלוונטי. הכלל המלא נמצא ב־[`docs/CHANGE_DOCUMENTATION_POLICY.md`](docs/CHANGE_DOCUMENTATION_POLICY.md).
 
 ### גרסאות
+- **שדרוג Phase 15 המיועד ל־Staging:** Android 1.0.9 (`versionCode` 10) ו־Windows 1.1.8. אלו עדכונים על גבי ההתקנה הקיימת; מזהי האפליקציות לא משתנים.
 - **Windows Production שנבדק ידנית:** 1.1.4 — Security Device Management.
 - **Windows source/security baseline:** 1.1.5-security.5 — Phase 5 Local File Capabilities. מוזג ל-`main`, עבר CI, עדיין דורש build/install ובדיקה ידנית לפני קידום ל-Production.
 - **Android Production:** 1.0.5 — Security Device Management.

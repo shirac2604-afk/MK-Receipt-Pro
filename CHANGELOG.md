@@ -2,6 +2,25 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-26 — Phase 15 Staging build routing
+
+- Confirmed that Supabase project `ymcmmvnfrfntmllytpyu` is `MK-Receipt-Pro-Phase9-Staging`; the exact password-recovery callback was allowlisted there.
+- Android Phase 15 source now targets that Staging project and excludes the Production project.
+- Added a dedicated Windows Staging configuration and a manual unsigned GitHub Actions installer workflow, including SHA-256 verification.
+- Corrected the Android direct-Supabase verifier so it checks the diagnostic label that is actually rendered.
+- Documented the Staging-only upgrade route. No Production setting, `main` branch, stable Android package or stable Windows app ID was changed.
+- Kept Android's repository default on Production and added an isolated, manual Staging APK workflow, so merging does not repoint the main source tree to Staging.
+
+## 2026-08-26 — Security Phase 15 / Password recovery (Staging-ready)
+
+- Prepared an in-place upgrade build: Android version `1.0.9` / `versionCode` 10 and Windows version `1.1.8`. Android package `il.mkreceiptpro.android` and Windows appId `il.co.mkreceipt.desktop` remain unchanged.
+- Updated all Android release verifiers to require the new `versionCode` 10, so CI rejects an accidental downgrade.
+- Added a permanent GitHub change-documentation policy: every code, configuration, security, CI, build and documentation change must have a clear commit, PR context, relevant documentation and recorded verification/upgrade impact before it is considered complete.
+- Replaced the unfinished OTP recovery flow with Supabase's standard password-reset link for Android and Windows. Both clients use an ephemeral, non-persistent Auth client and the same Staging callback, `mkreceiptpro://auth/recovery`.
+- Added a bounded callback trust model: exact scheme/host/path, `type=recovery`, token-length limits, `setSession` + `getUser` verification, password policy reuse and global sign-out after update.
+- Windows registers the protocol in its installer, accepts the link only in the Electron main process, and never exposes recovery URLs or tokens to preload/IPC. The renderer receives only a recovery-ready state and submits a new password through the existing guarded IPC path.
+- Removed the unsupported HTML Edge Function design after confirming that Supabase rewrites non-custom-domain HTML function responses to `text/plain`. Updated static checks and Staging-only instructions. No Production Auth setting, SMTP setting, installer, or release build was changed.
+
 ## 2026-08-25 — Security Phase 14 / Source and lockfile integrity
 
 - Restored complete Android and Windows npm lockfiles after both committed files were found to contain tool-output truncation markers and invalid JSON.
@@ -20,7 +39,6 @@
 - Windows additionally forces an active-device check before the operation.
 - New passwords are bounded to 8–128 characters and use the Phase 12 common/email-derived checks.
 - Added masked confirmation UI, sanitized IPC errors, release-gate verifiers and a dedicated GitHub Actions workflow.
-- Password recovery remains deferred until a verified deep-link/callback trust model is designed.
 - No build, Supabase Auth setting or Production deployment was changed.
 
 ## 2026-08-25 — Security Phase 12 / Auth and cloud session hardening

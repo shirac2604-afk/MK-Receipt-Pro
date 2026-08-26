@@ -1,6 +1,6 @@
 {
   "name": "mk-receipt-pro-android",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "private": true,
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
@@ -32,11 +32,12 @@
     "verify:student-parity": "node scripts/verify-student-parity-v1.mjs",
     "verify:student-reminders": "node scripts/verify-student-reminders-v1.mjs",
     "verify:student-local-privacy": "node scripts/verify-student-local-privacy.mjs",
-    "release:check": "npm run verify:upgrade-identity && npm run verify:device-revocation-integrity && npm run verify:auth-password-policy && npm run verify:password-change && npm run verify:release-1.0.7 && npm run verify:security-hardening && npm run verify:production-regression-audit && npm run verify:production-hardening && npm run verify:app-icon && npm run verify:eas-bundle-deps && npm run verify:intrusion-hardening && npm run verify:device-management && npm run verify:android-boundary-hardening && npm run verify:build-asset-safety && npm run verify:student-calendar && npm run verify:student-parity && npm run verify:student-reminders && npm run verify:student-local-privacy && npm run check",
+    "release:check": "npm run verify:upgrade-identity && npm run verify:device-revocation-integrity && npm run verify:auth-password-policy && npm run verify:password-change && npm run verify:password-recovery && npm run verify:release-1.0.7 && npm run verify:security-hardening && npm run verify:production-regression-audit && npm run verify:production-hardening && npm run verify:app-icon && npm run verify:eas-bundle-deps && npm run verify:intrusion-hardening && npm run verify:device-management && npm run verify:android-boundary-hardening && npm run verify:build-asset-safety && npm run verify:student-calendar && npm run verify:student-parity && npm run verify:student-reminders && npm run verify:student-local-privacy && npm run check",
     "verify:upgrade-identity": "node scripts/verify-upgrade-identity.mjs",
     "verify:device-revocation-integrity": "node scripts/verify-device-revocation-integrity.mjs",
     "verify:auth-password-policy": "node scripts/verify-auth-password-policy.mjs",
     "verify:password-change": "node scripts/verify-password-change.mjs",
+    "verify:password-recovery": "node scripts/verify-password-recovery.mjs",
     "verify:production-regression-audit": "node scripts/verify-production-regression-audit.mjs",
     "verify:app-icon": "node scripts/verify-app-icon.mjs",
     "verify:eas-bundle-deps": "node scripts/verify-eas-bundle-deps.mjs",
