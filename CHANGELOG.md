@@ -4,6 +4,7 @@
 
 ## 2026-08-26 — Security Phase 15 / Password recovery (Staging-ready)
 
+- Added a permanent GitHub change-documentation policy: every code, configuration, security, CI, build and documentation change must have a clear commit, PR context, relevant documentation and recorded verification/upgrade impact before it is considered complete.
 - Replaced the unfinished OTP recovery flow with Supabase's standard password-reset link for Android and Windows. Both clients use an ephemeral, non-persistent Auth client and the same Staging callback, `mkreceiptpro://auth/recovery`.
 - Added a bounded callback trust model: exact scheme/host/path, `type=recovery`, token-length limits, `setSession` + `getUser` verification, password policy reuse and global sign-out after update.
 - Windows registers the protocol in its installer, accepts the link only in the Electron main process, and never exposes recovery URLs or tokens to preload/IPC. The renderer receives only a recovery-ready state and submits a new password through the existing guarded IPC path.
