@@ -9,6 +9,8 @@ const recoveryRenderer=fs.readFileSync("apps/desktop/renderer/src/PasswordRecove
 const indexHtml=fs.readFileSync("apps/desktop/renderer/index.html","utf8");
 const globalTypes=fs.readFileSync("apps/desktop/renderer/src/global.d.ts","utf8");
 const types=fs.readFileSync("packages/database/src/types.ts","utf8");
+const productionConfig=fs.readFileSync("apps/desktop/electron/main/SupabaseCloudConfig.production.ts","utf8");
+const stagingConfig=fs.readFileSync("apps/desktop/electron/main/SupabaseCloudConfig.staging.ts","utf8");
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 
 const checks=[
@@ -25,6 +27,7 @@ const checks=[
   [types.includes("SupabaseCloudPasswordRecoveryRequestInput")&&types.includes("SupabaseCloudPasswordRecoveryCompleteInput")&&!types.includes("access_token")&&!types.includes("refresh_token"),"IPC types carry recovery request/password data but never recovery tokens"],
   [indexHtml.includes('/src/PasswordRecovery.tsx'),"Windows renderer entry loads the dedicated recovery UI"],
   [recoveryRenderer.includes("requestPasswordRecovery")&&recoveryRenderer.includes("getPasswordRecoveryStatus")&&recoveryRenderer.includes("completePasswordRecovery")&&recoveryRenderer.includes("autoComplete=\"new-password\"")&&!recoveryRenderer.includes('autoComplete=\"one-time-code\"')&&!recoveryRenderer.includes("verifyOtp")&&!recoveryRenderer.includes("access_token")&&!recoveryRenderer.includes("refresh_token"),"Windows recovery UI uses the guarded API, verifies readiness by status, and has no OTP/token input"],
+  [productionConfig.includes("PASSWORD_RECOVERY_ENABLED=false")&&stagingConfig.includes("PASSWORD_RECOVERY_ENABLED=true")&&handlers.includes('"cloud-account:password-recovery-enabled"')&&handlers.includes("AUTH_RECOVERY_DISABLED")&&preload.includes("isPasswordRecoveryEnabled")&&globalTypes.includes("isPasswordRecoveryEnabled")&&recoveryRenderer.includes("isPasswordRecoveryEnabled")&&recoveryRenderer.includes("if(!enabled)return null"),"recovery UI is disabled in personal Production and enabled only for Staging"],
   [!renderer.includes("beginPasswordRecovery")&&!renderer.includes("verifyOtp")&&!renderer.includes("access_token")&&!renderer.includes("refresh_token"),"main application renderer remains token-blind"],
   [String(pkg.scripts?.["release:production:win"]||"").includes("check:password-recovery"),"Windows release gate includes password recovery checks"]
 ];

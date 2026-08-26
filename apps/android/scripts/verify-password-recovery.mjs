@@ -4,6 +4,8 @@ const service=fs.readFileSync("src/auth/AuthService.ts","utf8");
 const context=fs.readFileSync("src/context/AuthContext.tsx","utf8");
 const screen=fs.readFileSync("src/screens/AuthScreen.tsx","utf8");
 const config=fs.readFileSync("app.json","utf8");
+const productionConfig=fs.readFileSync("src/config/supabasePublic.ts","utf8");
+const stagingConfig=fs.readFileSync("src/config/supabasePublic.staging.ts","utf8");
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 
 const checks=[
@@ -15,6 +17,7 @@ const checks=[
   [context.includes('Linking.addEventListener("url"')&&context.includes("beginPasswordRecovery"),"Android receives the callback through a dedicated link listener"],
   [config.includes('"scheme": "mkreceiptpro"')&&!config.includes('"intentFilters"'),"Android registers only the exact custom scheme"],
   [screen.includes("קישור השחזור אומת")&&screen.includes("completePasswordRecovery")&&!screen.includes('autoComplete="one-time-code"'),"Android UI accepts a new password only after link verification"],
+  [productionConfig.includes("PASSWORD_RECOVERY_ENABLED=false")&&stagingConfig.includes("PASSWORD_RECOVERY_ENABLED=true")&&screen.includes("PASSWORD_RECOVERY_ENABLED"),"recovery UI is disabled in personal Production and enabled only for Staging"],
   [String(pkg.scripts?.["release:check"]||"").includes("verify:password-recovery"),"Android release gate includes password recovery checks"]
 ];
 

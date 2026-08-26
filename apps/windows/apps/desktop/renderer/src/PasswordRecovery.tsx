@@ -13,6 +13,7 @@ function resultError(result:unknown):string{
 }
 
 function RecoveryPanel(){
+  const [enabled,setEnabled]=useState(false);
   const [active,setActive]=useState(false);
   const [open,setOpen]=useState(false);
   const [email,setEmail]=useState("");
@@ -22,7 +23,10 @@ function RecoveryPanel(){
   const [sent,setSent]=useState(false);
   const [message,setMessage]=useState("");
 
+  useEffect(()=>{void window.mkApi.cloudAccount.isPasswordRecoveryEnabled().then(result=>{if(result.success)setEnabled(result.data)});},[]);
+
   useEffect(()=>{
+    if(!enabled)return;
     let disposed=false;
     let timer:number|undefined;
     const poll=async()=>{
@@ -38,7 +42,7 @@ function RecoveryPanel(){
     };
     void poll();
     return()=>{disposed=true;if(timer!==undefined)window.clearTimeout(timer)};
-  },[]);
+  },[enabled]);
 
   async function requestReset(){
     if(!email.trim()){
@@ -75,6 +79,7 @@ function RecoveryPanel(){
     }finally{setBusy(false)}
   }
 
+  if(!enabled)return null;
   return <>
     {!active&&<button type="button" onClick={()=>{setOpen(v=>!v);setMessage("")}} style={{position:"fixed",left:24,bottom:24,zIndex:9999,border:0,borderRadius:14,padding:"10px 16px",background:"#4F46E5",color:"#fff",fontWeight:800,cursor:"pointer",boxShadow:"0 8px 24px rgba(0,0,0,.16)"}}>שכחתי סיסמה</button>}
     {open&&<div dir="rtl" style={{position:"fixed",left:24,bottom:72,width:360,maxWidth:"calc(100vw - 48px)",zIndex:10000,background:"#fff",border:"1px solid #d9dee8",borderRadius:18,padding:18,boxShadow:"0 18px 50px rgba(0,0,0,.2)",fontFamily:"inherit"}}>

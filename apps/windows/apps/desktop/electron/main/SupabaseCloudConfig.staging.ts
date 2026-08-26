@@ -7,6 +7,7 @@ export const STUDENT_RELEASE_CHANNEL="staging" as const;
 export const REMINDER_AUTO_DISPATCH_ENABLED=false;
 export const SUPABASE_URL="https://ymcmmvnfrfntmllytpyu.supabase.co";
 export const SUPABASE_PUBLISHABLE_KEY="sb_publishable_KnDNrw0ZkLpfPperkEL68Q_Fduyi87t";
+export const PASSWORD_RECOVERY_ENABLED=true;
 
 export function validateSupabaseConfig():void{
  if(STUDENT_TEST_MODE)throw new Error("STAGING_CLOUD_MODE_REQUIRED");
