@@ -5,6 +5,7 @@ import {theme} from "../theme/theme";
 import {testSupabaseConnection,type SupabaseDiagnostic} from "../services/SupabaseDiagnostics";
 import {MAX_PASSWORD_LENGTH,MIN_NEW_PASSWORD_LENGTH,validateNewPassword,type NewPasswordValidationError} from "../auth/passwordPolicy";
 import {AuthService} from "../auth/AuthService";
+import {PASSWORD_RECOVERY_ENABLED} from "../config/supabasePublic";
 
 const passwordErrorMessages:Record<NewPasswordValidationError,string>={
   AUTH_PASSWORD_TOO_SHORT:`סיסמה חדשה חייבת להכיל לפחות ${MIN_NEW_PASSWORD_LENGTH} תווים.`,
@@ -81,7 +82,7 @@ export default function AuthScreen(){
   finally{setRecoveryBusy(false)}
  }
 
- if(recoveryActive)return <ScrollView contentContainerStyle={s.wrap} keyboardShouldPersistTaps="handled">
+ if(PASSWORD_RECOVERY_ENABLED&&recoveryActive)return <ScrollView contentContainerStyle={s.wrap} keyboardShouldPersistTaps="handled">
   <Text style={s.logo}>MK Receipt Pro</Text>
   <Text style={s.title}>בחירת סיסמה חדשה</Text>
   <View style={s.recoveryPanel}>
@@ -115,8 +116,8 @@ export default function AuthScreen(){
   <Text style={s.passwordHint}>ליצירת חשבון חדש: לפחות {MIN_NEW_PASSWORD_LENGTH} תווים וסיסמה שאינה כוללת את שם האימייל.</Text>
   <Pressable style={s.primary} disabled={busy} onPress={()=>void run("signin")}><Text style={s.primaryText}>{busy?"מתחבר…":"כניסה"}</Text></Pressable>
   <Pressable style={s.secondary} disabled={busy} onPress={()=>void run("signup")}><Text style={s.secondaryText}>יצירת חשבון</Text></Pressable>
-  <Pressable style={s.recoveryToggle} disabled={busy||recoveryBusy} onPress={()=>{setRecoveryOpen(v=>!v);setRecoverySent(false)}}><Text style={s.secondaryText}>שכחתי סיסמה</Text></Pressable>
-  {recoveryOpen?<View style={s.recoveryPanel}>
+  {PASSWORD_RECOVERY_ENABLED?<Pressable style={s.recoveryToggle} disabled={busy||recoveryBusy} onPress={()=>{setRecoveryOpen(v=>!v);setRecoverySent(false)}}><Text style={s.secondaryText}>שכחתי סיסמה</Text></Pressable>:null}
+  {PASSWORD_RECOVERY_ENABLED&&recoveryOpen?<View style={s.recoveryPanel}>
     <Text style={s.recoveryTitle}>שחזור סיסמה באמצעות קישור מאובטח</Text>
     <Text style={s.passwordHint}>{recoverySent?"נשלח קישור מאובטח לתיבת הדואר. פתחי אותו באפליקציה כדי לקבוע סיסמה חדשה.":"הזיני את כתובת האימייל של החשבון ושלחי בקשת שחזור. אם קיימת כתובת תואמת, יישלח אליה קישור מאובטח."}</Text>
     <Pressable style={s.secondaryButton} disabled={recoveryBusy} onPress={()=>void requestRecovery()}><Text style={s.secondaryText}>{recoveryBusy?"שולח קישור…":recoverySent?"שלחי קישור חדש":"שליחת קישור לשחזור"}</Text></Pressable>
