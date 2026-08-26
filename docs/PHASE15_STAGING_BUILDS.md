@@ -14,7 +14,7 @@ This is an in-place upgrade for a device that already has the Windows app. Becau
 
 ## Android
 
-The Android source on this branch uses the same Staging project and retains the stable package ID `il.mkreceiptpro.android`. Run the manual **Android Production APK** GitHub workflow only after the repository secret `EXPO_TOKEN` is configured for the `shirac` Expo account. Despite the historical workflow name, its output is an internal APK profile (`production-apk`), not a Play Store submission.
+The Android source default remains Production. The manual **Phase 15 Staging Android APK** workflow copies the isolated Staging configuration only inside its runner and retains the stable package ID `il.mkreceiptpro.android`. Run it after the repository secret `EXPO_TOKEN` is configured for the `shirac` Expo account. Its output is an internal APK profile (`production-apk`), not a Play Store submission.
 
 ## Release boundary
 
