@@ -6,7 +6,7 @@ import { apiFailure, apiSuccess, type ApiResult } from "../../../../packages/sha
 import { parseIssueReceiptInput } from "./receiptInputSchema";
 import { parseBusinessSettingsInput } from "./settingsInputSchema";
 import { assertPayloadSize, assertTrustedSender, withTimeout } from "./security";
-import { SUPABASE_URL } from "../main/SupabaseCloudConfig";
+import { PASSWORD_RECOVERY_ENABLED, SUPABASE_URL } from "../main/SupabaseCloudConfig";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -404,7 +404,8 @@ export function registerDatabaseHandlers(databaseService: DatabaseService, cloud
   ipcMain.handle("cloud-account:get-status", (event) => handle(event, () => supabaseCloud.getStatus()));
   ipcMain.handle("cloud-account:connect", (event,input) => handle(event, () => supabaseCloud.signIn(String(input?.email||""),String(input?.password||"")), input));
   ipcMain.handle("cloud-account:change-password", (event,input) => handle(event, () => supabaseCloud.changePassword(String(input?.currentPassword||""),String(input?.newPassword||"")), input));
-  ipcMain.handle("cloud-account:request-password-recovery", (event,input) => handle(event, () => supabaseCloud.requestPasswordRecovery(String(input?.email||"")), input));
+  ipcMain.handle("cloud-account:password-recovery-enabled", (event) => handle(event, () => PASSWORD_RECOVERY_ENABLED));
+  ipcMain.handle("cloud-account:request-password-recovery", (event,input) => handle(event, () => {if(!PASSWORD_RECOVERY_ENABLED)throw new Error("AUTH_RECOVERY_DISABLED");return supabaseCloud.requestPasswordRecovery(String(input?.email||""));}, input));
   ipcMain.handle("cloud-account:password-recovery-status", (event) => handle(event, () => supabaseCloud.hasPendingPasswordRecovery()));
   ipcMain.handle("cloud-account:complete-password-recovery", (event,input) => handle(event, () => supabaseCloud.completePasswordRecovery(String(input?.newPassword||"")), input));
   ipcMain.handle("cloud-account:disconnect", (event) => handle(event, () => supabaseCloud.signOut()));
