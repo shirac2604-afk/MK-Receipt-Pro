@@ -13,6 +13,10 @@
 - ה־callback מאומת בקוד: scheme/host/path מדויקים, `type=recovery`, מגבלות אורך, `getUser()` ו־session בזיכרון בלבד. ב־Windows ה־URL והטוקנים אינם עוברים דרך preload/IPC.
 - לפני כל הפעלה יש לקרוא ולבצע את [תוכנית הבדיקה ל־Staging](docs/PASSWORD_RECOVERY_STAGING.md). אין למזג ל־`main` או לשנות Production ללא בדיקות Staging ואישור מפורש מחדש.
 
+### כלל תיעוד GitHub
+
+כל שינוי מתועד ב־GitHub לפני שהוא נחשב הושלם: commit ברור, PR עם בדיקות והשפעת השדרוג, ועדכון `CHANGELOG.md` והמסמך הרלוונטי. הכלל המלא נמצא ב־[`docs/CHANGE_DOCUMENTATION_POLICY.md`](docs/CHANGE_DOCUMENTATION_POLICY.md).
+
 ### גרסאות
 - **Windows Production שנבדק ידנית:** 1.1.4 — Security Device Management.
 - **Windows source/security baseline:** 1.1.5-security.5 — Phase 5 Local File Capabilities. מוזג ל-`main`, עבר CI, עדיין דורש build/install ובדיקה ידנית לפני קידום ל-Production.
