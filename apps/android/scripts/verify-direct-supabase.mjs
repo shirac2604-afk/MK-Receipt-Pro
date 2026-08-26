@@ -1,11 +1,14 @@
 import fs from "node:fs";
-const cfg=fs.readFileSync("src/config/supabasePublic.ts","utf8");
+const cfg=fs.readFileSync(process.env.SUPABASE_CONFIG_PATH??"src/config/supabasePublic.ts","utf8");
 const sup=fs.readFileSync("src/lib/supabase.ts","utf8");
 const auth=fs.readFileSync("src/screens/AuthScreen.tsx","utf8");
 const diag=fs.readFileSync("src/services/SupabaseDiagnostics.ts","utf8");
+const stagingCfg=fs.readFileSync("src/config/supabasePublic.staging.ts","utf8");
+const expectStaging=process.env.PHASE15_EXPECT_STAGING==="1";
 const checks=[
- [cfg.includes("https://ymcmmvnfrfntmllytpyu.supabase.co"),"Staging project URL embedded"],
- [!cfg.includes("https://noimclnzzuxcszdotmby.supabase.co"),"Production project is excluded from Phase 15 build"],
+ [expectStaging?cfg.includes("https://ymcmmvnfrfntmllytpyu.supabase.co"):cfg.includes("https://noimclnzzuxcszdotmby.supabase.co"),expectStaging?"Staging project selected":"Production default selected"],
+ [expectStaging?!cfg.includes("https://noimclnzzuxcszdotmby.supabase.co"):!cfg.includes("https://ymcmmvnfrfntmllytpyu.supabase.co"),"selected build excludes the other project"],
+ [stagingCfg.includes("https://ymcmmvnfrfntmllytpyu.supabase.co")&&!stagingCfg.includes("https://noimclnzzuxcszdotmby.supabase.co"),"isolated Staging config excludes Production"],
  [cfg.includes("sb_publishable_"),"publishable key embedded"],
  [!cfg.includes("eyJ") && !cfg.includes("sb_secret_"),"no secret/admin key pattern"],
  [sup.includes("SUPABASE_URL"),"client uses direct URL"],
