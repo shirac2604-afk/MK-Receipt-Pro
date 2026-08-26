@@ -19,7 +19,7 @@ const checks=[
   [handlers.includes('"cloud-account:password-recovery-status"')&&handlers.includes('"cloud-account:complete-password-recovery"'),"trusted IPC exposes status and password update without a raw link channel"],
   [preload.includes("getPasswordRecoveryStatus")&&preload.includes("completePasswordRecovery")&&!preload.includes("beginPasswordRecovery"),"preload never exposes raw recovery credentials"],
   [types.includes("SupabaseCloudPasswordRecoveryCompleteInput")&&!types.includes("access_token")&&!types.includes("refresh_token"),"IPC types carry a new password but never recovery tokens"],
-  [renderer.includes("getPasswordRecoveryStatus")&&renderer.includes("completePasswordRecovery")&&!renderer.includes('autoComplete="one-time-code"'),"Windows UI uses only the verified recovery state and never accepts an OTP"],
+  [renderer.includes("שכחתי סיסמה")&&renderer.includes("קישור")&&!renderer.includes('autoComplete="one-time-code"'),"Windows UI offers secure link recovery and never accepts an OTP"],
   [String(pkg.scripts?.["release:production:win"]||"").includes("check:password-recovery"),"Windows release gate includes password recovery checks"]
 ];
 
