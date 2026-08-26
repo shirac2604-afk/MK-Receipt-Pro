@@ -37,7 +37,13 @@ Supabase signed storage URLs used outside the Supabase SDK must pass `assertTrus
 
 Do not add an Android custom URL scheme or intent filter without designing and testing a dedicated deep-link trust model first. Auth tokens must not be accepted implicitly from incoming URLs.
 
-Password recovery remains outside the current client boundary. Do not add `resetPasswordForEmail`, a custom callback protocol or a recovery deep link without redirect allowlisting, recovery-state validation, token lifecycle checks and cross-platform tests.
+## Password recovery (Phase 15 — Staging only)
+
+Password recovery uses an ephemeral Supabase client with `persistSession: false`, `autoRefreshToken: false` and `detectSessionInUrl: false`. It requests a code without `redirectTo`, verifies the OTP only with the same normalized email, applies the existing password policy, then globally signs out all sessions. The temporary and normal local sessions are cleared whether recovery succeeds or fails.
+
+The client does not add a custom callback protocol, Android URL scheme, intent filter, deep link or redirect allowlist. Recovery must first be enabled and tested on Staging using the `{{ .Token }}` reset-password email template. Do not change Production Auth settings or merge this phase until the documented cross-platform Staging checks pass and a fresh approval is given.
+
+The local cooldown and failed-attempt windows are user-interface load reduction only. They are not a substitute for Supabase Auth server-side rate limits.
 
 ## Release status
 

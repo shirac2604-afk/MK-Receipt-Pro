@@ -2,6 +2,14 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-26 — Security Phase 15 / Password recovery (Staging-ready)
+
+- Added code-based password recovery for Android and Windows using an ephemeral, non-persistent Supabase Auth client.
+- Recovery binds OTP verification to the normalized email address, reuses the existing password policy and globally signs out sessions after an update.
+- Added neutral request messaging, masked confirmation UI, bounded token format, and local cooldown/attempt controls. Server-side rate limiting remains an Auth configuration responsibility.
+- Added static recovery validators, a Phase 15 GitHub Actions gate, and Staging-only activation/test instructions.
+- No Supabase Auth setting, Production deployment, installer or release build was changed.
+
 ## 2026-08-25 — Security Phase 14 / Source and lockfile integrity
 
 - Restored complete Android and Windows npm lockfiles after both committed files were found to contain tool-output truncation markers and invalid JSON.
@@ -20,7 +28,6 @@
 - Windows additionally forces an active-device check before the operation.
 - New passwords are bounded to 8–128 characters and use the Phase 12 common/email-derived checks.
 - Added masked confirmation UI, sanitized IPC errors, release-gate verifiers and a dedicated GitHub Actions workflow.
-- Password recovery remains deferred until a verified deep-link/callback trust model is designed.
 - No build, Supabase Auth setting or Production deployment was changed.
 
 ## 2026-08-25 — Security Phase 12 / Auth and cloud session hardening

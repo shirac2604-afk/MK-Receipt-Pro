@@ -4,7 +4,13 @@
 
 > **זהו דף הבית של הפרויקט.** בכל חזרה לפרויקט יש לקרוא קודם את README, אחר כך `CHANGELOG.md`, `WORKFLOW.md`, `SECURITY.md`, `SECURITY_PHASE7.md`, `SECURITY_PHASE8.md` ו-`SOURCE_BACKUP_MANIFEST.md`.
 
-## מצב נוכחי — 12.08.2026
+## מצב נוכחי — 26.08.2026
+
+### Phase 15 — שחזור סיסמה (מוכן ל־Staging בלבד)
+
+- הענף `security/phase15-password-recovery` מכיל שחזור מבוסס קוד חד־פעמי ל־Android ול־Windows.
+- אין deep link, intent filter, callback מותאם או שינוי בהגדרות Supabase/Production.
+- לפני כל הפעלה יש לקרוא ולבצע את [תוכנית הבדיקה ל־Staging](docs/PASSWORD_RECOVERY_STAGING.md). אין למזג ל־`main` או לשנות Production ללא בדיקות Staging ואישור מפורש מחדש.
 
 ### גרסאות
 - **Windows Production שנבדק ידנית:** 1.1.4 — Security Device Management.

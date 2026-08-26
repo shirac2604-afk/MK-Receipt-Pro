@@ -15,7 +15,7 @@ const checks=[
   [policy.includes("MIN_NEW_PASSWORD_LENGTH=8")&&policy.includes("MAX_PASSWORD_LENGTH=128"),"new password length is bounded"],
   [context.includes("changePassword:(currentPassword:string,newPassword:string)"),"AuthContext exposes only the dedicated operation"],
   [screen.includes("newPasswordConfirmation")&&screen.includes('secureTextEntry'),"Android UI confirms and masks the new password"],
-  [!service.includes("resetPasswordForEmail")&&!config.includes('"scheme"')&&!config.includes('"intentFilters"'),"recovery deep links remain outside this phase"],
+  [!config.includes('"scheme"')&&!config.includes('"intentFilters"'),"password recovery does not add Android deep-link configuration"],
   [String(pkg.scripts?.["release:check"]||"").includes("verify:password-change"),"Android release gate includes password-change checks"]
 ];
 
