@@ -19,11 +19,11 @@ const productionContext=
   pkg.version===app.expo.version&&
   app.expo.android?.versionCode===10&&
   expo57&&
-  pkg.dependencies["react-native"]==="0.86.2";
+  pkg.dependencies["react-native"]==="0.86.3";
 
 const checks=[
  [productionContext,"production release version/context"],
- [expo57&&pkg.dependencies["react-native"]==="0.86.2","Expo 57 React Native compatibility"],
+ [expo57&&pkg.dependencies["react-native"]==="0.86.3","Expo 57 React Native compatibility"],
  [app.expo.android?.package==="il.mkreceiptpro.android","stable Android package id"],
  [eas.build?.["production-apk"]?.android?.buildType==="apk","standalone APK profile"],
  [eas.build?.production?.android?.buildType==="app-bundle","Play Store AAB profile"],
