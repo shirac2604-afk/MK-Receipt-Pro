@@ -21,3 +21,7 @@ Google Drive now always chooses the packaged **Desktop OAuth** client for its PK
 - Production cloud configuration is selected only in the GitHub Actions build runner.
 - No Supabase schema, authentication settings, or business data is changed.
 - This change and the workflow are documented in GitHub under the repository documentation rule.
+
+## Build-gate correction (2026-08-27)
+
+The first manual 1.1.10 build stopped before packaging because an older verification assertion still expected Google Drive to use the legacy Google Calendar client configuration. The assertion is updated to require the packaged Desktop OAuth client and to reject the legacy Calendar configuration. No application behavior, Supabase setting, or data is changed by this gate correction.
