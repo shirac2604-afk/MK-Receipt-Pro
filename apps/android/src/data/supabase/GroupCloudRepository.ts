@@ -7,7 +7,7 @@ export type CloudStudentGroup={
 
 export type CloudStudentGroupInput={id?:string;name:string;description?:string;studentIds:string[]};
 
-const mapStudent=(row:any):CloudStudent=>({id:String(row.id),displayName:String(row.display_name),phone:row.phone?String(row.phone):null,email:row.email?String(row.email):null,schoolName:row.school_name?String(row.school_name):null,schoolGrade:row.school_grade?String(row.school_grade):null,focusNotes:row.focus_notes?String(row.focus_notes):null,defaultPriceAgorot:Number(row.default_price_agorot??0),active:Boolean(row.active)});
+const mapStudent=(row:any):CloudStudent=>({id:String(row.id),displayName:String(row.display_name),phone:row.phone?String(row.phone):null,email:row.email?String(row.email):null,schoolName:row.school_name?String(row.school_name):null,schoolGrade:row.school_grade?String(row.school_grade):null,focusNotes:row.focus_notes?String(row.focus_notes):null,defaultPriceAgorot:Number(row.default_price_agorot??0),reminderEnabled:Boolean(row.reminder_enabled),active:Boolean(row.active),primaryGuardian:null});
 
 export async function listCloudStudentGroups(businessId:string):Promise<CloudStudentGroup[]>{
  const {data:groups,error:groupsError}=await supabase.from("student_groups").select("id,name,description,active").eq("business_id",businessId).eq("active",true).order("name");
@@ -19,7 +19,7 @@ export async function listCloudStudentGroups(businessId:string):Promise<CloudStu
  const studentIds=[...new Set((members??[]).map(row=>String(row.student_id)))];
  let students:CloudStudent[]=[];
  if(studentIds.length){
-  const {data,error}=await supabase.from("students").select("id,display_name,phone,email,school_name,school_grade,focus_notes,default_price_agorot,active").eq("business_id",businessId).eq("active",true).in("id",studentIds);
+  const {data,error}=await supabase.from("students").select("id,display_name,phone,email,school_name,school_grade,focus_notes,default_price_agorot,reminder_enabled,active").eq("business_id",businessId).eq("active",true).in("id",studentIds);
   if(error)throw new Error(`CLOUD_GROUP_STUDENTS_FAILED:${error.message}`);
   students=(data??[]).map(mapStudent);
  }

@@ -38,6 +38,7 @@ Students, groups, lesson series, lessons, participants, lesson notes, payments a
 
 - Android now has cloud-backed group management (create, edit, membership and archive) and a lesson calendar with recurring individual and group series, attendance, payment state and lesson notes.
 - Windows keeps its existing lesson, group, reminder and payment workflows, and its shared style layer now uses the same navy, powder-blue and warm off-white system as Android.
+- Android now records each student's primary guardian, contact details and explicit reminder consent in the shared cloud record. The controls configure eligibility only; this increment does not send a reminder from Android.
 - Reminder controls, Google Calendar controls and the remaining management views will be brought to Android in later parity increments. They are not represented as complete until they have matching cloud workflows and automated checks.
 
 ## Local backup rule
