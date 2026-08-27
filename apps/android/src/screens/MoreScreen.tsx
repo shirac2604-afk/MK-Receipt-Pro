@@ -6,6 +6,7 @@ import {useAuth} from "../context/AuthContext";
 import {getBusinessProfile,updateBusinessProfile} from "../data/supabase/BusinessRepository";
 import {listBusinessDevices,revokeBusinessDevice,type CloudDevice} from "../data/supabase/DeviceRepository";
 import {pickBusinessLogo,uploadBusinessLogo,type PickedBusinessLogo} from "../services/BusinessBrandingService";
+import {createAndShareLocalBackup} from "../services/LocalBackupService";
 import {formatUnknownError} from "../services/ErrorFormatter";
 import {theme} from "../theme/theme";
 import {sanitizeDigits,sanitizePhone,validEmail,validPhone} from "../securityValidation";
@@ -29,6 +30,7 @@ export default function MoreScreen(){
  const [newPassword,setNewPassword]=useState("");
  const [newPasswordConfirmation,setNewPasswordConfirmation]=useState("");
  const [passwordBusy,setPasswordBusy]=useState(false);
+ const [backupBusy,setBackupBusy]=useState(false);
 
  async function load(){
   if(!businessId)return;
@@ -98,6 +100,16 @@ export default function MoreScreen(){
   finally{setPasswordBusy(false)}
  }
 
+ async function createLocalBackup(){
+  if(!businessId)return;
+  setBackupBusy(true);
+  try{
+   const result=await createAndShareLocalBackup(businessId);
+   Alert.alert("הגיבוי מוכן",`נוצרו ${result.recordCount} רשומות. בחלון השיתוף בחרי „שמור בקבצים” או יעד מקומי אחר.`);
+  }catch(e){Alert.alert("יצירת הגיבוי נכשלה",formatUnknownError(e));}
+  finally{setBackupBusy(false)}
+ }
+
  return <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
   <Text style={s.title}>הגדרות העסק</Text>
   <Text style={s.subtitle}>הפרטים האלה יופיעו בקבלות ב־Android ובהמשך גם ב־Windows.</Text>
@@ -153,6 +165,13 @@ export default function MoreScreen(){
    <Pressable style={s.refreshButton} onPress={()=>void load()} disabled={busy}><Ionicons name="refresh-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>רענון רשימת מכשירים</Text></Pressable>
    <Pressable style={s.signOutButton} onPress={()=>Alert.alert("התנתקות","להתנתק מהחשבון במכשיר הזה?",[{text:"ביטול",style:"cancel"},{text:"התנתקות",style:"destructive",onPress:()=>void signOut()}])}><Text style={s.signOutText}>התנתקות מהמכשיר הזה</Text></Pressable>
   </View>
+
+  <View style={s.card}>
+   <View style={s.sectionHeader}><Ionicons name="save-outline" size={22} color={theme.primary}/><Text style={s.cardTitle}>גיבוי מקומי</Text></View>
+   <Text style={s.note}>הגיבוי נוצר רק לפי בחירתך. בחלון הבא אפשר לשמור אותו בקבצים, בכונן או ביעד מקומי אחר.</Text>
+   <Text style={s.backupNote}>קבצי PDF ותמונות הוצאה אינם כלולים בקובץ הנתונים; הם נשמרים בענן בנפרד.</Text>
+   <Pressable style={s.primaryButton} onPress={()=>void createLocalBackup()} disabled={backupBusy||busy}><Text style={s.primaryText}>{backupBusy?"מכין גיבוי…":"יצירת גיבוי מקומי"}</Text></Pressable>
+  </View>
  </ScrollView>;
 }
 
@@ -172,6 +191,7 @@ const s=StyleSheet.create({
  secondaryText:{color:theme.primary,fontWeight:"700"},
  primaryButton:{backgroundColor:theme.primary,borderRadius:12,padding:14,alignItems:"center"},primaryText:{color:"#fff",fontWeight:"800"},
  note:{color:theme.muted,textAlign:"right",lineHeight:20},
+ backupNote:{color:theme.muted,textAlign:"right",fontSize:12,lineHeight:18},
  passwordPanel:{gap:9,paddingTop:12,marginTop:4,borderTopWidth:1,borderTopColor:theme.border},
  passwordTitle:{fontSize:16,fontWeight:"800",color:theme.text,textAlign:"right"},
  sectionHeader:{flexDirection:"row",alignItems:"center",justifyContent:"flex-end",gap:7},

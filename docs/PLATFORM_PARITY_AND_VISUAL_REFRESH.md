@@ -40,6 +40,12 @@ Students, groups, lesson series, lessons, participants, lesson notes, payments a
 - Windows keeps its existing lesson, group, reminder and payment workflows, and its shared style layer now uses the same navy, powder-blue and warm off-white system as Android.
 - Reminder controls, Google Calendar controls and the remaining management views will be brought to Android in later parity increments. They are not represented as complete until they have matching cloud workflows and automated checks.
 
+## Local backup rule
+
+- Windows always has a local backup destination. When no folder was selected during setup, the application creates and uses `Documents/MK Receipt Pro/Backups` instead of silently disabling automatic backups.
+- Android offers an explicit local data export through the system share sheet. It contains the business records that the signed-in user may read; it does not claim to contain receipt PDFs or expense attachments stored separately in cloud storage.
+- Automatic import and restore are intentionally not enabled on Android until they can validate a backup and protect receipt-number sequencing as strictly as Windows does.
+
 ## Delivery rule
 
 Each parity increment must include:
