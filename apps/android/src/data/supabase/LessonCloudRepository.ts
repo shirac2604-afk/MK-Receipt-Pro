@@ -7,8 +7,8 @@ export type CloudLessonItem={
   summary:string|null;homework:string|null;
 };
 
-export type LessonSeriesInput={studentId:string;title:string;startsOn:string;localStartTime:string;durationMinutes:number;recurrenceIntervalWeeks:number;endsOn?:string;defaultPriceAgorot:number;};
-export type GroupLessonSeriesInput={groupId:string;title:string;startsOn:string;localStartTime:string;durationMinutes:number;recurrenceIntervalWeeks:number;endsOn?:string;defaultPriceAgorot:number;};
+export type LessonSeriesInput={studentId:string;title:string;startsOn:string;localStartTime:string;durationMinutes:number;recurrenceIntervalWeeks:number;endsOn?:string;defaultPriceAgorot:number;parentReminderMinutes:number;studentReminderMinutes:number;};
+export type GroupLessonSeriesInput={groupId:string;title:string;startsOn:string;localStartTime:string;durationMinutes:number;recurrenceIntervalWeeks:number;endsOn?:string;defaultPriceAgorot:number;parentReminderMinutes:number;studentReminderMinutes:number;};
 
 const occurrenceLimit=26;
 const ymd=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
@@ -54,11 +54,11 @@ export async function listCloudLessonCalendar(businessId:string,fromIso:string,t
 }
 
 export async function createCloudLessonSeries(businessId:string,input:LessonSeriesInput):Promise<void>{
- if(!input.studentId||input.title.trim().length<2||input.title.trim().length>160||!/^\d{4}-\d{2}-\d{2}$/.test(input.startsOn)||!/^\d{2}:\d{2}$/.test(input.localStartTime)||input.durationMinutes<15||input.durationMinutes>480||input.recurrenceIntervalWeeks<1||input.recurrenceIntervalWeeks>12||!Number.isInteger(input.defaultPriceAgorot)||input.defaultPriceAgorot<0)throw new Error("INVALID_LESSON_SERIES");
+ if(!input.studentId||input.title.trim().length<2||input.title.trim().length>160||!/^\d{4}-\d{2}-\d{2}$/.test(input.startsOn)||!/^\d{2}:\d{2}$/.test(input.localStartTime)||input.durationMinutes<15||input.durationMinutes>480||input.recurrenceIntervalWeeks<1||input.recurrenceIntervalWeeks>12||!Number.isInteger(input.defaultPriceAgorot)||input.defaultPriceAgorot<0||!Number.isInteger(input.parentReminderMinutes)||!Number.isInteger(input.studentReminderMinutes)||input.parentReminderMinutes<0||input.parentReminderMinutes>10080||input.studentReminderMinutes<0||input.studentReminderMinutes>10080)throw new Error("INVALID_LESSON_SERIES");
  const studentResult=await supabase.from("students").select("id,payer_customer_id").eq("business_id",businessId).eq("id",input.studentId).eq("active",true).single();
  if(studentResult.error||!studentResult.data)throw new Error("LESSON_STUDENT_NOT_FOUND");
  const weekday=new Date(`${input.startsOn}T12:00:00`).getDay();
- const seriesResult=await supabase.from("lesson_series").insert({business_id:businessId,kind:"individual",student_id:input.studentId,group_id:null,title:input.title.trim(),weekday,local_start_time:input.localStartTime,duration_minutes:input.durationMinutes,recurrence_interval_weeks:input.recurrenceIntervalWeeks,starts_on:input.startsOn,ends_on:input.endsOn||null,default_price_agorot:input.defaultPriceAgorot,parent_reminder_minutes:1440,student_reminder_minutes:1440,active:true}).select("id").single();
+ const seriesResult=await supabase.from("lesson_series").insert({business_id:businessId,kind:"individual",student_id:input.studentId,group_id:null,title:input.title.trim(),weekday,local_start_time:input.localStartTime,duration_minutes:input.durationMinutes,recurrence_interval_weeks:input.recurrenceIntervalWeeks,starts_on:input.startsOn,ends_on:input.endsOn||null,default_price_agorot:input.defaultPriceAgorot,parent_reminder_minutes:input.parentReminderMinutes,student_reminder_minutes:input.studentReminderMinutes,active:true}).select("id").single();
  if(seriesResult.error||!seriesResult.data)throw seriesResult.error??new Error("LESSON_SERIES_CREATE_FAILED");
  for(const date of occurrenceDates(input.startsOn,input.recurrenceIntervalWeeks,input.endsOn)){
   const start=new Date(`${date}T${input.localStartTime}:00`),end=new Date(start.getTime()+input.durationMinutes*60_000);
@@ -72,7 +72,7 @@ export async function createCloudLessonSeries(businessId:string,input:LessonSeri
 }
 
 export async function createCloudGroupLessonSeries(businessId:string,input:GroupLessonSeriesInput):Promise<void>{
- if(!input.groupId||input.title.trim().length<2||input.title.trim().length>160||!/^\d{4}-\d{2}-\d{2}$/.test(input.startsOn)||!/^\d{2}:\d{2}$/.test(input.localStartTime)||input.durationMinutes<15||input.durationMinutes>480||input.recurrenceIntervalWeeks<1||input.recurrenceIntervalWeeks>12||!Number.isInteger(input.defaultPriceAgorot)||input.defaultPriceAgorot<0)throw new Error("INVALID_GROUP_LESSON_SERIES");
+ if(!input.groupId||input.title.trim().length<2||input.title.trim().length>160||!/^\d{4}-\d{2}-\d{2}$/.test(input.startsOn)||!/^\d{2}:\d{2}$/.test(input.localStartTime)||input.durationMinutes<15||input.durationMinutes>480||input.recurrenceIntervalWeeks<1||input.recurrenceIntervalWeeks>12||!Number.isInteger(input.defaultPriceAgorot)||input.defaultPriceAgorot<0||!Number.isInteger(input.parentReminderMinutes)||!Number.isInteger(input.studentReminderMinutes)||input.parentReminderMinutes<0||input.parentReminderMinutes>10080||input.studentReminderMinutes<0||input.studentReminderMinutes>10080)throw new Error("INVALID_GROUP_LESSON_SERIES");
  const {data:members,error:membersError}=await supabase.from("student_group_members").select("student_id").eq("business_id",businessId).eq("group_id",input.groupId).is("left_at",null);
  if(membersError)throw new Error(`CLOUD_GROUP_MEMBERS_FAILED:${membersError.message}`);
  const studentIds=[...new Set((members??[]).map(row=>String(row.student_id)))];
@@ -81,7 +81,7 @@ export async function createCloudGroupLessonSeries(businessId:string,input:Group
  if(studentsError||(students??[]).length!==studentIds.length)throw new Error("GROUP_MEMBER_NOT_FOUND");
  const payerByStudent=new Map((students??[]).map((student:any)=>[String(student.id),student.payer_customer_id??null]));
  const weekday=new Date(`${input.startsOn}T12:00:00`).getDay();
- const {data:series,error:seriesError}=await supabase.from("lesson_series").insert({business_id:businessId,kind:"group",student_id:null,group_id:input.groupId,title:input.title.trim(),weekday,local_start_time:input.localStartTime,duration_minutes:input.durationMinutes,recurrence_interval_weeks:input.recurrenceIntervalWeeks,starts_on:input.startsOn,ends_on:input.endsOn||null,default_price_agorot:input.defaultPriceAgorot,parent_reminder_minutes:1440,student_reminder_minutes:1440,active:true}).select("id").single();
+ const {data:series,error:seriesError}=await supabase.from("lesson_series").insert({business_id:businessId,kind:"group",student_id:null,group_id:input.groupId,title:input.title.trim(),weekday,local_start_time:input.localStartTime,duration_minutes:input.durationMinutes,recurrence_interval_weeks:input.recurrenceIntervalWeeks,starts_on:input.startsOn,ends_on:input.endsOn||null,default_price_agorot:input.defaultPriceAgorot,parent_reminder_minutes:input.parentReminderMinutes,student_reminder_minutes:input.studentReminderMinutes,active:true}).select("id").single();
  if(seriesError||!series)throw seriesError??new Error("GROUP_LESSON_SERIES_CREATE_FAILED");
  for(const date of occurrenceDates(input.startsOn,input.recurrenceIntervalWeeks,input.endsOn)){
   const start=new Date(`${date}T${input.localStartTime}:00`),end=new Date(start.getTime()+input.durationMinutes*60_000);
