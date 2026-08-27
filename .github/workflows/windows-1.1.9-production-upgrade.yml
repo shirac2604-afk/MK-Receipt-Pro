@@ -1,0 +1,53 @@
+name: Windows 1.1.9 Production Upgrade
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-windows-upgrade:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.14.0"
+          cache: npm
+          cache-dependency-path: apps/windows/package-lock.json
+      - name: Select dedicated Production cloud configuration
+        shell: pwsh
+        run: Copy-Item apps/desktop/electron/main/SupabaseCloudConfig.production.ts apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Build in-place Production upgrade
+        run: npm run release:production:win
+      - name: Write verification files
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path release -Filter "Maptehot-LaHatzlaha-1.1.9-Setup.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows 1.1.9 installer was not produced" }
+          $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content -Encoding ascii release/SHA256SUMS.txt
+          @(
+            "MK Receipt Pro Windows 1.1.9 — Production cloud upgrade",
+            "In-place update: app ID remains il.co.mkreceipt.desktop.",
+            "Verify SHA-256 before installation. The installer does not contain a Google client secret."
+          ) | Set-Content -Encoding utf8 release/UPGRADE-NOTICE.txt
+      - name: Upload installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: MK-Receipt-Pro-Windows-1.1.9-Production-Upgrade
+          path: |
+            apps/windows/release/Maptehot-LaHatzlaha-1.1.9-Setup.exe
+            apps/windows/release/SHA256SUMS.txt
+            apps/windows/release/UPGRADE-NOTICE.txt
+          retention-days: 14
