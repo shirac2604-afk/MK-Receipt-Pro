@@ -1,5 +1,5 @@
 import React,{useCallback,useEffect,useState} from "react";
-import {Alert,Pressable,RefreshControl,ScrollView,StyleSheet,Text,View} from "react-native";
+import {Alert,Image,Pressable,RefreshControl,ScrollView,StyleSheet,Text,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {useNavigation} from "@react-navigation/native";
 import {useBusiness} from "../context/BusinessContext";
@@ -14,6 +14,7 @@ export default function DashboardScreen(){
  const navigation=useNavigation<any>();
  const {businessId,deviceId}=useBusiness();
  const [businessName,setBusinessName]=useState("העסק שלי");
+ const [logoDataUrl,setLogoDataUrl]=useState<string|null>(null);
  const [snapshot,setSnapshot]=useState<DashboardSnapshot|null>(null);
  const [busy,setBusy]=useState(false);
 
@@ -23,6 +24,7 @@ export default function DashboardScreen(){
   try{
     const [profile,data]=await Promise.all([getBusinessProfile(businessId),getDashboardSnapshot(businessId)]);
     setBusinessName(profile.businessName);
+    setLogoDataUrl(profile.logoDataUrl);
     setSnapshot(data);
   }catch(e){Alert.alert("טעינת דף הבית נכשלה",formatUnknownError(e))}
   finally{setBusy(false)}
@@ -45,7 +47,7 @@ export default function DashboardScreen(){
         <Text style={s.cloudText}>מחובר לענן · {snapshot?.devicesCount??"–"} מכשירים</Text>
       </View>
     </View>
-    <View style={s.cloudBadge}><Ionicons name="sync" size={24} color={theme.primary}/></View>
+    <View style={s.cloudBadge}>{logoDataUrl?<Image source={{uri:logoDataUrl}} style={s.logo} resizeMode="contain"/>:<Ionicons name="business-outline" size={24} color={theme.primary}/>}</View>
    </View>
 
    <View style={s.nextCard}>
@@ -75,7 +77,7 @@ export default function DashboardScreen(){
 const s=StyleSheet.create({
  root:{flex:1,backgroundColor:theme.background},screen:{padding:18,paddingTop:28,paddingBottom:120,direction:"rtl"},
  header:{flexDirection:"row",alignItems:"center",gap:12},hello:{fontSize:15,color:theme.muted,textAlign:"right"},business:{fontSize:27,fontWeight:"800",color:theme.text,textAlign:"right",marginTop:2},
- cloudRow:{flexDirection:"row",alignItems:"center",gap:5,justifyContent:"flex-start",marginTop:6},cloudText:{fontSize:12,color:theme.primary,fontWeight:"700"},cloudBadge:{width:50,height:50,borderRadius:16,backgroundColor:theme.primarySoft,alignItems:"center",justifyContent:"center"},
+ cloudRow:{flexDirection:"row",alignItems:"center",gap:5,justifyContent:"flex-start",marginTop:6},cloudText:{fontSize:12,color:theme.primary,fontWeight:"700"},cloudBadge:{width:58,height:58,borderRadius:16,backgroundColor:theme.primarySoft,alignItems:"center",justifyContent:"center",overflow:"hidden"},logo:{width:52,height:52},
  nextCard:{marginTop:18,backgroundColor:theme.primary,borderRadius:22,padding:20,alignItems:"flex-end"},nextLabel:{color:"#E9F1EF",fontSize:13},nextNumber:{color:"#fff",fontSize:36,fontWeight:"900",marginTop:2},nextHint:{color:"#E9F1EF",fontSize:12,textAlign:"right",marginTop:4},
  sectionTitle:{fontSize:18,fontWeight:"800",color:theme.text,textAlign:"right",marginTop:22,marginBottom:10},statsGrid:{flexDirection:"row",flexWrap:"wrap",gap:10},
  statCard:{width:"48%",flexGrow:1,backgroundColor:"#fff",borderRadius:17,padding:14,borderWidth:1,borderColor:theme.border,alignItems:"flex-end"},statLabel:{fontSize:12,color:theme.muted,marginTop:7},statValue:{fontSize:20,fontWeight:"800",color:theme.text,marginTop:2},statMeta:{fontSize:11,color:theme.muted,marginTop:3},
