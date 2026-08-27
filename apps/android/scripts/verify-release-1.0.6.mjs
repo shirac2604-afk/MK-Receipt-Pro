@@ -7,7 +7,7 @@ const expo57 = typeof p.dependencies?.expo === "string" && /^\^?57\./.test(p.dep
 const checks = [
   [p.version === "1.0.6", "package version 1.0.6"],
   [expo57, "Expo SDK 57"],
-  [p.dependencies?.["react-native"] === "0.86.2", "React Native 0.86.2"],
+  [p.dependencies?.["react-native"] === "0.86.3", "React Native 0.86.3"],
   [a.expo.version === "1.0.6", "app version 1.0.6"],
   [a.expo.android?.versionCode === 8, "versionCode 8"],
   [a.expo.android?.package === "il.mkreceiptpro.android", "stable Android package id"],
