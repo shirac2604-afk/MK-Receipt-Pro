@@ -4,7 +4,7 @@ const service=fs.readFileSync("apps/desktop/electron/main/GoogleDriveSyncService
 const ui=fs.readFileSync("apps/desktop/renderer/src/main.tsx","utf8");
 const ipc=fs.readFileSync("apps/desktop/electron/ipc/databaseHandlers.ts","utf8");
 const checks=[
- [service.includes('"student-module","google-calendar-config.json"'),"uses configured Google Calendar client ID"],
+ [service.includes('path.join(this.resourcesPath,"google","oauth-client.json")')&&!service.includes('"student-module","google-calendar-config.json"'),"uses packaged Desktop OAuth client instead of legacy Calendar configuration"],
  [service.includes("code_challenge_method\",\"S256"),"OAuth PKCE remains enabled"],
  [service.includes("const clientId=this.state.clientId"),"refresh uses the token's original client ID"],
  [service.includes("if(this.pushTimer){clearTimeout(this.pushTimer);this.pushTimer=null;}"),"disconnect cancels queued uploads"],
