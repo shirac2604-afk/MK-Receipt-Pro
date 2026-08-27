@@ -2,6 +2,14 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-27 — Windows 1.1.9 / production upgrade and Google OAuth repair
+
+- Investigated the Phase 15 Windows Staging installer after it could not connect to the normal cloud account and Google returned `invalid_request: client_secret is missing`.
+- Confirmed the Staging installer intentionally targets the isolated Staging Supabase project and therefore cannot access the normal Production account.
+- Replaced the incompatible Google OAuth web-client ID with the dedicated Desktop OAuth public client ID. No client secret, token, password, or user data is committed.
+- Added a manual Windows Production Upgrade workflow. It copies the existing dedicated Production Supabase configuration only inside the GitHub runner, keeps the stable app ID `il.co.mkreceipt.desktop`, and builds version 1.1.9 as an in-place update.
+- Added documented install and manual verification requirements. The prior Staging installer must not be used as the daily-work application build.
+
 ## 2026-08-26 — Phase 15 Staging build routing
 
 - Confirmed that Supabase project `ymcmmvnfrfntmllytpyu` is `MK-Receipt-Pro-Phase9-Staging`; the exact password-recovery callback was allowlisted there.
