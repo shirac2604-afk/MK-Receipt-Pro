@@ -51,7 +51,7 @@ export class ReceiptPdfService {
       if (data.length < 1000) throw new Error("PDF_VERIFICATION_FAILED");
       fs.renameSync(tempPath, finalPath);
       const fileHash = createHash("sha256").update(data).digest("hex");
-      return { path: finalPath, fileHash, fileSize: data.length, createdAt: new Date().toISOString(), templateVersion: 1 };
+      return { path: finalPath, fileHash, fileSize: data.length, createdAt: new Date().toISOString(), templateVersion: 2 };
     } finally {
       pdfWindow.destroy();
       try { fs.rmSync(htmlPath, { force: true }); } catch {}
