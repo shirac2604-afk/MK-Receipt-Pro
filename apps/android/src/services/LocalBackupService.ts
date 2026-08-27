@@ -30,7 +30,7 @@ export async function createAndShareLocalBackup(businessId:string):Promise<Local
  if(!baseDirectory)throw new Error("LOCAL_BACKUP_STORAGE_UNAVAILABLE");
  const uri=`${baseDirectory}${fileName}`;
  await FileSystem.writeAsStringAsync(uri,JSON.stringify(payload),{encoding:FileSystem.EncodingType.UTF8});
- const info=await FileSystem.getInfoAsync(uri,{size:true});
+ const info=await FileSystem.getInfoAsync(uri);
  if(!info.exists||!info.size)throw new Error("LOCAL_BACKUP_WRITE_FAILED");
  if(!(await Sharing.isAvailableAsync()))throw new Error("LOCAL_BACKUP_SHARING_UNAVAILABLE");
  await Sharing.shareAsync(uri,{mimeType:"application/json",dialogTitle:"שמירת גיבוי MK Receipt Pro",UTI:"public.json"});
