@@ -70,15 +70,15 @@ export default function CustomersScreen(){
 
 const s=StyleSheet.create({
   screen:{flex:1,backgroundColor:theme.background,padding:18,direction:"rtl"},
-  title:{fontSize:28,fontWeight:"800",color:theme.text,textAlign:"right",marginTop:12},
-  subtitle:{fontSize:14,color:theme.muted,textAlign:"right",marginTop:4,marginBottom:14},
-  card:{backgroundColor:"#fff",borderRadius:18,padding:16,borderWidth:1,borderColor:theme.border,gap:10},
-  cardTitle:{fontSize:18,fontWeight:"800",color:theme.text,textAlign:"right"},
-  input:{backgroundColor:"#F8FAFC",borderWidth:1,borderColor:theme.border,borderRadius:12,padding:12},
-  button:{backgroundColor:theme.primary,borderRadius:12,padding:14,alignItems:"center"},
-  buttonText:{color:"#fff",fontWeight:"800"},
+  title:{fontSize:30,fontWeight:"900",color:theme.text,textAlign:"right",marginTop:18},
+  subtitle:{fontSize:14,color:theme.muted,textAlign:"right",marginTop:4,marginBottom:18},
+  card:{backgroundColor:"#fff",borderRadius:theme.radius,padding:18,borderWidth:1,borderColor:theme.border,gap:11,shadowColor:theme.navy,shadowOpacity:.04,shadowRadius:10,elevation:2},
+  cardTitle:{fontSize:18,fontWeight:"900",color:theme.text,textAlign:"right"},
+  input:{backgroundColor:"#FBFCFF",borderWidth:1,borderColor:theme.border,borderRadius:15,padding:13},
+  button:{backgroundColor:theme.accent,borderRadius:15,padding:15,alignItems:"center"},
+  buttonText:{color:theme.navy,fontWeight:"900"},
   list:{gap:10,paddingVertical:14,paddingBottom:100},
-  item:{backgroundColor:"#fff",borderRadius:16,padding:15,borderWidth:1,borderColor:theme.border},
+  item:{backgroundColor:"#fff",borderRadius:18,padding:16,borderWidth:1,borderColor:theme.border},
   itemTitle:{fontSize:16,fontWeight:"800",color:theme.text,textAlign:"right"},
   itemText:{fontSize:13,color:theme.muted,textAlign:"right",marginTop:3},
   empty:{textAlign:"center",color:theme.muted,padding:30}

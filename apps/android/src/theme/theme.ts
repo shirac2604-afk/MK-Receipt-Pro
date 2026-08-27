@@ -1,5 +1,6 @@
 export const theme = {
-  background:"#F6F7F9", surface:"#FFFFFF", text:"#1E293B", muted:"#64748B",
-  primary:"#496B67", primarySoft:"#E8F0EE", border:"#E2E8F0", danger:"#B42318",
-  radius:18, gap:14
+  background:"#F7F5F0", surface:"#FFFFFF", text:"#102A56", muted:"#64718A",
+  primary:"#0B2B5B", primarySoft:"#DCEBFF", border:"#DCE4F0", danger:"#B42318",
+  accent:"#8CC4FF", accentStrong:"#2878D4", navy:"#071F45",
+  radius:22, gap:14
 } as const;

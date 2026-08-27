@@ -1,8 +1,7 @@
-import React,{useEffect,useState} from "react";
+import React,{useState} from "react";
 import {Alert,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import {useAuth} from "../context/AuthContext";
 import {theme} from "../theme/theme";
-import {testSupabaseConnection,type SupabaseDiagnostic} from "../services/SupabaseDiagnostics";
 import {MAX_PASSWORD_LENGTH,MIN_NEW_PASSWORD_LENGTH,validateNewPassword,type NewPasswordValidationError} from "../auth/passwordPolicy";
 import {AuthService} from "../auth/AuthService";
 
@@ -28,19 +27,11 @@ export default function AuthScreen(){
  const [email,setEmail]=useState("");
  const [password,setPassword]=useState("");
  const [busy,setBusy]=useState(false);
- const [diag,setDiag]=useState<SupabaseDiagnostic|null>(null);
- const [diagBusy,setDiagBusy]=useState(false);
  const [recoveryOpen,setRecoveryOpen]=useState(false);
  const [recoveryBusy,setRecoveryBusy]=useState(false);
  const [recoverySent,setRecoverySent]=useState(false);
  const [recoveryPassword,setRecoveryPassword]=useState("");
  const [recoveryPasswordConfirmation,setRecoveryPasswordConfirmation]=useState("");
-
- async function diagnose(){
-   setDiagBusy(true);
-   try{setDiag(await testSupabaseConnection())}finally{setDiagBusy(false)}
- }
- useEffect(()=>{void diagnose()},[]);
 
  async function run(mode:"signin"|"signup"){
   if(!email.trim()||!password){Alert.alert("חסרים פרטים","יש להזין אימייל וסיסמה.");return;}
@@ -55,7 +46,7 @@ export default function AuthScreen(){
     const errorCode=e instanceof Error?e.message:"";
     const isPasswordError=Object.prototype.hasOwnProperty.call(passwordErrorMessages,errorCode);
     const message=isPasswordError?passwordErrorMessages[errorCode as NewPasswordValidationError]:(errorCode||"שגיאה לא ידועה");
-    await diagnose();Alert.alert("התחברות נכשלה",message);
+    Alert.alert("התחברות נכשלה",message);
   }finally{setBusy(false)}
  }
 
@@ -82,7 +73,8 @@ export default function AuthScreen(){
  }
 
  if(recoveryActive)return <ScrollView contentContainerStyle={s.wrap} keyboardShouldPersistTaps="handled">
-  <Text style={s.logo}>MK Receipt Pro</Text>
+  <View style={s.brandMark}><Text style={s.brandMarkText}>⌁</Text></View>
+  <Text style={s.logo}>מפתחות להצלחה</Text>
   <Text style={s.title}>בחירת סיסמה חדשה</Text>
   <View style={s.recoveryPanel}>
    <Text style={s.recoveryTitle}>קישור השחזור אומת</Text>
@@ -95,20 +87,10 @@ export default function AuthScreen(){
  </ScrollView>;
 
  return <ScrollView contentContainerStyle={s.wrap} keyboardShouldPersistTaps="handled">
-  <Text style={s.logo}>MK Receipt Pro</Text>
-  <Text style={s.version}>Android Foundation 5.2</Text>
-  <Text style={s.title}>כניסה לחשבון</Text>
-
-  <View style={s.diag}>
-    <Text style={s.diagTitle}>בדיקת חיבור Supabase</Text>
-    {diagBusy?<Text style={s.diagText}>בודק חיבור…</Text>:diag?<>
-      <Text style={s.diagText}>Raw fetch: {diag.rawFetchOk?"תקין":"נכשל"} · HTTP {diag.rawFetchStatus}</Text>
-      <Text style={s.diagText}>Auth client: {diag.authClientOk?"תקין":"נכשל"}</Text>
-      {!diag.rawFetchOk?<Text style={s.error}>{diag.rawFetchMessage}</Text>:null}
-      {!diag.authClientOk?<Text style={s.error}>{diag.authClientMessage}</Text>:null}
-    </>:<Text style={s.diagText}>טרם בוצעה בדיקה</Text>}
-    <Pressable style={s.testButton} onPress={()=>void diagnose()} disabled={diagBusy}><Text style={s.testButtonText}>בדיקה מחדש</Text></Pressable>
-  </View>
+  <View style={s.brandMark}><Text style={s.brandMarkText}>⌁</Text></View>
+  <Text style={s.logo}>מפתחות להצלחה</Text>
+  <Text style={s.version}>ניהול פשוט ומאובטח לעסק שלך</Text>
+  <Text style={s.title}>כניסה לעסק</Text>
 
   <TextInput style={s.input} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" placeholder="אימייל"/>
   <TextInput style={s.input} value={password} onChangeText={setPassword} secureTextEntry placeholder="סיסמה"/>
@@ -126,24 +108,19 @@ export default function AuthScreen(){
 }
 
 const s=StyleSheet.create({
- wrap:{flexGrow:1,justifyContent:"center",padding:24,backgroundColor:theme.background,direction:"rtl"},
- logo:{fontSize:18,fontWeight:"800",color:theme.primary,textAlign:"center",marginBottom:4},
- version:{fontSize:12,color:theme.muted,textAlign:"center",marginBottom:16},
- title:{fontSize:28,fontWeight:"800",color:theme.text,textAlign:"center",marginBottom:18},
- diag:{backgroundColor:"#fff",borderWidth:1,borderColor:theme.border,borderRadius:14,padding:14,marginBottom:18},
- diagTitle:{fontSize:15,fontWeight:"800",color:theme.text,textAlign:"right"},
- diagText:{fontSize:13,color:theme.muted,textAlign:"right",marginTop:5},
- error:{fontSize:12,color:theme.danger,textAlign:"right",marginTop:5},
- testButton:{alignSelf:"flex-start",marginTop:10,paddingVertical:7,paddingHorizontal:12,borderRadius:10,backgroundColor:theme.primarySoft},
- testButtonText:{color:theme.primary,fontWeight:"700"},
- input:{backgroundColor:"#fff",borderWidth:1,borderColor:theme.border,borderRadius:14,padding:14,marginBottom:12,textAlign:"right"},
+ wrap:{flexGrow:1,justifyContent:"center",padding:24,backgroundColor:theme.navy,direction:"rtl"},
+ brandMark:{width:76,height:76,borderRadius:28,backgroundColor:theme.primarySoft,alignSelf:"center",alignItems:"center",justifyContent:"center",marginBottom:12},brandMarkText:{fontSize:46,color:theme.primary,fontWeight:"900"},
+ logo:{fontSize:26,fontWeight:"900",color:"#FFFFFF",textAlign:"center",marginBottom:4},
+ version:{fontSize:13,color:"#C6DCF7",textAlign:"center",marginBottom:26},
+ title:{fontSize:28,fontWeight:"900",color:theme.text,textAlign:"center",marginBottom:18,backgroundColor:theme.background,marginHorizontal:-24,paddingTop:30},
+ input:{backgroundColor:"#fff",borderWidth:1,borderColor:theme.border,borderRadius:16,padding:15,marginBottom:12,textAlign:"right"},
  passwordHint:{fontSize:12,color:theme.muted,textAlign:"right",marginTop:-4,marginBottom:12},
- primary:{backgroundColor:theme.primary,borderRadius:14,padding:15,alignItems:"center",marginTop:6},
- primaryText:{color:"#fff",fontWeight:"800"},
+ primary:{backgroundColor:theme.accent,borderRadius:16,padding:16,alignItems:"center",marginTop:6},
+ primaryText:{color:theme.navy,fontWeight:"900"},
  secondary:{padding:15,alignItems:"center"},
  secondaryText:{color:theme.primary,fontWeight:"700"},
  recoveryToggle:{padding:11,alignItems:"center"},
- recoveryPanel:{backgroundColor:"#fff",borderWidth:1,borderColor:theme.border,borderRadius:14,padding:14,marginTop:4,gap:10},
+ recoveryPanel:{backgroundColor:"#fff",borderWidth:1,borderColor:theme.border,borderRadius:18,padding:16,marginTop:4,gap:10},
  recoveryTitle:{fontSize:15,fontWeight:"800",color:theme.text,textAlign:"right"},
  recoveryHint:{fontSize:12,color:theme.muted,textAlign:"right",lineHeight:18},
  secondaryButton:{padding:12,borderRadius:12,alignItems:"center",backgroundColor:theme.primarySoft}

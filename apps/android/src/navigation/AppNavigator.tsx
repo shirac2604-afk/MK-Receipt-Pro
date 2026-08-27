@@ -31,10 +31,10 @@ export default function AppNavigator(){
   <Tab.Navigator
     screenOptions={({route})=>({
       headerShown:false,
-      tabBarActiveTintColor:theme.primary,
-      tabBarInactiveTintColor:theme.muted,
-      tabBarLabelStyle:{fontSize:11,fontWeight:"600"},
-      tabBarStyle:{height:58+bottomSpace,paddingTop:5,paddingBottom:bottomSpace},
+      tabBarActiveTintColor:"#A9D4FF",
+      tabBarInactiveTintColor:"#E0E9F7",
+      tabBarLabelStyle:{fontSize:11,fontWeight:"700"},
+      tabBarStyle:{height:66+bottomSpace,paddingTop:8,paddingBottom:bottomSpace,backgroundColor:theme.navy,borderTopWidth:0,elevation:12,shadowColor:"#071F45",shadowOpacity:.22,shadowRadius:14,shadowOffset:{width:0,height:-5}},
       tabBarIcon:({focused,color,size})=>(
         <Ionicons name={iconFor(route.name,focused) as any} size={size??23} color={color}/>
       )
