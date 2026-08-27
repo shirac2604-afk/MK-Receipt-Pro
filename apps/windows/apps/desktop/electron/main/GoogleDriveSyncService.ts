@@ -50,12 +50,9 @@ export class GoogleDriveSyncService {
   private resolveClientId():string|null{
     const env=process.env.MK_GOOGLE_OAUTH_CLIENT_ID?.trim();
     if(env&&env.endsWith(".apps.googleusercontent.com"))return env;
-    try{
-      const calendarConfig=path.join(this.userDataPath,"student-module","google-calendar-config.json");
-      const parsed=JSON.parse(fs.readFileSync(calendarConfig,"utf8")) as {clientId?:string};
-      const configured=parsed.clientId?.trim();
-      if(configured&&configured.endsWith(".apps.googleusercontent.com"))return configured;
-    }catch{}
+    // Drive always uses the packaged Desktop OAuth client. A legacy Calendar
+    // configuration may refer to a confidential web client, which cannot be
+    // used by this PKCE desktop flow because it requires a client secret.
     const candidates=[
       path.join(this.resourcesPath,"google","oauth-client.json"),
       path.join(process.cwd(),"resources","google","oauth-client.json")
