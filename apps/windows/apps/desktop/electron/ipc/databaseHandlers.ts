@@ -413,6 +413,7 @@ export function registerDatabaseHandlers(databaseService: DatabaseService, cloud
   ipcMain.handle("cloud-account:revoke-device", (event,input) => handle(event, () => supabaseCloud.revokeDevice(String(input?.deviceId||"")), input));
 
   ipcMain.handle("cloud-sync:get-status", (event) => handle(event, () => cloudSync.getStatus()));
+  ipcMain.handle("cloud-sync:set-client-secret", (event,input) => handle(event, () => cloudSync.setClientSecret(typeof input?.clientSecret==="string"?input.clientSecret:""), input));
   ipcMain.handle("cloud-sync:connect", async (event,input) => {
     try{assertTrustedSender(event);assertPayloadSize(input);return apiSuccess(await cloudSync.connect(typeof input?.email==="string"?input.email:""))}
     catch(error){console.warn("[IPC] cloud connect failure",error);try{errorSink?.("GoogleDriveSync",error)}catch{}return errorResult(error)}
