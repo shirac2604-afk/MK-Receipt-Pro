@@ -4,7 +4,7 @@ export type CloudLessonItem={
   lessonId:string;participantId:string;studentId:string;studentName:string;title:string;startsAt:string;endsAt:string;kind:"individual"|"group";
   attendance:"scheduled"|"attended"|"absent"|"cancelled"|"late_cancelled";
   payment:"unpaid"|"paid"|"waived"|"refunded";amountAgorot:number;paymentMethod:string|null;
-  summary:string|null;homework:string|null;
+  summary:string|null;homework:string|null;parentReminderMinutes:number;studentReminderMinutes:number;
 };
 
 export type LessonSeriesInput={studentId:string;title:string;startsOn:string;localStartTime:string;durationMinutes:number;recurrenceIntervalWeeks:number;endsOn?:string;defaultPriceAgorot:number;parentReminderMinutes:number;studentReminderMinutes:number;};
@@ -13,11 +13,11 @@ export type GroupLessonSeriesInput={groupId:string;title:string;startsOn:string;
 const occurrenceLimit=26;
 const ymd=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 
-function map(row:any,student:any,participant:any):CloudLessonItem{
+function map(row:any,student:any,participant:any,series:any):CloudLessonItem{
  return {
   lessonId:String(row.id),participantId:String(participant.id),studentId:String(student.id),studentName:String(student.display_name),title:String(row.title),startsAt:String(row.starts_at),endsAt:String(row.ends_at),kind:row.kind==="group"?"group":"individual",
   attendance:participant.attendance_status,payment:participant.payment_status,amountAgorot:Number(participant.amount_agorot??0),paymentMethod:participant.payment_method??null,
-  summary:row.lesson_summary??null,homework:row.homework??null
+  summary:row.lesson_summary??null,homework:row.homework??null,parentReminderMinutes:Number(series?.parent_reminder_minutes??0),studentReminderMinutes:Number(series?.student_reminder_minutes??0)
  };
 }
 
@@ -35,11 +35,15 @@ function occurrenceDates(startsOn:string,intervalWeeks:number,endsOn?:string):st
 
 export async function listCloudLessonCalendar(businessId:string,fromIso:string,toIso:string):Promise<CloudLessonItem[]>{
  const {data:lessons,error:lessonError}=await supabase.from("lessons")
-  .select("id,student_id,kind,title,starts_at,ends_at,lesson_summary,homework")
+  .select("id,series_id,student_id,kind,title,starts_at,ends_at,lesson_summary,homework")
   .eq("business_id",businessId).gte("starts_at",fromIso).lt("starts_at",toIso).order("starts_at");
  if(lessonError)throw lessonError;
  const rows=lessons??[];if(!rows.length)return[];
  const lessonIds=rows.map((row:any)=>String(row.id));
+ const seriesIds=[...new Set(rows.map((row:any)=>row.series_id).filter(Boolean).map(String))];
+ const seriesResult=seriesIds.length?await supabase.from("lesson_series").select("id,parent_reminder_minutes,student_reminder_minutes").eq("business_id",businessId).in("id",seriesIds):{data:[],error:null};
+ if(seriesResult.error)throw seriesResult.error;
+ const seriesById=new Map((seriesResult.data??[]).map((row:any)=>[String(row.id),row]));
  const participantResult=await supabase.from("lesson_participants").select("id,lesson_id,student_id,attendance_status,payment_status,amount_agorot,payment_method").eq("business_id",businessId).in("lesson_id",lessonIds);
  if(participantResult.error)throw participantResult.error;
  const participantRows=participantResult.data??[];
@@ -50,7 +54,7 @@ export async function listCloudLessonCalendar(businessId:string,fromIso:string,t
  const participantsByLesson=new Map<string,any[]>();
  for(const participant of participantRows){const key=String(participant.lesson_id);participantsByLesson.set(key,[...(participantsByLesson.get(key)??[]),participant]);}
  const students=new Map((studentResult.data??[]).map((row:any)=>[String(row.id),row]));
- return rows.flatMap((row:any)=>(participantsByLesson.get(String(row.id))??[]).flatMap(participant=>{const student=students.get(String(participant.student_id));return student?[map(row,student,participant)]:[]}));
+ return rows.flatMap((row:any)=>(participantsByLesson.get(String(row.id))??[]).flatMap(participant=>{const student=students.get(String(participant.student_id));return student?[map(row,student,participant,seriesById.get(String(row.series_id)))]:[]}));
 }
 
 export async function createCloudLessonSeries(businessId:string,input:LessonSeriesInput):Promise<void>{
