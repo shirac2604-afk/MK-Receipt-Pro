@@ -29,12 +29,13 @@ export class GoogleDriveSyncService {
   private pushTimer:NodeJS.Timeout|null=null;
   private running:Promise<void>|null=null;
   constructor(private readonly userDataPath:string,private readonly database:DatabaseService,private readonly resourcesPath:string){
+    // Earlier internal builds incorrectly persisted a confidential-client secret.
+    // Desktop OAuth with PKCE is a public-client flow, so remove that unused value
+    // on startup instead of retaining sensitive configuration on the computer.
+    try{fs.rmSync(path.join(this.userDataPath,"cloud-sync","google-drive-client-secret.bin"),{force:true})}catch{}
     this.load();
   }
   private statePath():string{return path.join(this.userDataPath,"cloud-sync","google-drive-state.json")}
-  private clientSecretPath():string{return path.join(this.userDataPath,"cloud-sync","google-drive-client-secret.bin")}
-  private readClientSecret():string|null{try{if(!safeStorage.isEncryptionAvailable())return null;const value=safeStorage.decryptString(fs.readFileSync(this.clientSecretPath())).trim();return value||null}catch{return null}}
-  setClientSecret(raw:string):CloudSyncStatus{const value=raw.trim();if(value.length<8||value.length>512)throw new Error("GOOGLE_CLIENT_SECRET_INVALID");if(!safeStorage.isEncryptionAvailable())throw new Error("SECURE_STORAGE_UNAVAILABLE");fs.mkdirSync(path.dirname(this.clientSecretPath()),{recursive:true});fs.writeFileSync(this.clientSecretPath(),safeStorage.encryptString(value));this.message=null;return this.getStatus()}
   private load():void{
     try{
       const p=this.statePath(); if(!fs.existsSync(p))return;
@@ -77,7 +78,6 @@ export class GoogleDriveSyncService {
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))throw new Error("GOOGLE_EMAIL_INVALID");
     const normalized=this.resolveClientId();
     if(!normalized)throw new Error("GOOGLE_OAUTH_APP_NOT_CONFIGURED");
-    const clientSecret=this.readClientSecret();
     if(!safeStorage.isEncryptionAvailable())throw new Error("SECURE_STORAGE_UNAVAILABLE");
     this.runtimeState="syncing";this.message="ממתין לאישור בחשבון Google";
     let oauthServer:ReturnType<typeof http.createServer>|null=null;
@@ -114,7 +114,6 @@ export class GoogleDriveSyncService {
     await shell.openExternal(auth.toString());
     const code=await codePromise;
     const body=new URLSearchParams({client_id:normalized,code,code_verifier:verifier,grant_type:"authorization_code",redirect_uri:redirectUri});
-    if(clientSecret)body.set("client_secret",clientSecret);
     const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
     const tokenPayload=await response.json().catch(()=>({})) as {refresh_token?:string;access_token?:string;error?:string;error_description?:string};
     if(!response.ok){
@@ -242,7 +241,6 @@ export class GoogleDriveSyncService {
     if(!this.state)throw new Error("GOOGLE_DRIVE_NOT_CONNECTED");
     const clientId=this.state.clientId;
     const body=new URLSearchParams({client_id:clientId,refresh_token:this.decryptRefreshToken(),grant_type:"refresh_token"});
-    const clientSecret=this.readClientSecret();if(clientSecret)body.set("client_secret",clientSecret);
     const res=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
     if(!res.ok)throw new Error(`GOOGLE_TOKEN_REFRESH_FAILED_${res.status}`);
     const json=await res.json() as {access_token?:string};if(!json.access_token)throw new Error("GOOGLE_ACCESS_TOKEN_MISSING");return json.access_token;

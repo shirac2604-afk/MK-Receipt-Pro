@@ -2,6 +2,13 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-30 — Windows 1.1.13 / Google Drive public-client repair
+
+- Removed the erroneous Google Drive Client Secret input and IPC surface from the Windows backup screen.
+- The Windows Desktop OAuth flow now uses the packaged public client ID with PKCE only; authorization-code and refresh-token exchanges no longer send a client secret.
+- This fixes Google's `invalid_client` rejection caused by an obsolete or rotated secret while preserving the encrypted refresh-token storage and the existing Windows app ID.
+- Existing Google Drive backup files are not changed or deleted. Reconnect is required once after installing the upgrade.
+
 ## 2026-08-27 — Windows 1.1.9 / production upgrade and Google OAuth repair
 
 - Investigated the Phase 15 Windows Staging installer after it could not connect to the normal cloud account and Google returned `invalid_request: client_secret is missing`.
