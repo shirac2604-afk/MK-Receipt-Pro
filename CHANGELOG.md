@@ -2,6 +2,13 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-30 — Windows 1.1.14 / Google Drive token-credential repair
+
+- Production test of Windows 1.1.13 proved that this Google Desktop OAuth project requires its matching token credential: Google returned `invalid_request: client_secret is missing` after authorization was approved.
+- Restored the credential only for authorization-code and refresh-token exchanges, while preserving PKCE and removing any user-entered Client Secret field.
+- The value is injected into the installer solely by the internal GitHub Actions build from the repository secret `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`; it is not committed to source control or stored in user data.
+- Existing Drive backups are unchanged. A one-time reconnect is required after upgrading.
+
 ## 2026-08-30 — Windows 1.1.13 / Google Drive public-client repair
 
 - Removed the erroneous Google Drive Client Secret input and IPC surface from the Windows backup screen.

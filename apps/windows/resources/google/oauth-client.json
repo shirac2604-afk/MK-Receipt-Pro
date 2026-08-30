@@ -1,4 +1,5 @@
 {
   "clientId": "924275176596-rd2bvfki9kc8qe8h71nk3l38cgl59o9j.apps.googleusercontent.com",
-  "credentialStatus": "DESKTOP_PUBLIC_CLIENT_ID_ONLY"
+  "clientSecret": "",
+  "credentialStatus": "DESKTOP_OAUTH_CREDENTIAL_INJECTED_BY_CI"
 }

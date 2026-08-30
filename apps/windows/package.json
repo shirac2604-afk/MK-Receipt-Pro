@@ -1,6 +1,6 @@
 {
   "name": "mk-receipt-pro",
-  "version": "1.1.13",
+  "version": "1.1.14",
   "private": true,
   "description": "MK Receipt Pro — מערכת שולחנית לניהול קבלות, הוצאות, לקוחות, דיווחים וגיבוי לעוסק פטור",
   "main": "dist-electron/apps/desktop/electron/main/main.js",
