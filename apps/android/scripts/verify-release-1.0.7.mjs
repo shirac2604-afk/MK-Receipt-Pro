@@ -9,7 +9,7 @@ const checks=[
   [visibleVersion,"matching semantic package/app version"],
   [expo57,"Expo SDK 57"],
   [pkg.dependencies?.["react-native"]==="0.86.3","React Native 0.86.3"],
-  [app.expo?.android?.versionCode===10,"versionCode 10"],
+  [app.expo?.android?.versionCode===11,"versionCode 11"],
   [app.expo?.android?.package==="il.mkreceiptpro.android","stable Android package id"],
   [Boolean(pkg.scripts["verify:student-local-privacy"]),"student local privacy audit"],
   [Boolean(pkg.scripts["verify:device-management"]),"device management audit"]
