@@ -1,11 +1,11 @@
 # Tax Authority API 2027 — HOLD / Release Checklist
 
-Status: **PREPARED, NOT CONNECTED, DO NOT MERGE YET**
+Status: **PREPARATION COMPLETE — NOT CONNECTED — DO NOT MERGE YET**
 
 Target window: before 2027-01-01.
 Source baseline: Israel Tax Authority API instructions, edition 1.0 / March 2026.
 
-## What is already prepared
+## Prepared package
 
 - API contract and validation for upload-link requests.
 - Sandbox and production endpoint configuration from the March 2026 specification.
@@ -13,9 +13,12 @@ Source baseline: Israel Tax Authority API instructions, edition 1.0 / March 2026
 - Resumable upload flow: signed URL initiation, Location session URL, PUT chunks and Content-Range.
 - 1 MB chunk support.
 - Status lookup by fileUniqueId and status mapping for Uploaded / Approved / Rejected.
+- Isolated orchestration service for prepare → upload → status refresh.
 - Local persistence foundation for transmission identifiers and statuses.
 - No persistence of access tokens, refresh tokens, signUrl or upload session URLs.
-- Offline orchestration tests using mocks.
+- Contract, HTTP client, orchestration and persistence tests using mocks/local DB.
+- Static isolation/credential-safety gate.
+- Dedicated GitHub Actions workflow: `Tax Authority 2027 Preparation Gate`.
 - Production guard remains closed.
 - Current 2026 open-format generation and reports are unchanged.
 
@@ -42,9 +45,10 @@ Do not merge this branch into main and do not include it in the current installe
 9. Verify a rejected-file response and that its description/error information is retained locally.
 10. Run TypeScript typecheck, Vitest, database migration tests, Windows build and security workflows.
 11. Run `node scripts/verify-tax-authority-2027-prep.mjs` from `apps/windows`.
-12. Review the diff against main and confirm no current receipt/open-format behavior changed unintentionally.
-13. Only after all checks pass: connect the feature to application IPC/UI behind an explicit feature flag.
-14. Build a release candidate, test on a clean Windows installation, and only then merge/release.
+12. Run the dedicated `Tax Authority 2027 Preparation Gate` workflow.
+13. Review the diff against main and confirm no current receipt/open-format behavior changed unintentionally.
+14. Only after all checks pass: connect the feature to application IPC/UI behind an explicit feature flag.
+15. Build a release candidate, test on a clean Windows installation, and only then merge/release.
 
 ## Release-blocking security rules
 
