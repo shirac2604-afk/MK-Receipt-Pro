@@ -31,6 +31,18 @@ jobs:
           if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'noimclnzzuxcszdotmby.supabase.co' -Quiet)) { throw "Production cloud is missing" }
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Inject Google Drive Desktop OAuth credential
+        shell: pwsh
+        env:
+          MK_GOOGLE_DRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_DRIVE_OAUTH_CLIENT_SECRET }}
+        run: |
+          $secret = $env:MK_GOOGLE_DRIVE_OAUTH_CLIENT_SECRET
+          if ([string]::IsNullOrWhiteSpace($secret)) { throw "GOOGLE_DRIVE_OAUTH_CLIENT_SECRET is not configured" }
+          $path = "resources/google/oauth-client.json"
+          $config = Get-Content -Raw $path | ConvertFrom-Json
+          $config.clientSecret = $secret
+          $config.credentialStatus = "DESKTOP_OAUTH_CREDENTIAL_INJECTED_BY_CI"
+          $config | ConvertTo-Json | Set-Content -Encoding utf8NoBOM $path
       - name: TypeScript
         run: npm run typecheck
       - name: Google Calendar sync contract

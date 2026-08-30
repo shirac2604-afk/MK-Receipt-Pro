@@ -18,6 +18,7 @@ interface PersistedState {
   deviceId: string;
 }
 interface DriveFileMeta { id:string; name:string; modifiedTime:string; md5Checksum?:string; size?:string; }
+interface OAuthCredentials { clientId:string; clientSecret:string; }
 
 const FILE_NAME="MK-Receipt-Pro-Production-Sync.mkrbackup";
 const SCOPE="openid email https://www.googleapis.com/auth/drive.file";
@@ -29,12 +30,12 @@ export class GoogleDriveSyncService {
   private pushTimer:NodeJS.Timeout|null=null;
   private running:Promise<void>|null=null;
   constructor(private readonly userDataPath:string,private readonly database:DatabaseService,private readonly resourcesPath:string){
+    // Remove the obsolete per-user value. The Desktop OAuth client credential is
+    // supplied only while the signed test installer is assembled in CI.
+    try{fs.rmSync(path.join(this.userDataPath,"cloud-sync","google-drive-client-secret.bin"),{force:true})}catch{}
     this.load();
   }
   private statePath():string{return path.join(this.userDataPath,"cloud-sync","google-drive-state.json")}
-  private clientSecretPath():string{return path.join(this.userDataPath,"cloud-sync","google-drive-client-secret.bin")}
-  private readClientSecret():string|null{try{if(!safeStorage.isEncryptionAvailable())return null;const value=safeStorage.decryptString(fs.readFileSync(this.clientSecretPath())).trim();return value||null}catch{return null}}
-  setClientSecret(raw:string):CloudSyncStatus{const value=raw.trim();if(value.length<8||value.length>512)throw new Error("GOOGLE_CLIENT_SECRET_INVALID");if(!safeStorage.isEncryptionAvailable())throw new Error("SECURE_STORAGE_UNAVAILABLE");fs.mkdirSync(path.dirname(this.clientSecretPath()),{recursive:true});fs.writeFileSync(this.clientSecretPath(),safeStorage.encryptString(value));this.message=null;return this.getStatus()}
   private load():void{
     try{
       const p=this.statePath(); if(!fs.existsSync(p))return;
@@ -50,34 +51,34 @@ export class GoogleDriveSyncService {
     fs.mkdirSync(path.dirname(this.statePath()),{recursive:true});
     fs.writeFileSync(this.statePath(),JSON.stringify(this.state,null,2),"utf8");
   }
-  private resolveClientId():string|null{
+  private resolveCredentials():OAuthCredentials|null{
     const env=process.env.MK_GOOGLE_OAUTH_CLIENT_ID?.trim();
-    if(env&&env.endsWith(".apps.googleusercontent.com"))return env;
-    // Drive always uses the packaged Desktop OAuth client. A legacy Calendar
-    // configuration may refer to a confidential web client, which cannot be
-    // used by this PKCE desktop flow because it requires a client secret.
+    const envSecret=process.env.MK_GOOGLE_OAUTH_CLIENT_SECRET?.trim();
+    if(env&&env.endsWith(".apps.googleusercontent.com")&&envSecret)return {clientId:env,clientSecret:envSecret};
+    // Drive always uses the packaged Desktop OAuth client. PKCE protects the
+    // authorization flow; Google still requires this client's matching token
+    // credential for this project at both token-exchange stages.
     const candidates=[
       path.join(this.resourcesPath,"google","oauth-client.json"),
       path.join(process.cwd(),"resources","google","oauth-client.json")
     ];
     for(const file of candidates){
       try{
-        const parsed=JSON.parse(fs.readFileSync(file,"utf8")) as {clientId?:string};
-        const value=parsed.clientId?.trim();
-        if(value&&value.endsWith(".apps.googleusercontent.com"))return value;
+        const parsed=JSON.parse(fs.readFileSync(file,"utf8")) as {clientId?:string;clientSecret?:string};
+        const clientId=parsed.clientId?.trim(),clientSecret=parsed.clientSecret?.trim();
+        if(clientId&&clientId.endsWith(".apps.googleusercontent.com")&&clientSecret)return {clientId,clientSecret};
       }catch{}
     }
     return null;
   }
   getStatus():CloudSyncStatus{
-    return {connected:Boolean(this.state),state:this.runtimeState,clientIdConfigured:Boolean(this.resolveClientId()),accountEmail:this.state?.accountEmail??null,remoteFileId:this.state?.remoteFileId??null,remoteModifiedTime:this.state?.remoteModifiedTime??null,lastSyncAt:this.state?.lastSyncAt??null,message:this.message,deviceId:this.state?.deviceId??"not-connected"};
+    return {connected:Boolean(this.state),state:this.runtimeState,clientIdConfigured:Boolean(this.resolveCredentials()),accountEmail:this.state?.accountEmail??null,remoteFileId:this.state?.remoteFileId??null,remoteModifiedTime:this.state?.remoteModifiedTime??null,lastSyncAt:this.state?.lastSyncAt??null,message:this.message,deviceId:this.state?.deviceId??"not-connected"};
   }
   async connect(email:string):Promise<CloudSyncStatus>{
     const normalizedEmail=email.trim().toLowerCase();
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))throw new Error("GOOGLE_EMAIL_INVALID");
-    const normalized=this.resolveClientId();
-    if(!normalized)throw new Error("GOOGLE_OAUTH_APP_NOT_CONFIGURED");
-    const clientSecret=this.readClientSecret();
+    const credentials=this.resolveCredentials();
+    if(!credentials)throw new Error("GOOGLE_OAUTH_APP_NOT_CONFIGURED");
     if(!safeStorage.isEncryptionAvailable())throw new Error("SECURE_STORAGE_UNAVAILABLE");
     this.runtimeState="syncing";this.message="ממתין לאישור בחשבון Google";
     let oauthServer:ReturnType<typeof http.createServer>|null=null;
@@ -91,7 +92,7 @@ export class GoogleDriveSyncService {
     const port=(server.address() as AddressInfo).port;
     const redirectUri=`http://127.0.0.1:${port}/oauth2callback`;
     const auth=new URL("https://accounts.google.com/o/oauth2/v2/auth");
-    auth.searchParams.set("client_id",normalized);auth.searchParams.set("redirect_uri",redirectUri);auth.searchParams.set("response_type","code");
+    auth.searchParams.set("client_id",credentials.clientId);auth.searchParams.set("redirect_uri",redirectUri);auth.searchParams.set("response_type","code");
     auth.searchParams.set("scope",SCOPE);auth.searchParams.set("access_type","offline");auth.searchParams.set("prompt","consent");auth.searchParams.set("login_hint",normalizedEmail);
     auth.searchParams.set("code_challenge",challenge);auth.searchParams.set("code_challenge_method","S256");auth.searchParams.set("state",csrf);
     const codePromise=new Promise<string>((resolve,reject)=>{
@@ -113,8 +114,7 @@ export class GoogleDriveSyncService {
     });
     await shell.openExternal(auth.toString());
     const code=await codePromise;
-    const body=new URLSearchParams({client_id:normalized,code,code_verifier:verifier,grant_type:"authorization_code",redirect_uri:redirectUri});
-    if(clientSecret)body.set("client_secret",clientSecret);
+    const body=new URLSearchParams({client_id:credentials.clientId,code,code_verifier:verifier,grant_type:"authorization_code",redirect_uri:redirectUri,client_secret:credentials.clientSecret});
     const response=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
     const tokenPayload=await response.json().catch(()=>({})) as {refresh_token?:string;access_token?:string;error?:string;error_description?:string};
     if(!response.ok){
@@ -129,7 +129,7 @@ export class GoogleDriveSyncService {
       const userRes=await fetch("https://openidconnect.googleapis.com/v1/userinfo",{headers:{Authorization:`Bearer ${token.access_token}`}});
       if(userRes.ok){const user=await userRes.json() as {email?:string};if(user.email)verifiedEmail=user.email.toLowerCase()}
     }catch{}
-    this.state={clientId:normalized,accountEmail:verifiedEmail,encryptedRefreshToken:safeStorage.encryptString(token.refresh_token).toString("base64"),remoteFileId:null,remoteModifiedTime:null,lastSyncAt:null,lastLocalHash:null,deviceId:crypto.randomUUID()};
+    this.state={clientId:credentials.clientId,accountEmail:verifiedEmail,encryptedRefreshToken:safeStorage.encryptString(token.refresh_token).toString("base64"),remoteFileId:null,remoteModifiedTime:null,lastSyncAt:null,lastLocalHash:null,deviceId:crypto.randomUUID()};
     this.runtimeState="idle";this.message=null;this.save();
     const remote=await this.findRemoteFile();
     if(remote){
@@ -241,8 +241,9 @@ export class GoogleDriveSyncService {
   private async accessToken():Promise<string>{
     if(!this.state)throw new Error("GOOGLE_DRIVE_NOT_CONNECTED");
     const clientId=this.state.clientId;
-    const body=new URLSearchParams({client_id:clientId,refresh_token:this.decryptRefreshToken(),grant_type:"refresh_token"});
-    const clientSecret=this.readClientSecret();if(clientSecret)body.set("client_secret",clientSecret);
+    const credentials=this.resolveCredentials();
+    if(!credentials||credentials.clientId!==clientId)throw new Error("GOOGLE_OAUTH_APP_NOT_CONFIGURED");
+    const body=new URLSearchParams({client_id:clientId,refresh_token:this.decryptRefreshToken(),grant_type:"refresh_token",client_secret:credentials.clientSecret});
     const res=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
     if(!res.ok)throw new Error(`GOOGLE_TOKEN_REFRESH_FAILED_${res.status}`);
     const json=await res.json() as {access_token?:string};if(!json.access_token)throw new Error("GOOGLE_ACCESS_TOKEN_MISSING");return json.access_token;

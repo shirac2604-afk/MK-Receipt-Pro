@@ -196,7 +196,8 @@ export class DatabaseService {
     const settings=this.requireSettings().get();
     const row=this.requireConnection().prepare("SELECT * FROM backups WHERE status='verified' ORDER BY created_at DESC LIMIT 1").get() as unknown as any;
     const count=this.requireConnection().prepare("SELECT COUNT(*) AS c FROM backups").get() as unknown as {c:number};
-    return {backupFolder:settings?.backupFolder??null,googleDriveFolder:settings?.googleDriveFolder??null,latestBackup:row?this.mapBackup(row):null,backupCount:count.c};
+    const backupFolder=settings?.backupFolder||path.join(this.documentsPath??this.userDataPath??".","MK Receipt Pro","Backups");
+    return {backupFolder,googleDriveFolder:settings?.googleDriveFolder??null,latestBackup:row?this.mapBackup(row):null,backupCount:count.c};
   }
   createBackup(targetFile:string,type:BackupRecord["backupType"]="manual"):BackupRecord {
     const record=this.requireBackup().create(targetFile,type);
@@ -244,8 +245,8 @@ export class DatabaseService {
   }
   private tryAutomaticBackup():void{
     try{
-      const folder=this.requireSettings().get()?.backupFolder;
-      if(folder){const file=path.join(folder,"MK-Receipt-Pro-Auto-Latest.mkrbackup");this.createBackup(file,"automatic");}
+      const folder=this.requireSettings().get()?.backupFolder||path.join(this.documentsPath??this.userDataPath??".","MK Receipt Pro","Backups");
+      const file=path.join(folder,"MK-Receipt-Pro-Auto-Latest.mkrbackup");this.createBackup(file,"automatic");
     }catch(error){console.warn("Automatic backup failed",error);}
     try{this.automaticCloudSyncHook?.()}catch(error){console.warn("Cloud sync scheduling failed",error);}
   }

@@ -2,6 +2,28 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-30 — Android 1.0.10 / גלילת היסטוריית קבלות
+
+- תוקן מסך הקבלות בנייד: רשימת הקבלות היא כעת משטח הגלילה הראשי, והטופס וכותרת ההיסטוריה נמצאים בכותרת הרשימה.
+- כך אפשר לגלול תמיד אל כל היסטוריית הקבלות, גם כאשר טופס הפקת הקבלה פתוח או ארוך.
+- נוסף מאמת שחרור סטטי שמוודא שלמסך יש `FlatList` יחיד עם `ListHeaderComponent`, כדי למנוע חזרה של התקלה.
+- הועלה מספר הגרסה ל־Android `1.0.10` / `versionCode` 11. מזהה החבילה `il.mkreceiptpro.android` לא השתנה, ולכן ההתקנה הבאה תהיה שדרוג על גבי האפליקציה הקיימת.
+- עודכנו מאמתי השחרור ומטא־הנתונים של ה־lockfile לגרסה 11, כדי ש־CI ידחה חוסר התאמה או downgrade.
+
+## 2026-08-30 — Windows 1.1.14 / Google Drive token-credential repair
+
+- Production test of Windows 1.1.13 proved that this Google Desktop OAuth project requires its matching token credential: Google returned `invalid_request: client_secret is missing` after authorization was approved.
+- Restored the credential only for authorization-code and refresh-token exchanges, while preserving PKCE and removing any user-entered Client Secret field.
+- The value is injected into the installer solely by the internal GitHub Actions build from the repository secret `GOOGLE_DRIVE_OAUTH_CLIENT_SECRET`; it is not committed to source control or stored in user data.
+- Existing Drive backups are unchanged. A one-time reconnect is required after upgrading.
+
+## 2026-08-30 — Windows 1.1.13 / Google Drive public-client repair
+
+- Removed the erroneous Google Drive Client Secret input and IPC surface from the Windows backup screen.
+- The Windows Desktop OAuth flow now uses the packaged public client ID with PKCE only; authorization-code and refresh-token exchanges no longer send a client secret.
+- This fixes Google's `invalid_client` rejection caused by an obsolete or rotated secret while preserving the encrypted refresh-token storage and the existing Windows app ID.
+- Existing Google Drive backup files are not changed or deleted. Reconnect is required once after installing the upgrade.
+
 ## 2026-08-27 — Windows 1.1.9 / production upgrade and Google OAuth repair
 
 - Investigated the Phase 15 Windows Staging installer after it could not connect to the normal cloud account and Google returned `invalid_request: client_secret is missing`.

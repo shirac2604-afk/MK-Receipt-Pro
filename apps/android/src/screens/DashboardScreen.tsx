@@ -38,12 +38,13 @@ export default function DashboardScreen(){
    contentContainerStyle={s.screen}
    refreshControl={<RefreshControl refreshing={busy} onRefresh={()=>void load()}/>}
  >
+   <View style={s.hero}>
    <View style={s.header}>
     <View style={{flex:1}}>
-      <Text style={s.hello}>שלום,</Text>
+      <Text style={s.hello}>ניהול העסק שלך</Text>
       <Text style={s.business}>{businessName}</Text>
       <View style={s.cloudRow}>
-        <Ionicons name="cloud-done-outline" size={16} color={theme.primary}/>
+        <Ionicons name="cloud-done-outline" size={16} color={theme.accent}/>
         <Text style={s.cloudText}>מחובר לענן · {snapshot?.devicesCount??"–"} מכשירים</Text>
       </View>
     </View>
@@ -54,6 +55,7 @@ export default function DashboardScreen(){
      <Text style={s.nextLabel}>הקבלה הבאה</Text>
      <Text style={s.nextNumber}>{snapshot?.nextReceiptNumber??"–"}</Text>
      <Text style={s.nextHint}>המספר משותף לכל המחשבים והטלפונים של העסק</Text>
+   </View>
    </View>
 
    <Text style={s.sectionTitle}>תמונת מצב</Text>
@@ -75,10 +77,10 @@ export default function DashboardScreen(){
 }
 
 const s=StyleSheet.create({
- root:{flex:1,backgroundColor:theme.background},screen:{padding:18,paddingTop:28,paddingBottom:120,direction:"rtl"},
- header:{flexDirection:"row",alignItems:"center",gap:12},hello:{fontSize:15,color:theme.muted,textAlign:"right"},business:{fontSize:27,fontWeight:"800",color:theme.text,textAlign:"right",marginTop:2},
- cloudRow:{flexDirection:"row",alignItems:"center",gap:5,justifyContent:"flex-start",marginTop:6},cloudText:{fontSize:12,color:theme.primary,fontWeight:"700"},cloudBadge:{width:58,height:58,borderRadius:16,backgroundColor:theme.primarySoft,alignItems:"center",justifyContent:"center",overflow:"hidden"},logo:{width:52,height:52},
- nextCard:{marginTop:18,backgroundColor:theme.primary,borderRadius:22,padding:20,alignItems:"flex-end"},nextLabel:{color:"#E9F1EF",fontSize:13},nextNumber:{color:"#fff",fontSize:36,fontWeight:"900",marginTop:2},nextHint:{color:"#E9F1EF",fontSize:12,textAlign:"right",marginTop:4},
+ root:{flex:1,backgroundColor:theme.background},screen:{paddingBottom:120,direction:"rtl"},hero:{backgroundColor:theme.navy,padding:18,paddingTop:30,borderBottomLeftRadius:32,borderBottomRightRadius:32},
+ header:{flexDirection:"row",alignItems:"center",gap:12},hello:{fontSize:13,color:"#B9D8FC",textAlign:"right",fontWeight:"700"},business:{fontSize:28,fontWeight:"900",color:"#FFFFFF",textAlign:"right",marginTop:2},
+ cloudRow:{flexDirection:"row",alignItems:"center",gap:5,justifyContent:"flex-start",marginTop:6},cloudText:{fontSize:12,color:"#DCEBFF",fontWeight:"700"},cloudBadge:{width:58,height:58,borderRadius:18,backgroundColor:"#FFFFFF",alignItems:"center",justifyContent:"center",overflow:"hidden"},logo:{width:52,height:52},
+ nextCard:{marginTop:20,backgroundColor:"#DCEBFF",borderRadius:20,padding:18,alignItems:"flex-end"},nextLabel:{color:theme.primary,fontSize:13,fontWeight:"700"},nextNumber:{color:theme.navy,fontSize:36,fontWeight:"900",marginTop:2},nextHint:{color:theme.primary,fontSize:12,textAlign:"right",marginTop:4},
  sectionTitle:{fontSize:18,fontWeight:"800",color:theme.text,textAlign:"right",marginTop:22,marginBottom:10},statsGrid:{flexDirection:"row",flexWrap:"wrap",gap:10},
  statCard:{width:"48%",flexGrow:1,backgroundColor:"#fff",borderRadius:17,padding:14,borderWidth:1,borderColor:theme.border,alignItems:"flex-end"},statLabel:{fontSize:12,color:theme.muted,marginTop:7},statValue:{fontSize:20,fontWeight:"800",color:theme.text,marginTop:2},statMeta:{fontSize:11,color:theme.muted,marginTop:3},
  actions:{gap:9},action:{backgroundColor:"#fff",borderRadius:16,padding:13,borderWidth:1,borderColor:theme.border,flexDirection:"row-reverse",alignItems:"center",gap:11},actionIcon:{width:46,height:46,borderRadius:14,backgroundColor:theme.primarySoft,alignItems:"center",justifyContent:"center"},actionTitle:{fontSize:16,fontWeight:"800",color:theme.text,textAlign:"right"},actionText:{fontSize:12,color:theme.muted,textAlign:"right",marginTop:2}
