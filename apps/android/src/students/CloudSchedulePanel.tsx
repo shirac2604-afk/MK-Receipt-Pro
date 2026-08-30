@@ -4,6 +4,8 @@ import type {CloudStudent} from "../data/supabase/StudentCloudRepository";
 import {listCloudStudentGroups,type CloudStudentGroup} from "../data/supabase/GroupCloudRepository";
 import {createCloudGroupLessonSeries,createCloudLessonSeries,listCloudLessonCalendar,saveCloudLessonNotes,updateCloudLessonParticipant,type CloudLessonItem} from "../data/supabase/LessonCloudRepository";
 import {theme} from "../theme/theme";
+import {DeviceCalendarPanel} from "./DeviceCalendarPanel";
+import {CloudTeacherReminderPanel} from "./CloudTeacherReminderPanel";
 
 const today=()=>new Date().toISOString().slice(0,10);
 const dateTime=(iso:string)=>new Intl.DateTimeFormat("he-IL",{weekday:"short",day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"}).format(new Date(iso));
@@ -28,8 +30,11 @@ export function CloudSchedulePanel({businessId,students,paymentsOnly=false}:{bus
  function openNotes(item:CloudLessonItem){setNotesTarget(item);setSummary(item.summary??"");setHomework(item.homework??"");}
  async function saveNotes(){if(!notesTarget)return;setBusy(true);try{await saveCloudLessonNotes(businessId,notesTarget.lessonId,summary,homework);setNotesTarget(null);await load()}catch(e){Alert.alert("שמירת הסיכום נכשלה",e instanceof Error?e.message:"נסי שוב")}finally{setBusy(false)}}
  const visibleItems=paymentsOnly?items.filter(item=>item.payment==="unpaid"):items;
+ const calendarLessons=useMemo(()=>[...new Map(items.map(item=>[item.lessonId,{id:item.lessonId,title:item.title,startsAt:item.startsAt,endsAt:item.endsAt,cancelled:item.attendance==="cancelled",kind:item.kind}])).values()],[items]);
  return <ScrollView contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={busy} onRefresh={()=>void load()}/>} keyboardShouldPersistTaps="handled">
   <Text style={s.eyebrow}>{paymentsOnly?"גבייה משותפת":"יומן משותף"}</Text><Text style={s.title}>{paymentsOnly?"תשלומים פתוחים":"השיעורים שלי"}</Text><Text style={s.subtitle}>{paymentsOnly?"שיעורים שטרם סומנו כמשולמים — אותם נתונים מופיעים גם ב־Windows.":"קביעת שיעור כאן מופיעה גם בתוכנת Windows."}</Text>
+  {!paymentsOnly?<DeviceCalendarPanel lessons={calendarLessons}/>:null}
+  {!paymentsOnly?<CloudTeacherReminderPanel items={items}/>:null}
   {!paymentsOnly?<View style={s.card}><Text style={s.cardTitle}>שיעור קבוע חדש</Text><View style={s.row}><Pressable style={[s.interval,lessonType==="individual"&&s.intervalActive]} onPress={()=>setLessonType("individual")}><Text style={lessonType==="individual"?s.intervalActiveText:s.intervalText}>שיעור אישי</Text></Pressable><Pressable style={[s.interval,lessonType==="group"&&s.intervalActive]} onPress={()=>setLessonType("group")}><Text style={lessonType==="group"?s.intervalActiveText:s.intervalText}>שיעור קבוצתי</Text></Pressable></View><Text style={s.label}>{lessonType==="group"?"בחירת קבוצה":"בחירת תלמיד"}</Text><View style={s.chips}>{lessonType==="group"?groups.map(group=><Pressable key={group.id} onPress={()=>setGroupId(group.id)} style={[s.chip,groupId===group.id&&s.chipActive]}><Text style={groupId===group.id?s.chipActiveText:s.chipText}>{group.name} · {group.members.length}</Text></Pressable>):students.map(student=><Pressable key={student.id} onPress={()=>setStudentId(student.id)} style={[s.chip,studentId===student.id&&s.chipActive]}><Text style={studentId===student.id?s.chipActiveText:s.chipText}>{student.displayName}</Text></Pressable>)}</View>
    <TextInput style={s.input} value={title} onChangeText={setTitle} maxLength={160} placeholder="כותרת השיעור" textAlign="right"/>
    <View style={s.row}><TextInput style={[s.input,s.half]} value={date} onChangeText={setDate} maxLength={10} placeholder="YYYY-MM-DD" textAlign="center"/><TextInput style={[s.input,s.half]} value={time} onChangeText={setTime} maxLength={5} placeholder="HH:MM" textAlign="center"/></View>

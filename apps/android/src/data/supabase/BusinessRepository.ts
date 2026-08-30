@@ -1,4 +1,5 @@
 import {supabase} from "../../lib/supabase";
+import {COMPANY_BRAND} from "../../branding/CompanyBrand";
 import {getBusinessLogoDataUrl} from "../../services/BusinessBrandingService";
 
 export interface BusinessMembership{
@@ -33,8 +34,12 @@ export async function getBusinessProfile(businessId:string):Promise<BusinessProf
    .select("id,business_name,owner_name,business_number,tax_status,phone,email,address,slogan,logo_storage_key")
    .eq("id",businessId).single();
  if(error)throw error;
- let logoDataUrl:string|null=null;
- try{logoDataUrl=await getBusinessLogoDataUrl(data.logo_storage_key)}catch{logoDataUrl=null}
+ // The app ships with the approved business logo. A temporary Storage/signing failure
+ // must never make branding disappear after an app update or while offline.
+ let logoDataUrl:string|null=COMPANY_BRAND.logoDataUrl;
+ if(data.logo_storage_key){
+  try{logoDataUrl=await getBusinessLogoDataUrl(data.logo_storage_key)}catch{}
+ }
  return {
    id:data.id,
    businessName:data.business_name,

@@ -6,7 +6,8 @@ import {useAuth} from "../context/AuthContext";
 import {getBusinessProfile,updateBusinessProfile} from "../data/supabase/BusinessRepository";
 import {listBusinessDevices,revokeBusinessDevice,type CloudDevice} from "../data/supabase/DeviceRepository";
 import {pickBusinessLogo,uploadBusinessLogo,type PickedBusinessLogo} from "../services/BusinessBrandingService";
-import {createAndShareLocalBackup} from "../services/LocalBackupService";
+import {createAndShareLocalBackup,inspectPickedLocalBackup} from "../services/LocalBackupService";
+import {createAndShareYearlyReport} from "../services/BusinessReportService";
 import {formatUnknownError} from "../services/ErrorFormatter";
 import {theme} from "../theme/theme";
 import {sanitizeDigits,sanitizePhone,validEmail,validPhone} from "../securityValidation";
@@ -31,6 +32,8 @@ export default function MoreScreen(){
  const [newPasswordConfirmation,setNewPasswordConfirmation]=useState("");
  const [passwordBusy,setPasswordBusy]=useState(false);
  const [backupBusy,setBackupBusy]=useState(false);
+ const [backupInspectionBusy,setBackupInspectionBusy]=useState(false);
+ const [reportBusy,setReportBusy]=useState(false);
 
  async function load(){
   if(!businessId)return;
@@ -109,6 +112,21 @@ export default function MoreScreen(){
   }catch(e){Alert.alert("יצירת הגיבוי נכשלה",formatUnknownError(e));}
   finally{setBackupBusy(false)}
  }
+ async function inspectLocalBackup(){
+  if(!businessId)return;
+  setBackupInspectionBusy(true);
+  try{const result=await inspectPickedLocalBackup(businessId);if(!result)return;const details=[result.message,result.createdAt?`נוצר: ${new Date(result.createdAt).toLocaleString("he-IL")}`:"",result.valid?`רשומות: ${result.recordCount}`:"",...result.warnings].filter(Boolean).join("\n");Alert.alert(result.valid?"בדיקת גיבוי":"בדיקת גיבוי נכשלה",details);}
+  catch(e){Alert.alert("בדיקת הגיבוי נכשלה",formatUnknownError(e));}
+  finally{setBackupInspectionBusy(false)}
+ }
+
+ async function createYearlyReport(){
+  if(!businessId)return;
+  setReportBusy(true);
+  try{const report=await createAndShareYearlyReport(businessId);Alert.alert("הדוח מוכן",`דוח ${report.year} כולל ${report.activeReceiptCount} קבלות פעילות ו־${report.expenseCount} הוצאות. בחלון השיתוף אפשר לשמור אותו בקבצים או לשלוח לרואה החשבון.`);}
+  catch(e){Alert.alert("יצירת הדוח נכשלה",formatUnknownError(e));}
+  finally{setReportBusy(false)}
+ }
 
  return <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
   <Text style={s.title}>הגדרות העסק</Text>
@@ -167,10 +185,18 @@ export default function MoreScreen(){
   </View>
 
   <View style={s.card}>
+   <View style={s.sectionHeader}><Ionicons name="stats-chart-outline" size={22} color={theme.primary}/><Text style={s.cardTitle}>דוחות</Text></View>
+   <Text style={s.note}>ייצוא CSV של קבלות והוצאות לשנה הנוכחית. הסכומים והמסמכים זהים לנתוני הענן המשותפים עם Windows.</Text>
+   <Text style={s.backupNote}>הדוח הוא סיכום עזר ואינו תחליף לדיווח רשמי או לייעוץ מקצועי.</Text>
+   <Pressable style={s.primaryButton} onPress={()=>void createYearlyReport()} disabled={reportBusy||busy}><Text style={s.primaryText}>{reportBusy?"מכין דוח…":`ייצוא דוח ${new Date().getFullYear()} CSV`}</Text></Pressable>
+  </View>
+
+  <View style={s.card}>
    <View style={s.sectionHeader}><Ionicons name="save-outline" size={22} color={theme.primary}/><Text style={s.cardTitle}>גיבוי מקומי</Text></View>
    <Text style={s.note}>הגיבוי נוצר רק לפי בחירתך. בחלון הבא אפשר לשמור אותו בקבצים, בכונן או ביעד מקומי אחר.</Text>
    <Text style={s.backupNote}>קבצי PDF ותמונות הוצאה אינם כלולים בקובץ הנתונים; הם נשמרים בענן בנפרד.</Text>
    <Pressable style={s.primaryButton} onPress={()=>void createLocalBackup()} disabled={backupBusy||busy}><Text style={s.primaryText}>{backupBusy?"מכין גיבוי…":"יצירת גיבוי מקומי"}</Text></Pressable>
+   <Pressable style={s.secondaryButton} onPress={()=>void inspectLocalBackup()} disabled={backupInspectionBusy||busy}><Ionicons name="shield-checkmark-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>{backupInspectionBusy?"בודק גיבוי…":"בדיקת קובץ גיבוי"}</Text></Pressable>
   </View>
  </ScrollView>;
 }

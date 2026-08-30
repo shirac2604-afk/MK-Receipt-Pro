@@ -22,13 +22,13 @@ Windows adapts this language to a wide work area and sidebar. Android adapts it 
 | Business profile, branding, devices and cloud status | Available | Available |
 | Receipts, PDF history and cancellations | Available | Available |
 | Customers and expenses | Available | Available |
-| Students and guardians | Available | Add full guardian controls |
-| Groups | Available | Add cloud group management |
-| Lessons calendar and recurring series | Available | Add cloud calendar and series management |
-| Attendance, lesson notes and open payments | Available | Add cloud lesson controls |
-| Reminder workflow | Available | Add the same cloud reminder controls, with native notifications as an additional Android convenience |
-| Google Calendar | Available | Add the same account/status/sync workflow through the shared lesson data, while Android may additionally write to the phone calendar |
-| Reports, backup/restore, diagnostics and tax tools | Available | Add mobile-safe screens or guided exports; no silent reduction of the business workflow |
+| Students and guardians | Available | Available in shared cloud |
+| Groups | Available | Available in shared cloud |
+| Lessons calendar and recurring series | Available | Available in shared cloud |
+| Attendance, lesson notes and open payments | Available | Available in shared cloud |
+| Reminder workflow | Available | Shared-schedule teacher-device notifications; no external sending yet |
+| Google Calendar | Available | Shared schedule syncs to the device calendar; a Google calendar on the device is supported |
+| Reports, backup/restore, diagnostics and tax tools | Available | Yearly receipts/expenses CSV and local data export; diagnostics and validated restore are pending |
 
 ## Data rule
 
@@ -40,7 +40,10 @@ Students, groups, lesson series, lessons, participants, lesson notes, payments a
 - Windows keeps its existing lesson, group, reminder and payment workflows, and its shared style layer now uses the same navy, powder-blue and warm off-white system as Android.
 - Android now records each student's primary guardian, contact details and explicit reminder consent in the shared cloud record. The controls configure eligibility only; this increment does not send a reminder from Android.
 - The Android recurring-lesson form now stores separate lead times for parent and student reminders, including an explicit no-reminder option; these are the same cloud series settings used by Windows.
-- Reminder controls, Google Calendar controls and the remaining management views will be brought to Android in later parity increments. They are not represented as complete until they have matching cloud workflows and automated checks.
+- Android can now schedule teacher-only device notifications from the shared lesson calendar. It never sends WhatsApp, SMS or email to a student or guardian.
+- Android can now export the current year's shared receipts and expenses as a CSV file through the system share sheet.
+- Android's student, group, recurring-lesson, attendance, notes and payment controls now use the shared cloud records and are available in the app. The legacy local student hub is not part of the live navigation and must not be extended.
+- The remaining Android parity work is: an external reminder delivery workflow, diagnostics and validated restore. These are deliberately separate from the current shared-data workflows.
 
 ## Local backup rule
 

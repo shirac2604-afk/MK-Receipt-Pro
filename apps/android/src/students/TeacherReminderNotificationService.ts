@@ -1,13 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {Platform} from "react-native";
 import * as Notifications from "expo-notifications";
-import type {ReminderEntry} from "./ReminderLocalStore";
 
 const MAP_KEY="@mk-receipt-pro/student-reminder-notifications-v1";
 const ENABLED_KEY="@mk-receipt-pro/student-reminder-notifications-enabled-v1";
 const CHANNEL_ID="student-reminders";
 
 type NotificationMap=Record<string,string>;
+export type TeacherReminderNotification={dedupeKey:string;lessonId:string;scheduledFor:string;title:string;body:string;data?:Record<string,string>};
 
 Notifications.setNotificationHandler({
   handleNotification:async()=>({
@@ -50,16 +50,15 @@ export const TeacherReminderNotificationService={
     const requested=await Notifications.requestPermissionsAsync();
     return requested.granted;
   },
-  async sync(entries:ReminderEntry[]){
+  async sync(entries:TeacherReminderNotification[]){
     if(!(await this.isEnabled()))return {scheduled:0,cancelled:0};
     await ensureChannel();
     const permission=await Notifications.getPermissionsAsync();
     if(!permission.granted)throw new Error("אין הרשאה להציג התראות במכשיר.");
 
-    const desired=new Map<string,ReminderEntry>();
+    const desired=new Map<string,TeacherReminderNotification>();
     for(const entry of entries){
-      if(entry.status!=="scheduled"&&entry.status!=="ready")continue;
-      const key=`${entry.lessonId}:${entry.studentId}:${entry.scheduledFor}`;
+      const key=entry.dedupeKey;
       if(!desired.has(key))desired.set(key,entry);
     }
 
@@ -80,9 +79,9 @@ export const TeacherReminderNotificationService={
         : null;
       const notificationId=await Notifications.scheduleNotificationAsync({
         content:{
-          title:`תזכורת לשיעור · ${entry.recipientName}`,
-          body:entry.message,
-          data:{kind:"student-reminder",lessonId:entry.lessonId,studentId:entry.studentId},
+          title:entry.title,
+          body:entry.body,
+          data:{kind:"teacher-reminder",lessonId:entry.lessonId,...entry.data},
         },
         trigger,
       });
