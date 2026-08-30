@@ -1,6 +1,7 @@
 import React from "react";
 import {NavigationContainer} from "@react-navigation/native";
 import {createBottomTabNavigator} from "@react-navigation/bottom-tabs";
+import {createNativeStackNavigator} from "@react-navigation/native-stack";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import DashboardScreen from "../screens/DashboardScreen";
@@ -9,9 +10,11 @@ import CustomersScreen from "../screens/CustomersScreen";
 import ExpensesScreen from "../screens/ExpensesScreen";
 import StudentCloudScreen from "../screens/StudentCloudScreen";
 import MoreScreen from "../screens/MoreScreen";
+import ManagementReportsScreen from "../screens/ManagementReportsScreen";
 import {theme} from "../theme/theme";
 
 const Tab=createBottomTabNavigator();
+const Stack=createNativeStackNavigator();
 
 const iconFor=(routeName:string,focused:boolean)=>{
   switch(routeName){
@@ -24,11 +27,10 @@ const iconFor=(routeName:string,focused:boolean)=>{
   }
 };
 
-export default function AppNavigator(){
+function MainTabs(){
  const insets=useSafeAreaInsets();
  const bottomSpace=Math.max(insets.bottom,10);
- return <NavigationContainer>
-  <Tab.Navigator
+ return <Tab.Navigator
     screenOptions={({route})=>({
       headerShown:false,
       tabBarActiveTintColor:"#A9D4FF",
@@ -46,6 +48,14 @@ export default function AppNavigator(){
    <Tab.Screen name="תלמידים" component={StudentCloudScreen}/>
    <Tab.Screen name="הוצאות" component={ExpensesScreen}/>
    <Tab.Screen name="עוד" component={MoreScreen}/>
-  </Tab.Navigator>
+  </Tab.Navigator>;
+}
+
+export default function AppNavigator(){
+ return <NavigationContainer>
+  <Stack.Navigator screenOptions={{headerShown:false}}>
+   <Stack.Screen name="מסכים ראשיים" component={MainTabs}/>
+   <Stack.Screen name="דוחות" component={ManagementReportsScreen}/>
+  </Stack.Navigator>
  </NavigationContainer>;
 }

@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from "react";
 import {Alert,Image,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import {useNavigation} from "@react-navigation/native";
 import {useBusiness} from "../context/BusinessContext";
 import {useAuth} from "../context/AuthContext";
 import {getBusinessProfile,updateBusinessProfile} from "../data/supabase/BusinessRepository";
@@ -13,6 +14,7 @@ import {theme} from "../theme/theme";
 import {sanitizeDigits,sanitizePhone,validEmail,validPhone} from "../securityValidation";
 
 export default function MoreScreen(){
+ const navigation=useNavigation<any>();
  const {businessId,deviceId,role}=useBusiness();
  const {session,changePassword,signOut}=useAuth();
  const [businessName,setBusinessName]=useState("");
@@ -186,8 +188,9 @@ export default function MoreScreen(){
 
   <View style={s.card}>
    <View style={s.sectionHeader}><Ionicons name="stats-chart-outline" size={22} color={theme.primary}/><Text style={s.cardTitle}>דוחות</Text></View>
-   <Text style={s.note}>ייצוא CSV של קבלות והוצאות לשנה הנוכחית. הסכומים והמסמכים זהים לנתוני הענן המשותפים עם Windows.</Text>
+   <Text style={s.note}>תמונה שנתית של הכנסות, הוצאות, הפרש, קטגוריות ואסמכתאות — אותם נתוני ענן המשמשים את Windows.</Text>
    <Text style={s.backupNote}>הדוח הוא סיכום עזר ואינו תחליף לדיווח רשמי או לייעוץ מקצועי.</Text>
+   <Pressable style={s.secondaryButton} onPress={()=>navigation.navigate("דוחות")} disabled={busy}><Ionicons name="analytics-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>פתיחת מרכז הדוחות</Text></Pressable>
    <Pressable style={s.primaryButton} onPress={()=>void createYearlyReport()} disabled={reportBusy||busy}><Text style={s.primaryText}>{reportBusy?"מכין דוח…":`ייצוא דוח ${new Date().getFullYear()} CSV`}</Text></Pressable>
   </View>
 
