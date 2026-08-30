@@ -6,7 +6,7 @@ import {useAuth} from "../context/AuthContext";
 import {getBusinessProfile,updateBusinessProfile} from "../data/supabase/BusinessRepository";
 import {listBusinessDevices,revokeBusinessDevice,type CloudDevice} from "../data/supabase/DeviceRepository";
 import {pickBusinessLogo,uploadBusinessLogo,type PickedBusinessLogo} from "../services/BusinessBrandingService";
-import {createAndShareLocalBackup} from "../services/LocalBackupService";
+import {createAndShareLocalBackup,inspectPickedLocalBackup} from "../services/LocalBackupService";
 import {createAndShareYearlyReport} from "../services/BusinessReportService";
 import {formatUnknownError} from "../services/ErrorFormatter";
 import {theme} from "../theme/theme";
@@ -32,6 +32,7 @@ export default function MoreScreen(){
  const [newPasswordConfirmation,setNewPasswordConfirmation]=useState("");
  const [passwordBusy,setPasswordBusy]=useState(false);
  const [backupBusy,setBackupBusy]=useState(false);
+ const [backupInspectionBusy,setBackupInspectionBusy]=useState(false);
  const [reportBusy,setReportBusy]=useState(false);
 
  async function load(){
@@ -111,6 +112,13 @@ export default function MoreScreen(){
   }catch(e){Alert.alert("יצירת הגיבוי נכשלה",formatUnknownError(e));}
   finally{setBackupBusy(false)}
  }
+ async function inspectLocalBackup(){
+  if(!businessId)return;
+  setBackupInspectionBusy(true);
+  try{const result=await inspectPickedLocalBackup(businessId);if(!result)return;const details=[result.message,result.createdAt?`נוצר: ${new Date(result.createdAt).toLocaleString("he-IL")}`:"",result.valid?`רשומות: ${result.recordCount}`:"",...result.warnings].filter(Boolean).join("\n");Alert.alert(result.valid?"בדיקת גיבוי":"בדיקת גיבוי נכשלה",details);}
+  catch(e){Alert.alert("בדיקת הגיבוי נכשלה",formatUnknownError(e));}
+  finally{setBackupInspectionBusy(false)}
+ }
 
  async function createYearlyReport(){
   if(!businessId)return;
@@ -188,6 +196,7 @@ export default function MoreScreen(){
    <Text style={s.note}>הגיבוי נוצר רק לפי בחירתך. בחלון הבא אפשר לשמור אותו בקבצים, בכונן או ביעד מקומי אחר.</Text>
    <Text style={s.backupNote}>קבצי PDF ותמונות הוצאה אינם כלולים בקובץ הנתונים; הם נשמרים בענן בנפרד.</Text>
    <Pressable style={s.primaryButton} onPress={()=>void createLocalBackup()} disabled={backupBusy||busy}><Text style={s.primaryText}>{backupBusy?"מכין גיבוי…":"יצירת גיבוי מקומי"}</Text></Pressable>
+   <Pressable style={s.secondaryButton} onPress={()=>void inspectLocalBackup()} disabled={backupInspectionBusy||busy}><Ionicons name="shield-checkmark-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>{backupInspectionBusy?"בודק גיבוי…":"בדיקת קובץ גיבוי"}</Text></Pressable>
   </View>
  </ScrollView>;
 }
