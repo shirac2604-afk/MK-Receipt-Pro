@@ -2,6 +2,13 @@
 
 כל שינוי משמעותי בפרויקט חייב להירשם כאן. הרשומות מסודרות מהחדש לישן.
 
+## 2026-08-30 — Android 1.0.10 / גלילת היסטוריית קבלות
+
+- תוקן מסך הקבלות בנייד: רשימת הקבלות היא כעת משטח הגלילה הראשי, והטופס וכותרת ההיסטוריה נמצאים בכותרת הרשימה.
+- כך אפשר לגלול תמיד אל כל היסטוריית הקבלות, גם כאשר טופס הפקת הקבלה פתוח או ארוך.
+- נוסף מאמת שחרור סטטי שמוודא שלמסך יש `FlatList` יחיד עם `ListHeaderComponent`, כדי למנוע חזרה של התקלה.
+- הועלה מספר הגרסה ל־Android `1.0.10` / `versionCode` 11. מזהה החבילה `il.mkreceiptpro.android` לא השתנה, ולכן ההתקנה הבאה תהיה שדרוג על גבי האפליקציה הקיימת.
+
 ## 2026-08-30 — Windows 1.1.14 / Google Drive token-credential repair
 
 - Production test of Windows 1.1.13 proved that this Google Desktop OAuth project requires its matching token credential: Google returned `invalid_request: client_secret is missing` after authorization was approved.

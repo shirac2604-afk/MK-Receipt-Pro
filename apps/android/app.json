@@ -3,12 +3,12 @@
     "name": "MK Receipt Pro",
     "slug": "mk-receipt-pro-android",
     "scheme": "mkreceiptpro",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "android": {
       "package": "il.mkreceiptpro.android",
-      "versionCode": 10,
+      "versionCode": 11,
       "permissions": [
         "CAMERA",
         "READ_CALENDAR",
