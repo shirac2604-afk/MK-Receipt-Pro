@@ -6,7 +6,7 @@ class QueueTransport implements TaxAuthorityHttpTransport {
   calls:Array<{input:string;init?:RequestInit}>=[];
   constructor(private readonly responses:Response[]){}
   async fetch(input:string,init?:RequestInit):Promise<Response>{
-    this.calls.push({input,init});
+    this.calls.push(init===undefined?{input}:{input,init});
     const next=this.responses.shift();
     if(!next)throw new Error("NO_TEST_RESPONSE");
     return next;
