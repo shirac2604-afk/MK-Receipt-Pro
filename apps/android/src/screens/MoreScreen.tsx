@@ -7,6 +7,7 @@ import {getBusinessProfile,updateBusinessProfile} from "../data/supabase/Busines
 import {listBusinessDevices,revokeBusinessDevice,type CloudDevice} from "../data/supabase/DeviceRepository";
 import {pickBusinessLogo,uploadBusinessLogo,type PickedBusinessLogo} from "../services/BusinessBrandingService";
 import {createAndShareLocalBackup} from "../services/LocalBackupService";
+import {createAndShareYearlyReport} from "../services/BusinessReportService";
 import {formatUnknownError} from "../services/ErrorFormatter";
 import {theme} from "../theme/theme";
 import {sanitizeDigits,sanitizePhone,validEmail,validPhone} from "../securityValidation";
@@ -31,6 +32,7 @@ export default function MoreScreen(){
  const [newPasswordConfirmation,setNewPasswordConfirmation]=useState("");
  const [passwordBusy,setPasswordBusy]=useState(false);
  const [backupBusy,setBackupBusy]=useState(false);
+ const [reportBusy,setReportBusy]=useState(false);
 
  async function load(){
   if(!businessId)return;
@@ -110,6 +112,14 @@ export default function MoreScreen(){
   finally{setBackupBusy(false)}
  }
 
+ async function createYearlyReport(){
+  if(!businessId)return;
+  setReportBusy(true);
+  try{const report=await createAndShareYearlyReport(businessId);Alert.alert("הדוח מוכן",`דוח ${report.year} כולל ${report.activeReceiptCount} קבלות פעילות ו־${report.expenseCount} הוצאות. בחלון השיתוף אפשר לשמור אותו בקבצים או לשלוח לרואה החשבון.`);}
+  catch(e){Alert.alert("יצירת הדוח נכשלה",formatUnknownError(e));}
+  finally{setReportBusy(false)}
+ }
+
  return <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
   <Text style={s.title}>הגדרות העסק</Text>
   <Text style={s.subtitle}>הפרטים האלה יופיעו בקבלות ב־Android ובהמשך גם ב־Windows.</Text>
@@ -164,6 +174,13 @@ export default function MoreScreen(){
    </View>
    <Pressable style={s.refreshButton} onPress={()=>void load()} disabled={busy}><Ionicons name="refresh-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>רענון רשימת מכשירים</Text></Pressable>
    <Pressable style={s.signOutButton} onPress={()=>Alert.alert("התנתקות","להתנתק מהחשבון במכשיר הזה?",[{text:"ביטול",style:"cancel"},{text:"התנתקות",style:"destructive",onPress:()=>void signOut()}])}><Text style={s.signOutText}>התנתקות מהמכשיר הזה</Text></Pressable>
+  </View>
+
+  <View style={s.card}>
+   <View style={s.sectionHeader}><Ionicons name="stats-chart-outline" size={22} color={theme.primary}/><Text style={s.cardTitle}>דוחות</Text></View>
+   <Text style={s.note}>ייצוא CSV של קבלות והוצאות לשנה הנוכחית. הסכומים והמסמכים זהים לנתוני הענן המשותפים עם Windows.</Text>
+   <Text style={s.backupNote}>הדוח הוא סיכום עזר ואינו תחליף לדיווח רשמי או לייעוץ מקצועי.</Text>
+   <Pressable style={s.primaryButton} onPress={()=>void createYearlyReport()} disabled={reportBusy||busy}><Text style={s.primaryText}>{reportBusy?"מכין דוח…":`ייצוא דוח ${new Date().getFullYear()} CSV`}</Text></Pressable>
   </View>
 
   <View style={s.card}>
