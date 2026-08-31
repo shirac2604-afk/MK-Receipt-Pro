@@ -1,0 +1,45 @@
+name: Tax Authority 2027 Preparation Gate
+
+on:
+  pull_request:
+    paths:
+      - 'apps/windows/packages/tax-open/src/TaxAuthorityApi2027*'
+      - 'apps/windows/packages/tax-open/src/TaxAuthority2027PreparationService*'
+      - 'apps/windows/packages/database/src/migrations/010_tax_authority_transmissions.ts'
+      - 'apps/windows/packages/database/src/migrations/index.ts'
+      - 'apps/windows/packages/database/src/repositories/TaxAuthorityTransmissionRepository*'
+      - 'apps/windows/scripts/verify-tax-authority-2027-prep.mjs'
+      - 'docs/TAX_AUTHORITY_API_2027_PREPARATION.md'
+      - 'docs/tax-authority-2027-release-checklist.md'
+      - '.github/workflows/tax-authority-2027-prep.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tax-2027-prep:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/windows
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.14.0'
+          cache: npm
+          cache-dependency-path: apps/windows/package-lock.json
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Tax Authority 2027 unit and orchestration tests
+        run: >-
+          npx vitest run
+          packages/tax-open/src/TaxAuthorityApi2027.test.ts
+          packages/tax-open/src/TaxAuthorityApi2027Client.test.ts
+          packages/tax-open/src/TaxAuthority2027PreparationService.test.ts
+          packages/database/src/repositories/TaxAuthorityTransmissionRepository.test.ts
+      - name: Isolation and credential-safety gate
+        run: node scripts/verify-tax-authority-2027-prep.mjs
