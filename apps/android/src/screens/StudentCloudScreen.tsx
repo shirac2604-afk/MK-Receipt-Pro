@@ -1,6 +1,7 @@
 import React,{useCallback,useEffect,useState} from "react";
 import {Alert,Pressable,RefreshControl,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
+import {useRoute} from "@react-navigation/native";
 import {useBusiness} from "../context/BusinessContext";
 import {archiveCloudStudent,listCloudStudents,saveCloudStudent,type CloudStudent} from "../data/supabase/StudentCloudRepository";
 import {CloudGroupsPanel} from "../students/CloudGroupsPanel";
@@ -12,12 +13,17 @@ const fromPrice=(v:string)=>{const n=Number(v.replace(",","."));return Number.is
 
 export default function StudentCloudScreen(){
  const {businessId,loading}=useBusiness();
+ const route=useRoute<any>();
  const [students,setStudents]=useState<CloudStudent[]>([]),[busy,setBusy]=useState(false),[editing,setEditing]=useState<CloudStudent|null>(null);
  const [section,setSection]=useState<"students"|"groups"|"schedule"|"payments">("students");
  const [name,setName]=useState(""),[phone,setPhone]=useState(""),[grade,setGrade]=useState(""),[price,setPrice]=useState(""),[notes,setNotes]=useState(""),[guardianName,setGuardianName]=useState(""),[guardianPhone,setGuardianPhone]=useState(""),[guardianReminder,setGuardianReminder]=useState(false),[reminderEnabled,setReminderEnabled]=useState(false);
  const reset=()=>{setEditing(null);setName("");setPhone("");setGrade("");setPrice("");setNotes("");setGuardianName("");setGuardianPhone("");setGuardianReminder(false);setReminderEnabled(false)};
  const load=useCallback(async()=>{if(!businessId)return;setBusy(true);try{setStudents(await listCloudStudents(businessId))}catch(e){Alert.alert("טעינת תלמידים נכשלה",e instanceof Error?e.message:"נסי שוב")}finally{setBusy(false)}},[businessId]);
  useEffect(()=>{void load()},[load]);
+ useEffect(()=>{
+  const requested=route.params?.section;
+  if(requested==="students"||requested==="groups"||requested==="schedule"||requested==="payments")setSection(requested);
+ },[route.params?.section]);
  const edit=(student:CloudStudent)=>{setEditing(student);setName(student.displayName);setPhone(student.phone??"");setGrade(student.schoolGrade??"");setPrice(String(student.defaultPriceAgorot/100));setNotes(student.focusNotes??"");setGuardianName(student.primaryGuardian?.displayName??"");setGuardianPhone(student.primaryGuardian?.phone??"");setGuardianReminder(Boolean(student.primaryGuardian?.receivesReminders));setReminderEnabled(student.reminderEnabled)};
  const save=async()=>{if(!businessId)return;setBusy(true);try{await saveCloudStudent(businessId,{id:editing?.id,displayName:name,phone,schoolGrade:grade,focusNotes:notes,defaultPriceAgorot:fromPrice(price),reminderEnabled,guardianName,guardianPhone,guardianReceivesReminders:guardianReminder});reset();await load()}catch(e){Alert.alert("שמירת תלמיד נכשלה",e instanceof Error?e.message:"נסי שוב")}finally{setBusy(false)}};
  const archive=(student:CloudStudent)=>Alert.alert("הסתרת תלמיד",`להסתיר את ${student.displayName} מרשימת התלמידים הפעילים?`,[{text:"ביטול",style:"cancel"},{text:"הסתר",style:"destructive",onPress:()=>void (async()=>{if(!businessId)return;setBusy(true);try{await archiveCloudStudent(businessId,student.id);await load()}catch(e){Alert.alert("לא ניתן להסתיר",e instanceof Error?e.message:"נסי שוב")}finally{setBusy(false)}})()}]);

@@ -32,7 +32,7 @@ export default function DashboardScreen(){
 
  useEffect(()=>{void load()},[load]);
 
- const go=(name:string)=>navigation.navigate(name);
+ const go=(name:string,params?:Record<string,string>)=>navigation.navigate(name,params);
  return <ScrollView
    style={s.root}
    contentContainerStyle={s.screen}
@@ -68,10 +68,14 @@ export default function DashboardScreen(){
 
    <Text style={s.sectionTitle}>פעולות מהירות</Text>
    <View style={s.actions}>
-    <Pressable style={s.action} onPress={()=>go("קבלות")}><View style={s.actionIcon}><Ionicons name="receipt-outline" size={25} color={theme.primary}/></View><View style={{flex:1}}><Text style={s.actionTitle}>קבלות</Text><Text style={s.actionText}>הפקה, היסטוריה ו־PDF</Text></View><Ionicons name="chevron-back" size={20} color={theme.muted}/></Pressable>
-    <Pressable style={s.action} onPress={()=>go("לקוחות")}><View style={s.actionIcon}><Ionicons name="people-outline" size={25} color={theme.primary}/></View><View style={{flex:1}}><Text style={s.actionTitle}>לקוחות</Text><Text style={s.actionText}>רשימה משותפת לכל המכשירים</Text></View><Ionicons name="chevron-back" size={20} color={theme.muted}/></Pressable>
-    <Pressable style={s.action} onPress={()=>go("הוצאות")}><View style={s.actionIcon}><Ionicons name="wallet-outline" size={25} color={theme.primary}/></View><View style={{flex:1}}><Text style={s.actionTitle}>הוצאות</Text><Text style={s.actionText}>כולל אסמכתאות בענן</Text></View><Ionicons name="chevron-back" size={20} color={theme.muted}/></Pressable>
-    <Pressable style={s.action} onPress={()=>go("עוד")}><View style={s.actionIcon}><Ionicons name="business-outline" size={25} color={theme.primary}/></View><View style={{flex:1}}><Text style={s.actionTitle}>עסק וענן</Text><Text style={s.actionText}>פרטי העסק, לוגו ומכשירים</Text></View><Ionicons name="chevron-back" size={20} color={theme.muted}/></Pressable>
+    <Pressable style={s.action} onPress={()=>go("קבלות")}><View style={s.actionIcon}><Ionicons name="receipt-outline" size={24} color={theme.primary}/></View><Text style={s.actionTitle}>קבלות</Text><Text style={s.actionText}>הפקה והיסטוריה</Text></Pressable>
+    <Pressable style={s.action} onPress={()=>go("לקוחות")}><View style={s.actionIcon}><Ionicons name="people-outline" size={24} color={theme.primary}/></View><Text style={s.actionTitle}>לקוחות</Text><Text style={s.actionText}>כרטיסי לקוחות</Text></Pressable>
+    <Pressable style={s.action} onPress={()=>go("תלמידים")}><View style={s.actionIcon}><Ionicons name="school-outline" size={24} color={theme.primary}/></View><Text style={s.actionTitle}>תלמידים</Text><Text style={s.actionText}>ניהול תלמידים</Text></Pressable>
+    <Pressable style={s.action} onPress={()=>go("תלמידים",{section:"schedule"})}><View style={s.actionIcon}><Ionicons name="calendar-outline" size={24} color={theme.primary}/></View><Text style={s.actionTitle}>יומן שיעורים</Text><Text style={s.actionText}>קביעת מפגשים</Text></Pressable>
+    <Pressable style={s.action} onPress={()=>go("תלמידים",{section:"payments"})}><View style={s.actionIcon}><Ionicons name="card-outline" size={24} color={theme.primary}/></View><Text style={s.actionTitle}>גבייה</Text><Text style={s.actionText}>תשלומים פתוחים</Text></Pressable>
+    <Pressable style={s.action} onPress={()=>navigation.navigate("דוחות")}><View style={s.actionIcon}><Ionicons name="analytics-outline" size={24} color={theme.primary}/></View><Text style={s.actionTitle}>דוחות</Text><Text style={s.actionText}>תמונת מצב שנתית</Text></Pressable>
+    <Pressable style={s.action} onPress={()=>go("הוצאות")}><View style={s.actionIcon}><Ionicons name="wallet-outline" size={24} color={theme.primary}/></View><Text style={s.actionTitle}>הוצאות</Text><Text style={s.actionText}>אסמכתאות בענן</Text></Pressable>
+    <Pressable style={s.action} onPress={()=>go("עוד")}><View style={s.actionIcon}><Ionicons name="business-outline" size={24} color={theme.primary}/></View><Text style={s.actionTitle}>עסק וענן</Text><Text style={s.actionText}>הגדרות וגיבוי</Text></Pressable>
    </View>
  </ScrollView>;
 }
@@ -83,5 +87,5 @@ const s=StyleSheet.create({
  nextCard:{marginTop:20,backgroundColor:"#DCEBFF",borderRadius:20,padding:18,alignItems:"flex-end"},nextLabel:{color:theme.primary,fontSize:13,fontWeight:"700"},nextNumber:{color:theme.navy,fontSize:36,fontWeight:"900",marginTop:2},nextHint:{color:theme.primary,fontSize:12,textAlign:"right",marginTop:4},
  sectionTitle:{fontSize:18,fontWeight:"800",color:theme.text,textAlign:"right",marginTop:22,marginBottom:10},statsGrid:{flexDirection:"row",flexWrap:"wrap",gap:10},
  statCard:{width:"48%",flexGrow:1,backgroundColor:"#fff",borderRadius:17,padding:14,borderWidth:1,borderColor:theme.border,alignItems:"flex-end"},statLabel:{fontSize:12,color:theme.muted,marginTop:7},statValue:{fontSize:20,fontWeight:"800",color:theme.text,marginTop:2},statMeta:{fontSize:11,color:theme.muted,marginTop:3},
- actions:{gap:9},action:{backgroundColor:"#fff",borderRadius:16,padding:13,borderWidth:1,borderColor:theme.border,flexDirection:"row-reverse",alignItems:"center",gap:11},actionIcon:{width:46,height:46,borderRadius:14,backgroundColor:theme.primarySoft,alignItems:"center",justifyContent:"center"},actionTitle:{fontSize:16,fontWeight:"800",color:theme.text,textAlign:"right"},actionText:{fontSize:12,color:theme.muted,textAlign:"right",marginTop:2}
+ actions:{flexDirection:"row-reverse",flexWrap:"wrap",gap:10},action:{width:"48%",flexGrow:1,backgroundColor:"#fff",borderRadius:17,padding:14,borderWidth:1,borderColor:theme.border,alignItems:"flex-end",minHeight:132},actionIcon:{width:44,height:44,borderRadius:14,backgroundColor:theme.primarySoft,alignItems:"center",justifyContent:"center",marginBottom:11},actionTitle:{fontSize:15,fontWeight:"800",color:theme.text,textAlign:"right"},actionText:{fontSize:12,color:theme.muted,textAlign:"right",marginTop:3}
 });
