@@ -32,7 +32,7 @@ export default function DashboardScreen(){
 
  useEffect(()=>{void load()},[load]);
 
- const go=(name:string)=>navigation.navigate(name);
+ const go=(name:string,params?:Record<string,string>)=>navigation.navigate(name,params);
  return <ScrollView
    style={s.root}
    contentContainerStyle={s.screen}
