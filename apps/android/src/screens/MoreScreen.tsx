@@ -7,7 +7,7 @@ import {useAuth} from "../context/AuthContext";
 import {getBusinessProfile,updateBusinessProfile} from "../data/supabase/BusinessRepository";
 import {listBusinessDevices,revokeBusinessDevice,type CloudDevice} from "../data/supabase/DeviceRepository";
 import {pickBusinessLogo,uploadBusinessLogo,type PickedBusinessLogo} from "../services/BusinessBrandingService";
-import {createAndShareLocalBackup,inspectPickedLocalBackup} from "../services/LocalBackupService";
+import {createAndShareLocalBackup,inspectPickedLocalBackup,restorePickedLocalBackup} from "../services/LocalBackupService";
 import {createAndShareYearlyReport} from "../services/BusinessReportService";
 import {formatUnknownError} from "../services/ErrorFormatter";
 import {theme} from "../theme/theme";
@@ -35,6 +35,7 @@ export default function MoreScreen(){
  const [passwordBusy,setPasswordBusy]=useState(false);
  const [backupBusy,setBackupBusy]=useState(false);
  const [backupInspectionBusy,setBackupInspectionBusy]=useState(false);
+ const [backupRestoreBusy,setBackupRestoreBusy]=useState(false);
  const [reportBusy,setReportBusy]=useState(false);
 
  async function load(){
@@ -121,6 +122,13 @@ export default function MoreScreen(){
   catch(e){Alert.alert("בדיקת הגיבוי נכשלה",formatUnknownError(e));}
   finally{setBackupInspectionBusy(false)}
  }
+ async function restoreLocalBackup(){
+  if(!businessId)return;
+  setBackupRestoreBusy(true);
+  try{const result=await restorePickedLocalBackup(businessId);if(!result)return;Alert.alert("השחזור הושלם",`נוספו ${result.restoredRecordCount} רשומות חסרות. ${result.skippedRecordCount} רשומות קיימות נשמרו ללא שינוי.`);}
+  catch(e){Alert.alert("השחזור נכשל",formatUnknownError(e));}
+  finally{setBackupRestoreBusy(false)}
+ }
 
  async function createYearlyReport(){
   if(!businessId)return;
@@ -198,8 +206,10 @@ export default function MoreScreen(){
    <View style={s.sectionHeader}><Ionicons name="save-outline" size={22} color={theme.primary}/><Text style={s.cardTitle}>גיבוי מקומי</Text></View>
    <Text style={s.note}>הגיבוי נוצר רק לפי בחירתך. בחלון הבא אפשר לשמור אותו בקבצים, בכונן או ביעד מקומי אחר.</Text>
    <Text style={s.backupNote}>קבצי PDF ותמונות הוצאה אינם כלולים בקובץ הנתונים; הם נשמרים בענן בנפרד.</Text>
+   <Text style={s.backupNote}>שחזור בטוח מוסיף רק נתונים שחסרים בענן של העסק המחובר. הוא אינו מוחק או דורס מידע קיים.</Text>
    <Pressable style={s.primaryButton} onPress={()=>void createLocalBackup()} disabled={backupBusy||busy}><Text style={s.primaryText}>{backupBusy?"מכין גיבוי…":"יצירת גיבוי מקומי"}</Text></Pressable>
    <Pressable style={s.secondaryButton} onPress={()=>void inspectLocalBackup()} disabled={backupInspectionBusy||busy}><Ionicons name="shield-checkmark-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>{backupInspectionBusy?"בודק גיבוי…":"בדיקת קובץ גיבוי"}</Text></Pressable>
+   <Pressable style={s.secondaryButton} disabled={backupRestoreBusy||busy} onPress={()=>Alert.alert("שחזור מגיבוי","ייבחר קובץ גיבוי של העסק המחובר. השחזור מוסיף רק רשומות חסרות; נתונים קיימים לא ישתנו.",[{text:"ביטול",style:"cancel"},{text:"בחירת קובץ ושחזור",onPress:()=>void restoreLocalBackup()}])}><Ionicons name="cloud-upload-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>{backupRestoreBusy?"משחזר…":"שחזור בטוח מגיבוי"}</Text></Pressable>
   </View>
  </ScrollView>;
 }
