@@ -7,7 +7,7 @@ const panel=read("src/students/DeviceCalendarPanel.tsx");
 const hub=read("src/screens/StudentHubScreen.tsx");
 const store=read("src/students/StudentLocalStore.ts");
 const checks=[
- [pkg.dependencies?.["expo-calendar"]==="~57.0.1","Expo Calendar SDK 57 dependency"],
+ [pkg.dependencies?.["expo-calendar"]==="~57.0.3","Expo Calendar SDK 57 dependency"],
  [app.expo.android?.permissions?.includes("READ_CALENDAR")&&app.expo.android?.permissions?.includes("WRITE_CALENDAR"),"Android calendar permissions"],
  [service.includes("eventIds:Record<string,string>")&&service.includes("config.eventIds[lesson.id]"),"lesson-to-event idempotency map"],
  [service.includes("ExpoCalendarEvent.get")&&service.includes("event.update"),"existing event update path"],
