@@ -1,0 +1,61 @@
+name: Windows Unsigned Test Installer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer-unsigned-test:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.13.1"
+      - name: Select guarded production cloud configuration
+        shell: pwsh
+        run: |
+          Copy-Item apps/desktop/electron/main/SupabaseCloudConfig.production.ts apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_TEST_MODE=false' -Quiet)) { throw "Production mode is missing" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_RECEIPTS_ENABLED=false' -Quiet)) { throw "Receipt isolation is missing" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'REMINDER_AUTO_DISPATCH_ENABLED=false' -Quiet)) { throw "Automatic reminder delivery must remain disabled" }
+          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'noimclnzzuxcszdotmby.supabase.co' -Quiet)) { throw "Production cloud is missing" }
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Google Calendar sync contract
+        run: node scripts/verify-google-calendar-sync-v1.mjs
+      - name: Manual WhatsApp contract
+        run: node scripts/verify-manual-whatsapp-v1.mjs
+      - name: Student production safety contract
+        run: node scripts/verify-student-production-release.mjs
+      - name: Build unsigned Windows test installer
+        run: npm run release:production:win
+      - name: Write SHA-256 and unsigned notice
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path release -Filter "Maptehot-LaHatzlaha-*-Setup.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows installer was not produced" }
+          $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content -Encoding ascii release/SHA256SUMS.txt
+          "UNSIGNED TEST INSTALLER — for internal testing only. Windows may display a security warning. Do not distribute this installer to customers." | Set-Content -Encoding utf8 release/UNSIGNED-NOTICE.txt
+          Write-Host "Installer: $($installer.FullName)"
+          Write-Host "SHA256: $hash"
+      - name: Upload unsigned test installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: MK-Receipt-Pro-Windows-Unsigned-Test
+          path: |
+            apps/windows/release/Maptehot-LaHatzlaha-*-Setup.exe
+            apps/windows/release/SHA256SUMS.txt
+            apps/windows/release/UNSIGNED-NOTICE.txt
+          if-no-files-found: error
+          retention-days: 14
