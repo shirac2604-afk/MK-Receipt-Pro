@@ -12,7 +12,7 @@ const checks=[
   [service.includes("supabase.auth.getUser()")&&service.includes("supabase.auth.signInWithPassword"),"current user and current password are verified"],
   [service.includes("verified.user.id!==current.user.id"),"reauthenticated identity must match the active identity"],
   [service.includes("supabase.auth.updateUser({password:newPassword})"),"password update uses the authenticated Supabase user"],
-  [policy.includes("MIN_NEW_PASSWORD_LENGTH=8")&&policy.includes("MAX_PASSWORD_LENGTH=128"),"new password length is bounded"],
+  [policy.includes("MIN_NEW_PASSWORD_LENGTH=10")&&policy.includes("MAX_PASSWORD_LENGTH=128"),"new password length is bounded"],
   [context.includes("changePassword:(currentPassword:string,newPassword:string)"),"AuthContext exposes only the dedicated operation"],
   [screen.includes("newPasswordConfirmation")&&screen.includes('secureTextEntry'),"Android UI confirms and masks the new password"],
   [config.includes('"scheme": "mkreceiptpro"')&&!config.includes('"intentFilters"'),"password recovery registers only the bounded Android callback scheme"],
