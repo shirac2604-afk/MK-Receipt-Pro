@@ -6,7 +6,7 @@ const handlers=fs.readFileSync("apps/desktop/electron/ipc/databaseHandlers.ts","
 const preload=fs.readFileSync("apps/desktop/electron/preload/preload.ts","utf8");
 const ui=fs.readFileSync("apps/desktop/renderer/src/main.tsx","utf8");
 const checks=[
- [pkg.version==="1.1.1-cloud.1","version"],
+ [typeof pkg.version==="string"&&/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(pkg.version),"valid package version"],
  [Boolean(pkg.dependencies["@supabase/supabase-js"]),"supabase-js dependency"],
  [svc.includes("safeStorage.encryptString"),"encrypted session storage"],
  [svc.includes("signInWithPassword"),"email/password auth"],

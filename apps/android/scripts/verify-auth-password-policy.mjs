@@ -6,10 +6,14 @@ const policy=fs.readFileSync("src/auth/passwordPolicy.ts","utf8");
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 
 const checks=[
-  [policy.includes("MIN_NEW_PASSWORD_LENGTH=8"),"new-account minimum is eight characters"],
+  [policy.includes("MIN_NEW_PASSWORD_LENGTH=10"),"new-account minimum is ten characters"],
   [policy.includes("AUTH_PASSWORD_TOO_COMMON"),"common-password rejection"],
   [policy.includes("AUTH_PASSWORD_CONTAINS_EMAIL"),"email-derived password rejection"],
   [service.includes("validateNewPassword(email,password)"),"service enforces the registration policy"],
+  [service.includes("validatePasswordNotLeaked(password)"),"service checks registrations against leaked passwords"],
+  [service.includes("validatePasswordNotLeaked(newPassword)"),"service checks password changes and recovery against leaked passwords"],
+  [policy.includes('"Add-Padding":"true"'),"breach lookup uses padded k-anonymity responses"],
+  [policy.includes("HIBP_RANGE_URL"),"breach lookup uses the Pwned Passwords range API"],
   [screen.includes('if(mode==="signup")'),"password quality gate applies only to sign-up"],
   [screen.includes('if(!email.trim()||!password)'),"sign-in accepts every nonempty existing password"],
   [!screen.includes("password.length<6"),"legacy six-character shared gate removed"],

@@ -11,6 +11,7 @@ import ExpensesScreen from "../screens/ExpensesScreen";
 import StudentCloudScreen from "../screens/StudentCloudScreen";
 import MoreScreen from "../screens/MoreScreen";
 import ManagementReportsScreen from "../screens/ManagementReportsScreen";
+import LegalDocumentsScreen from "../screens/LegalDocumentsScreen";
 import {theme} from "../theme/theme";
 
 const Tab=createBottomTabNavigator();
@@ -56,6 +57,7 @@ export default function AppNavigator(){
   <Stack.Navigator screenOptions={{headerShown:false}}>
    <Stack.Screen name="מסכים ראשיים" component={MainTabs}/>
    <Stack.Screen name="דוחות" component={ManagementReportsScreen}/>
+   <Stack.Screen name="מסמכים משפטיים" component={LegalDocumentsScreen}/>
   </Stack.Navigator>
  </NavigationContainer>;
 }

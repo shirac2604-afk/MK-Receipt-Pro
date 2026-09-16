@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from "react";
 import {createRoot} from "react-dom/client";
 
-const MIN_PASSWORD_LENGTH=8;
+const MIN_PASSWORD_LENGTH=10;
 const MAX_PASSWORD_LENGTH=128;
 
 function resultError(result:unknown):string{
@@ -70,8 +70,9 @@ function RecoveryPanel(){
       const result=await window.mkApi.cloudAccount.completePasswordRecovery({newPassword:password});
       if(!result.success)throw new Error(resultError(result));
       setActive(false);setOpen(false);setPassword("");setConfirmation("");setMessage("הסיסמה עודכנה וכל ההתחברויות נותקו. אפשר להתחבר מחדש.");
-    }catch{
-      setMessage("לא ניתן לעדכן את הסיסמה. יש לבקש קישור חדש ולנסות שוב.");
+    }catch(error){
+      const detail=error instanceof Error?error.message:"";
+      setMessage(detail||"לא ניתן לעדכן את הסיסמה. יש לבקש קישור חדש ולנסות שוב.");
     }finally{setBusy(false)}
   }
 
@@ -83,7 +84,7 @@ function RecoveryPanel(){
         <button type="button" onClick={()=>setOpen(false)} style={{border:0,background:"transparent",fontSize:20,cursor:"pointer"}} aria-label="סגירה">×</button>
       </div>
       {active?<div style={{display:"grid",gap:10,marginTop:14}}>
-        <p style={{margin:0,color:"#475569",lineHeight:1.5}}>קישור השחזור אומת. בחרי סיסמה חדשה. אין להזין קוד שחזור באפליקציה.</p>
+        <p style={{margin:0,color:"#475569",lineHeight:1.5}}>קישור השחזור אומת. בחרי סיסמה חדשה של לפחות 10 תווים שאינה מופיעה במאגר סיסמאות שדלפו. אין להזין קוד שחזור באפליקציה.</p>
         <input type="password" value={password} onChange={e=>setPassword(e.target.value.slice(0,MAX_PASSWORD_LENGTH))} autoComplete="new-password" maxLength={MAX_PASSWORD_LENGTH} placeholder="סיסמה חדשה" style={{padding:11,borderRadius:10,border:"1px solid #cbd5e1"}} />
         <input type="password" value={confirmation} onChange={e=>setConfirmation(e.target.value.slice(0,MAX_PASSWORD_LENGTH))} autoComplete="new-password" maxLength={MAX_PASSWORD_LENGTH} placeholder="אימות הסיסמה" style={{padding:11,borderRadius:10,border:"1px solid #cbd5e1"}} />
         <button type="button" disabled={busy} onClick={()=>void completeReset()} style={{padding:11,border:0,borderRadius:10,background:"#4F46E5",color:"#fff",fontWeight:800,cursor:"pointer"}}>{busy?"מעדכן…":"עדכון סיסמה"}</button>

@@ -1,7 +1,7 @@
 import {createClient,type SupabaseClient} from "@supabase/supabase-js";
 import {supabase} from "../lib/supabase";
 import {SUPABASE_PUBLISHABLE_KEY,SUPABASE_URL} from "../config/supabasePublic";
-import {MAX_PASSWORD_LENGTH,validateNewPassword} from "./passwordPolicy";
+import {MAX_PASSWORD_LENGTH,validateNewPassword,validatePasswordNotLeaked} from "./passwordPolicy";
 
 const PASSWORD_RESET_REDIRECT_URL="mkreceiptpro://auth/recovery";
 const RECOVERY_REQUEST_COOLDOWN_MS=60_000;
@@ -53,6 +53,8 @@ export const AuthService={
   async signUp(email:string,password:string){
     const passwordError=validateNewPassword(email,password);
     if(passwordError)throw new Error(passwordError);
+    const breachError=await validatePasswordNotLeaked(password);
+    if(breachError)throw new Error(breachError);
     const {data,error}=await supabase.auth.signUp({email:email.trim().toLowerCase(),password});
     if(error)throw error;
     return data;
@@ -65,6 +67,8 @@ export const AuthService={
     if(currentError||!current.user?.email)throw new Error("AUTH_SESSION_REQUIRED");
     const passwordError=validateNewPassword(current.user.email,newPassword);
     if(passwordError)throw new Error(passwordError);
+    const breachError=await validatePasswordNotLeaked(newPassword);
+    if(breachError)throw new Error(breachError);
     const {data:verified,error:verifyError}=await supabase.auth.signInWithPassword({email:current.user.email.trim().toLowerCase(),password:currentPassword});
     if(verifyError||!verified.user)throw new Error("AUTH_CURRENT_PASSWORD_INVALID");
     if(verified.user.id!==current.user.id){await supabase.auth.signOut({scope:"local"}).catch(()=>{});throw new Error("AUTH_IDENTITY_CHANGED");}
@@ -107,6 +111,8 @@ export const AuthService={
     if(!recovery)throw new Error("AUTH_RECOVERY_SESSION_INVALID");
     const passwordError=validateNewPassword(recovery.email,newPassword);
     if(passwordError)throw new Error(passwordError);
+    const breachError=await validatePasswordNotLeaked(newPassword);
+    if(breachError)throw new Error(breachError);
     const {error:updateError}=await recovery.client.auth.updateUser({password:newPassword});
     if(updateError)throw new Error("AUTH_RECOVERY_PASSWORD_UPDATE_FAILED");
     activeRecovery=null;

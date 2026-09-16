@@ -1,5 +1,5 @@
 import React,{useEffect,useState} from "react";
-import {Alert,Image,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
+import {Alert,Image,Linking,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {useNavigation} from "@react-navigation/native";
 import {useBusiness} from "../context/BusinessContext";
@@ -12,6 +12,7 @@ import {createAndShareYearlyReport} from "../services/BusinessReportService";
 import {formatUnknownError} from "../services/ErrorFormatter";
 import {theme} from "../theme/theme";
 import {sanitizeDigits,sanitizePhone,validEmail,validPhone} from "../securityValidation";
+import {MIN_NEW_PASSWORD_LENGTH,passwordErrorMessage,type NewPasswordValidationError} from "../auth/passwordPolicy";
 
 export default function MoreScreen(){
  const navigation=useNavigation<any>();
@@ -102,7 +103,7 @@ export default function MoreScreen(){
    await changePassword(currentPassword,newPassword);
    setCurrentPassword("");setNewPassword("");setNewPasswordConfirmation("");
    Alert.alert("הסיסמה שונתה","מההתחברות הבאה יש להשתמש בסיסמה החדשה.");
-  }catch(e){Alert.alert("שינוי הסיסמה נכשל",formatUnknownError(e))}
+  }catch(e){const code=e instanceof Error?e.message:"";Alert.alert("שינוי הסיסמה נכשל",code.startsWith("AUTH_PASSWORD_")?passwordErrorMessage(code as NewPasswordValidationError):formatUnknownError(e))}
   finally{setPasswordBusy(false)}
  }
 
@@ -136,6 +137,17 @@ export default function MoreScreen(){
   try{const report=await createAndShareYearlyReport(businessId);Alert.alert("הדוח מוכן",`דוח ${report.year} כולל ${report.activeReceiptCount} קבלות פעילות ו־${report.expenseCount} הוצאות. בחלון השיתוף אפשר לשמור אותו בקבצים או לשלוח לרואה החשבון.`);}
   catch(e){Alert.alert("יצירת הדוח נכשלה",formatUnknownError(e));}
   finally{setReportBusy(false)}
+ }
+
+ async function contactSupport(){
+  const url="mailto:shirac2604@gmail.com?subject=MK%20Receipt%20Pro%20-%20פנייה%20לתמיכה";
+  try{
+   const supported=await Linking.canOpenURL(url);
+   if(!supported)throw new Error("SUPPORT_EMAIL_NOT_SUPPORTED");
+   await Linking.openURL(url);
+  }catch{
+   Alert.alert("תמיכה של מפתח להצלחה","אפשר לפנות בדוא״ל shirac2604@gmail.com או בטלפון 052-527-5122.");
+  }
  }
 
  return <ScrollView contentContainerStyle={s.screen} keyboardShouldPersistTaps="handled">
@@ -174,7 +186,7 @@ export default function MoreScreen(){
     <Text style={s.passwordTitle}>שינוי סיסמת החשבון</Text>
     <Text style={s.note}>כדי להגן על החשבון, יש לאמת תחילה את הסיסמה הנוכחית.</Text>
     <TextInput style={s.input} value={currentPassword} onChangeText={setCurrentPassword} maxLength={128} placeholder="סיסמה נוכחית" secureTextEntry autoCapitalize="none" autoCorrect={false} textAlign="right"/>
-    <TextInput style={s.input} value={newPassword} onChangeText={setNewPassword} maxLength={128} placeholder="סיסמה חדשה — לפחות 8 תווים" secureTextEntry autoCapitalize="none" autoCorrect={false} textAlign="right"/>
+    <TextInput style={s.input} value={newPassword} onChangeText={setNewPassword} maxLength={128} placeholder={`סיסמה חדשה — לפחות ${MIN_NEW_PASSWORD_LENGTH} תווים`} secureTextEntry autoCapitalize="none" autoCorrect={false} textAlign="right"/>
     <TextInput style={s.input} value={newPasswordConfirmation} onChangeText={setNewPasswordConfirmation} maxLength={128} placeholder="אימות הסיסמה החדשה" secureTextEntry autoCapitalize="none" autoCorrect={false} textAlign="right"/>
     <Pressable style={s.primaryButton} onPress={()=>void submitPasswordChange()} disabled={passwordBusy||busy}><Text style={s.primaryText}>{passwordBusy?"משנה סיסמה…":"שינוי סיסמה"}</Text></Pressable>
    </View>
@@ -210,6 +222,15 @@ export default function MoreScreen(){
    <Pressable style={s.primaryButton} onPress={()=>void createLocalBackup()} disabled={backupBusy||busy}><Text style={s.primaryText}>{backupBusy?"מכין גיבוי…":"יצירת גיבוי מקומי"}</Text></Pressable>
    <Pressable style={s.secondaryButton} onPress={()=>void inspectLocalBackup()} disabled={backupInspectionBusy||busy}><Ionicons name="shield-checkmark-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>{backupInspectionBusy?"בודק גיבוי…":"בדיקת קובץ גיבוי"}</Text></Pressable>
    <Pressable style={s.secondaryButton} disabled={backupRestoreBusy||busy} onPress={()=>Alert.alert("שחזור מגיבוי","ייבחר קובץ גיבוי של העסק המחובר. השחזור מוסיף רק רשומות חסרות; נתונים קיימים לא ישתנו.",[{text:"ביטול",style:"cancel"},{text:"בחירת קובץ ושחזור",onPress:()=>void restoreLocalBackup()}])}><Ionicons name="cloud-upload-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>{backupRestoreBusy?"משחזר…":"שחזור בטוח מגיבוי"}</Text></Pressable>
+  </View>
+
+  <View style={s.card}>
+   <View style={s.sectionHeader}><Ionicons name="help-buoy-outline" size={22} color={theme.primary}/><Text style={s.cardTitle}>תמיכה ופרטיות</Text></View>
+   <Text style={s.note}>לשאלות על האפליקציה, החשבון או המידע שלך אפשר לפנות למפתח להצלחה.</Text>
+   <Text style={s.backupNote}>דוא״ל: shirac2604@gmail.com · טלפון: 052-527-5122</Text>
+   <Text style={s.backupNote}>אפשר לבקש עיון, תיקון, ייצוא או מחיקה של מידע אישי. לפני הפנייה, אין לשלוח סיסמאות או פרטי כרטיס.</Text>
+   <Pressable style={s.secondaryButton} onPress={()=>void contactSupport()}><Ionicons name="mail-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>פנייה לתמיכה בדוא״ל</Text></Pressable>
+   <Pressable style={s.secondaryButton} onPress={()=>navigation.navigate("מסמכים משפטיים")}><Ionicons name="document-text-outline" size={18} color={theme.primary}/><Text style={s.secondaryText}>פתיחת תנאי השימוש ומדיניות הפרטיות</Text></Pressable>
   </View>
  </ScrollView>;
 }

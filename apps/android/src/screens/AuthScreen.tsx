@@ -2,15 +2,8 @@ import React,{useState} from "react";
 import {Alert,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import {useAuth} from "../context/AuthContext";
 import {theme} from "../theme/theme";
-import {MAX_PASSWORD_LENGTH,MIN_NEW_PASSWORD_LENGTH,validateNewPassword,type NewPasswordValidationError} from "../auth/passwordPolicy";
+import {MAX_PASSWORD_LENGTH,MIN_NEW_PASSWORD_LENGTH,passwordErrorMessage,validateNewPassword,type NewPasswordValidationError} from "../auth/passwordPolicy";
 import {AuthService} from "../auth/AuthService";
-
-const passwordErrorMessages:Record<NewPasswordValidationError,string>={
-  AUTH_PASSWORD_TOO_SHORT:`סיסמה חדשה חייבת להכיל לפחות ${MIN_NEW_PASSWORD_LENGTH} תווים.`,
-  AUTH_PASSWORD_TOO_LONG:`סיסמה חדשה יכולה להכיל עד ${MAX_PASSWORD_LENGTH} תווים.`,
-  AUTH_PASSWORD_TOO_COMMON:"הסיסמה נפוצה מדי. יש לבחור סיסמה אחרת.",
-  AUTH_PASSWORD_CONTAINS_EMAIL:"אין להשתמש בשם האימייל כחלק מהסיסמה."
-};
 
 const recoveryErrorMessages:Record<string,string>={
  AUTH_RECOVERY_REQUEST_COOLDOWN:"כדי להגן על החשבון, יש להמתין דקה לפני בקשה נוספת.",
@@ -32,20 +25,22 @@ export default function AuthScreen(){
  const [recoverySent,setRecoverySent]=useState(false);
  const [recoveryPassword,setRecoveryPassword]=useState("");
  const [recoveryPasswordConfirmation,setRecoveryPasswordConfirmation]=useState("");
+ const [acceptedLegal,setAcceptedLegal]=useState(false);
 
  async function run(mode:"signin"|"signup"){
   if(!email.trim()||!password){Alert.alert("חסרים פרטים","יש להזין אימייל וסיסמה.");return;}
   if(mode==="signup"){
+    if(!acceptedLegal){Alert.alert("נדרש אישור","כדי ליצור חשבון יש לאשר את תנאי השימוש ואת מדיניות הפרטיות.");return;}
     const passwordError=validateNewPassword(email,password);
-    if(passwordError){Alert.alert("הסיסמה אינה מתאימה",passwordErrorMessages[passwordError]);return;}
+    if(passwordError){Alert.alert("הסיסמה אינה מתאימה",passwordErrorMessage(passwordError));return;}
   }
   if(busy)return;
   setBusy(true);
   try{if(mode==="signin")await signIn(email,password);else await signUp(email,password)}
   catch(e){
     const errorCode=e instanceof Error?e.message:"";
-    const isPasswordError=Object.prototype.hasOwnProperty.call(passwordErrorMessages,errorCode);
-    const message=isPasswordError?passwordErrorMessages[errorCode as NewPasswordValidationError]:(errorCode||"שגיאה לא ידועה");
+    const isPasswordError=errorCode.startsWith("AUTH_PASSWORD_");
+    const message=isPasswordError?passwordErrorMessage(errorCode as NewPasswordValidationError):(errorCode||"שגיאה לא ידועה");
     Alert.alert("התחברות נכשלה",message);
   }finally{setBusy(false)}
  }
@@ -68,7 +63,7 @@ export default function AuthScreen(){
   if(recoveryPassword!==recoveryPasswordConfirmation){Alert.alert("אימות סיסמה","הסיסמאות אינן תואמות.");return;}
   setRecoveryBusy(true);
   try{await completePasswordRecovery(recoveryPassword);setRecoveryPassword("");setRecoveryPasswordConfirmation("");Alert.alert("הסיסמה עודכנה","הסיסמה עודכנה וכל ההתחברויות נותקו. אפשר להתחבר מחדש.");}
-  catch(e){const code=e instanceof Error?e.message:"";const isPolicyError=Object.prototype.hasOwnProperty.call(passwordErrorMessages,code);Alert.alert("שחזור סיסמה",isPolicyError?passwordErrorMessages[code as NewPasswordValidationError]:recoveryErrorMessages[code]||recoveryErrorMessages.AUTH_RECOVERY_PASSWORD_UPDATE_FAILED);}
+  catch(e){const code=e instanceof Error?e.message:"";const isPolicyError=code.startsWith("AUTH_PASSWORD_");Alert.alert("שחזור סיסמה",isPolicyError?passwordErrorMessage(code as NewPasswordValidationError):recoveryErrorMessages[code]||recoveryErrorMessages.AUTH_RECOVERY_PASSWORD_UPDATE_FAILED);}
   finally{setRecoveryBusy(false)}
  }
 
@@ -94,8 +89,12 @@ export default function AuthScreen(){
 
   <TextInput style={s.input} value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" placeholder="אימייל"/>
   <TextInput style={s.input} value={password} onChangeText={setPassword} secureTextEntry placeholder="סיסמה"/>
-  <Text style={s.passwordHint}>ליצירת חשבון חדש: לפחות {MIN_NEW_PASSWORD_LENGTH} תווים וסיסמה שאינה כוללת את שם האימייל.</Text>
+  <Text style={s.passwordHint}>ליצירת חשבון חדש: לפחות {MIN_NEW_PASSWORD_LENGTH} תווים, ללא שם האימייל, ונבדקת מול מאגר סיסמאות דלופות.</Text>
   <Pressable style={s.primary} disabled={busy} onPress={()=>void run("signin")}><Text style={s.primaryText}>{busy?"מתחבר…":"כניסה"}</Text></Pressable>
+  <Pressable style={s.legalConsent} disabled={busy} onPress={()=>setAcceptedLegal(value=>!value)} accessibilityRole="checkbox" accessibilityState={{checked:acceptedLegal}}>
+   <View style={[s.legalBox,acceptedLegal&&s.legalBoxActive]}>{acceptedLegal?<Text style={s.legalCheck}>✓</Text>:null}</View>
+   <Text style={s.legalText}>קראתי ואני מאשר/ת את תנאי השימוש ואת מדיניות הפרטיות.</Text>
+  </Pressable>
   <Pressable style={s.secondary} disabled={busy} onPress={()=>void run("signup")}><Text style={s.secondaryText}>יצירת חשבון</Text></Pressable>
   <Pressable style={s.recoveryToggle} disabled={busy||recoveryBusy} onPress={()=>{setRecoveryOpen(v=>!v);setRecoverySent(false)}}><Text style={s.secondaryText}>שכחתי סיסמה</Text></Pressable>
   {recoveryOpen?<View style={s.recoveryPanel}>
@@ -119,6 +118,11 @@ const s=StyleSheet.create({
  primaryText:{color:theme.navy,fontWeight:"900"},
  secondary:{padding:15,alignItems:"center"},
  secondaryText:{color:theme.primary,fontWeight:"700"},
+ legalConsent:{flexDirection:"row-reverse",alignItems:"flex-start",gap:9,backgroundColor:"#fff",padding:12,borderRadius:13,marginTop:12},
+ legalBox:{width:21,height:21,borderWidth:1,borderColor:theme.border,borderRadius:6,alignItems:"center",justifyContent:"center",marginTop:1},
+ legalBoxActive:{backgroundColor:theme.primary,borderColor:theme.primary},
+ legalCheck:{color:"#fff",fontWeight:"900",fontSize:14},
+ legalText:{flex:1,color:theme.text,textAlign:"right",fontSize:12,lineHeight:18},
  recoveryToggle:{padding:11,alignItems:"center"},
  recoveryPanel:{backgroundColor:"#fff",borderWidth:1,borderColor:theme.border,borderRadius:18,padding:16,marginTop:4,gap:10},
  recoveryTitle:{fontSize:15,fontWeight:"800",color:theme.text,textAlign:"right"},

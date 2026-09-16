@@ -4,7 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL, validateSupabaseConfig } from "./SupabaseCloudConfig";
-import {MAX_PASSWORD_LENGTH,validateNewPassword} from "./passwordPolicy";
+import {MAX_PASSWORD_LENGTH,validateNewPasswordSecurity} from "./passwordPolicy";
 import type { PaymentMethod, ReceiptRecord, ReceiptSearchFilters, ReceiptSearchResult, CustomerRecord, CustomerProfile, CustomerCreateInput, CustomerUpdateInput, CustomerDuplicateQuery, CustomerDuplicateMatch, ReceiptCoreStatus, DateRangeReport, AnnualReport, MonthlyReportRow, ExpenseInput, ExpenseUpdateInput, ExpenseSearchFilters, ExpenseRecord, ExpenseSummary, BusinessSettingsInput, BusinessSettingsRecord, CancelReceiptResult, SupabaseCloudDevice } from "../../../../packages/database/src/types";
 import type { LessonRecord } from "../../../../packages/database/src/studentTypes";
 
@@ -151,7 +151,7 @@ export class SupabaseCloudService {
     if(!this.status.connected||!this.status.userId)throw new Error("AUTH_SESSION_REQUIRED");
     const {data:current,error:currentError}=await this.client.auth.getUser();
     if(currentError||!current.user?.email||current.user.id!==this.status.userId)throw new Error("AUTH_SESSION_REQUIRED");
-    const passwordError=validateNewPassword(current.user.email,newPassword);
+    const passwordError=await validateNewPasswordSecurity(current.user.email,newPassword);
     if(passwordError)throw new Error(passwordError);
     const {data:verified,error:verifyError}=await this.client.auth.signInWithPassword({
       email:current.user.email.trim().toLowerCase(),
@@ -205,7 +205,7 @@ export class SupabaseCloudService {
   async completePasswordRecovery(newPassword:string):Promise<void>{
     const recovery=this.activeRecovery;
     if(!recovery)throw new Error("AUTH_RECOVERY_SESSION_INVALID");
-    const passwordError=validateNewPassword(recovery.email,newPassword);
+    const passwordError=await validateNewPasswordSecurity(recovery.email,newPassword);
     if(passwordError)throw new Error(passwordError);
     const {error:updateError}=await recovery.client.auth.updateUser({password:newPassword});
     if(updateError)throw new Error("AUTH_RECOVERY_PASSWORD_UPDATE_FAILED");

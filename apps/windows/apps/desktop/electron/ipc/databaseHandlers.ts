@@ -191,10 +191,12 @@ function errorResult(error: unknown): ApiResult<never> {
   if (code === "AUTH_CURRENT_PASSWORD_REQUIRED") return apiFailure("INVALID_INPUT", "יש להזין את הסיסמה הנוכחית.", false);
   if (code === "AUTH_CURRENT_PASSWORD_INVALID") return apiFailure("DATABASE_OPERATION_FAILED", "הסיסמה הנוכחית אינה נכונה.", false);
   if (code === "AUTH_PASSWORD_UNCHANGED") return apiFailure("INVALID_INPUT", "הסיסמה החדשה חייבת להיות שונה מהסיסמה הנוכחית.", false);
-  if (code === "AUTH_PASSWORD_TOO_SHORT") return apiFailure("INVALID_INPUT", "הסיסמה החדשה חייבת להכיל לפחות 8 תווים.", false);
+  if (code === "AUTH_PASSWORD_TOO_SHORT") return apiFailure("INVALID_INPUT", "הסיסמה החדשה חייבת להכיל לפחות 10 תווים.", false);
   if (code === "AUTH_PASSWORD_TOO_LONG") return apiFailure("INVALID_INPUT", "הסיסמה החדשה יכולה להכיל עד 128 תווים.", false);
   if (code === "AUTH_PASSWORD_TOO_COMMON") return apiFailure("INVALID_INPUT", "הסיסמה החדשה נפוצה מדי. יש לבחור סיסמה אחרת.", false);
   if (code === "AUTH_PASSWORD_CONTAINS_EMAIL") return apiFailure("INVALID_INPUT", "הסיסמה החדשה לא יכולה לכלול את החלק הראשון של כתובת האימייל.", false);
+  if (code === "AUTH_PASSWORD_LEAKED") return apiFailure("INVALID_INPUT", "הסיסמה הזו הופיעה במאגר סיסמאות שדלפו. יש לבחור סיסמה אחרת.", false);
+  if (code === "AUTH_PASSWORD_BREACH_CHECK_UNAVAILABLE") return apiFailure("DATABASE_OPERATION_FAILED", "לא ניתן כרגע לבצע בדיקת אבטחה לסיסמה. נסי שוב כשיש חיבור אינטרנט.", true);
   if (code === "AUTH_SESSION_REQUIRED"||code === "AUTH_IDENTITY_CHANGED") return apiFailure("DATABASE_OPERATION_FAILED", "החיבור לחשבון השתנה. יש להתנתק ולהתחבר מחדש לפני שינוי הסיסמה.", false);
   if (code === "AUTH_PASSWORD_CHANGE_FAILED") return apiFailure("DATABASE_OPERATION_FAILED", "שינוי הסיסמה לא הושלם. הסיסמה הקיימת נשארה ללא שינוי.", true);
   if (code === "AUTH_RECOVERY_REQUEST_COOLDOWN") return apiFailure("DATABASE_OPERATION_FAILED", "אם קיימת כתובת חשבון תואמת, אפשר לבקש קישור נוסף בעוד דקה.", false);
