@@ -7,4 +7,5 @@ import { migration006 } from "./006_backup_recovery";
 import { migration007 } from "./007_health_security";
 import { migration008 } from "./008_expenses";
 import { migration009 } from "./009_receipt_templates";
-export const migrations=[initialSchemaMigration,receiptCoreMigration,pdfEngineMigration,onboardingSettingsMigration,historyAndCancellationMigration,migration006,migration007,migration008,migration009];
+import { migration010 } from "./010_tax_authority_transmissions";
+export const migrations=[initialSchemaMigration,receiptCoreMigration,pdfEngineMigration,onboardingSettingsMigration,historyAndCancellationMigration,migration006,migration007,migration008,migration009,migration010];
