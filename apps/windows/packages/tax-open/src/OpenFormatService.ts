@@ -19,7 +19,8 @@ interface ExportReceiptRow {
 
 const OF_CONSTANT="&OF1.31&";
 const DOCUMENT_TYPE_RECEIPT="400";
-const TAX_REGISTERED_SOFTWARE_NAME="כהן שירה";
+const TAX_REGISTERED_SOFTWARE_NAME="MK-Receipt-Pro";
+const TAX_REGISTERED_SOFTWARE_DISPLAY_NAME="חשבוניות MK-Receipt-Pro";
 const TAX_REGISTERED_SOFTWARE_EDITION="1.0.0-rc.17.45-b100";
 
 function asciiOnly(value:string):string { return value.replace(/[\u200e\u200f]/g,"").replace(/[“”]/g,'"').replace(/[’‘]/g,"'"); }
@@ -110,7 +111,7 @@ export const DOCUMENT_TYPES:readonly Report26DocumentType[]=[
   {code:"100",label:"הזמנה"},{code:"200",label:"תעודת משלוח"},{code:"205",label:"תעודת משלוח סוכן"},{code:"210",label:"תעודת החזרה"},{code:"300",label:"חשבונית/חשבונית עסקה"},{code:"305",label:"חשבונית מס"},{code:"310",label:"חשבונית ריכוז"},{code:"320",label:"חשבונית מס / קבלה"},{code:"330",label:"חשבונית מס זיכוי"},{code:"340",label:"חשבונית שריון"},{code:"345",label:"חשבונית סוכן"},{code:"400",label:"קבלה"},{code:"405",label:"קבלה על תרומות"},{code:"406",label:"קבלה על פיקדון"},{code:"410",label:"יציאה מקופה"},{code:"420",label:"הפקדת בנק"},{code:"500",label:"הזמנת רכש"},{code:"600",label:"תעודת משלוח רכש"},{code:"610",label:"החזרת רכש"},{code:"700",label:"חשבונית מס רכש"},{code:"710",label:"זיכוי רכש"},{code:"800",label:"יתרת פתיחה"},{code:"810",label:"כניסה כללית למלאי"},{code:"820",label:"יציאה כללית מהמלאי"},{code:"830",label:"העברה בין מחסנים"},{code:"840",label:"עדכון בעקבות ספירה"},{code:"900",label:"דוח ייצור-כניסה"},{code:"910",label:"דוח ייצור-יציאה"}
 ];
 function htmlEscape(v:string):string{return v.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));}
-function reportSoftwareIdentification():string{return `${TAX_REGISTERED_SOFTWARE_NAME} • מהדורה ${TAX_REGISTERED_SOFTWARE_EDITION}`;}
+function reportSoftwareIdentification():string{return `${TAX_REGISTERED_SOFTWARE_DISPLAY_NAME} • מהדורה ${TAX_REGISTERED_SOFTWARE_EDITION}`;}
 function reportShell(title:string,body:string):string{return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>@page{size:A4;margin:12mm 12mm 14mm}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:Arial,sans-serif;color:#111827;direction:rtl;font-size:10.5px;line-height:1.25}main{width:100%}h1{text-align:center;font-size:18px;margin:0 0 10px}.authority{text-align:left;font-size:9px;border-bottom:1px solid #777;padding-bottom:4px;margin-bottom:8px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;margin:8px 0}.meta>*{white-space:nowrap}table{border-collapse:collapse;width:100%;margin-top:8px;page-break-inside:auto}thead{display:table-header-group}tr{page-break-inside:avoid;page-break-after:auto}th,td{border:1px solid #444;padding:3px 5px;text-align:right;vertical-align:middle}th{background:#f1f5f9;font-weight:700}.total{font-weight:bold;background:#f8fafc}.notice{margin-top:8px;padding:6px;border:1px solid #9aa6b8;font-size:9px}.print-note{margin-top:8px;font-size:8.5px;color:#374151}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><main><div class="authority">רשות המסים בישראל — הוראות להפקת קבצים במבנה אחיד, גרסה 1.31</div><h1>${title}</h1>${body}<div class="print-note">תוכנה: ${reportSoftwareIdentification()}</div></main></body></html>`;}
 
 export class OpenFormatService {

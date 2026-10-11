@@ -17,7 +17,7 @@ if(activeAmount+cancelledAmount!==amounts["400"])throw new Error("status amount 
 const folder=path.join("test-output","tax-open-simulator-fixture");
 if(!fs.existsSync(path.join(folder,"REPORT-2.6.html"))){console.log("Fixture missing; generating it first");await import("./tax-open-simulator-fixture.mjs");}
 const html=fs.readFileSync(path.join(folder,"REPORT-2.6.html"),"utf8");
-for(const token of ["תוכנה: כהן שירה","מהדורה 1.0.0-rc.17.45-b100"]){if(!html.includes(token))throw new Error(`report 2.6 missing software identification: ${token}`);}
+for(const token of ["תוכנה: חשבוניות MK-Receipt-Pro","מהדורה 1.0.0-rc.17.45-b100"]){if(!html.includes(token))throw new Error(`report 2.6 missing software identification: ${token}`);}
 if(html.includes("הופק באמצעות מפתחות להצלחה • גרסה 1.0.0-rc.17.37"))throw new Error("report 2.6 still contains obsolete software identification");
 
 console.log(`✓ Report 2.6 order, reconciliation and software identification passed (${matches.length} document types)`);
