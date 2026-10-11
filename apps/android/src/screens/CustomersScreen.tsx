@@ -1,5 +1,6 @@
 import React,{useCallback,useEffect,useState} from "react";
 import {Alert,FlatList,Pressable,RefreshControl,StyleSheet,Text,TextInput,View} from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import type {Customer} from "../domain/types";
 import {useLiveDataRepository} from "../hooks/useLiveDataRepository";
 import {theme} from "../theme/theme";
@@ -39,6 +40,32 @@ export default function CustomersScreen(){
     }finally{setLoading(false)}
   }
 
+  function confirmArchive(customer:Customer){
+    if(!repo)return;
+    Alert.alert(
+      "הסרת לקוח",
+      `להסיר את ${customer.displayName} מרשימת הלקוחות?
+
+קבלות ותשלומים קיימים לא ישתנו.`,
+      [
+        {text:"ביטול",style:"cancel"},
+        {text:"הסר לקוח",style:"destructive",onPress:()=>void archive(customer)}
+      ]
+    );
+  }
+
+  async function archive(customer:Customer){
+    if(!repo)return;
+    setLoading(true);
+    try{
+      await repo.archiveCustomer(customer.id);
+      setItems(current=>current.filter(item=>item.id!==customer.id));
+      Alert.alert("הלקוח הוסר","הלקוח לא יוצג יותר ברשימת הלקוחות או בבחירת לקוח חדשה.");
+    }catch(e){
+      Alert.alert("הסרת לקוח נכשלה",e instanceof Error?e.message:"שגיאה לא ידועה");
+    }finally{setLoading(false)}
+  }
+
   return <View style={s.screen}>
     <Text style={s.title}>לקוחות</Text>
     <Text style={s.subtitle}>לקוחות משותפים ל־Windows ול־Android</Text>
@@ -60,7 +87,18 @@ export default function CustomersScreen(){
       contentContainerStyle={s.list}
       ListEmptyComponent={<Text style={s.empty}>עדיין אין לקוחות</Text>}
       renderItem={({item})=><View style={s.item}>
-        <Text style={s.itemTitle}>{item.displayName}</Text>
+        <View style={s.itemHeader}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`הסרת לקוח ${item.displayName}`}
+            hitSlop={10}
+            disabled={loading}
+            onPress={()=>confirmArchive(item)}
+          >
+            <Ionicons name="trash-outline" size={21} color={theme.danger}/>
+          </Pressable>
+          <Text style={s.itemTitle}>{item.displayName}</Text>
+        </View>
         {item.phone?<Text style={s.itemText}>{item.phone}</Text>:null}
         {item.email?<Text style={s.itemText}>{item.email}</Text>:null}
       </View>}
@@ -79,6 +117,7 @@ const s=StyleSheet.create({
   buttonText:{color:theme.navy,fontWeight:"900"},
   list:{gap:10,paddingVertical:14,paddingBottom:100},
   item:{backgroundColor:"#fff",borderRadius:18,padding:16,borderWidth:1,borderColor:theme.border},
+  itemHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12},
   itemTitle:{fontSize:16,fontWeight:"800",color:theme.text,textAlign:"right"},
   itemText:{fontSize:13,color:theme.muted,textAlign:"right",marginTop:3},
   empty:{textAlign:"center",color:theme.muted,padding:30}
