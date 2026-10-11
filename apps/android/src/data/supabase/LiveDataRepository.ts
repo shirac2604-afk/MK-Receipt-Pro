@@ -40,6 +40,14 @@ export class LiveDataRepository{
   return mapCustomer(data);
  }
 
+ async archiveCustomer(customerId:string){
+  const {error}=await supabase.from("customers")
+   .update({is_archived:true,updated_at:new Date().toISOString()})
+   .eq("business_id",this.businessId)
+   .eq("id",customerId);
+  if(error)throw error;
+ }
+
  async expenses():Promise<Expense[]>{
   const {data,error}=await supabase.from("expenses").select("*")
    .eq("business_id",this.businessId)
