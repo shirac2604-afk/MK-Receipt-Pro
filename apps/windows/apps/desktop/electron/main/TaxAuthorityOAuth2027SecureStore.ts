@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { app,safeStorage } from "electron";
-import type { TaxAuthorityOAuthTokenSet,TaxAuthorityOAuthTokenStore } from "../../../packages/tax-open/src/TaxAuthorityOAuth2027";
+import type { TaxAuthorityOAuthTokenSet,TaxAuthorityOAuthTokenStore } from "../../../../packages/tax-open/src/TaxAuthorityOAuth2027";
 
 interface StoredEnvelope {
   version:1;
