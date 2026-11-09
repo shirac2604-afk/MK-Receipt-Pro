@@ -15,6 +15,9 @@ on:
       - '.github/workflows/tax-authority-2027-prep.yml'
       - 'supabase/functions/tax-authority-oauth-2027/**'
       - 'apps/windows/apps/desktop/electron/main/TaxAuthorityOAuth2027SecureStore.ts'
+      - 'apps/android/src/tax-authority/**'
+      - 'apps/android/scripts/verify-tax-authority-2027.mjs'
+      - 'apps/android/package.json'
   workflow_dispatch:
 
 permissions:
@@ -48,3 +51,21 @@ jobs:
           packages/database/src/repositories/TaxAuthorityTransmissionRepository.test.ts
       - name: Isolation and credential-safety gate
         run: node scripts/verify-tax-authority-2027-prep.mjs
+
+
+  android-tax-2027-prep:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.14.0'
+          cache: npm
+          cache-dependency-path: apps/android/package-lock.json
+      - name: Install Android dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Android Tax Authority 2027 type and security gate
+        run: npm run check && npm run verify:tax-authority-2027
