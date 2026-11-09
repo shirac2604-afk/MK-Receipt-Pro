@@ -25,7 +25,7 @@ describe("TaxAuthorityApi2027Client",()=>{
   it("requests upload links with OAuth bearer token",async()=>{
     const transport=new QueueTransport([new Response(JSON.stringify({success:true,data:{uniqueId:"u1",files:[]},error:null}),{status:200,headers:{"Content-Type":"application/json"}})]);
     const client=new TaxAuthorityApi2027Client({config:{environment:"sandbox",enabled:true},tokenProvider,transport});
-    const result=await client.requestUploadLinks({caseNumber:39375365,startPeriod:"2026-01-01",endPeriod:"2026-12-31"});
+    const result=await client.requestUploadLinks({caseNumber:"039375365",startPeriod:"2026-01-01",endPeriod:"2026-12-31"});
     expect(result.success).toBe(true);
     expect(transport.calls[0]?.init?.method).toBe("POST");
     expect((transport.calls[0]?.init?.headers as Record<string,string>).Authorization).toBe("Bearer sandbox-token");
@@ -54,7 +54,7 @@ describe("TaxAuthorityApi2027Client",()=>{
 
   it("blocks production until production readiness is confirmed",async()=>{
     const client=new TaxAuthorityApi2027Client({config:{environment:"production",enabled:true},tokenProvider,transport:new QueueTransport([])});
-    await expect(client.requestUploadLinks({caseNumber:39375365,startPeriod:"2027-01-01",endPeriod:"2027-01-31"})).rejects.toThrow("TAX_AUTHORITY_API_2027_PRODUCTION_NOT_CONFIRMED");
+    await expect(client.requestUploadLinks({caseNumber:"039375365",startPeriod:"2027-01-01",endPeriod:"2027-01-31"})).rejects.toThrow("TAX_AUTHORITY_API_2027_PRODUCTION_NOT_CONFIRMED");
   });
 
   it("gets statuses using fileUniqueId values as fileName",async()=>{
