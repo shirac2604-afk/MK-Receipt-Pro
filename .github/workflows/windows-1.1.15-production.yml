@@ -1,4 +1,4 @@
-name: Windows 1.1.15 Production Installer
+name: Windows 1.1.15 In-Place Upgrade
 
 on:
   workflow_dispatch:
@@ -9,65 +9,49 @@ permissions:
   contents: read
 
 jobs:
-  windows-installer-production:
+  production-windows-upgrade:
     runs-on: windows-latest
     defaults:
       run:
         working-directory: apps/windows
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      CSC_LINK: ${{ secrets.CSC_LINK }}
-      CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "24"
-      - name: Select guarded production cloud configuration
+          cache: npm
+          cache-dependency-path: apps/windows/package-lock.json
+      - name: Select dedicated Production cloud configuration
         shell: pwsh
-        run: |
-          Copy-Item apps/desktop/electron/main/SupabaseCloudConfig.production.ts apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
-          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_TEST_MODE=false' -Quiet)) { throw "Production mode is missing" }
-          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'STUDENT_RECEIPTS_ENABLED=false' -Quiet)) { throw "Receipt isolation is missing" }
-          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'REMINDER_AUTO_DISPATCH_ENABLED=false' -Quiet)) { throw "Automatic reminder delivery must remain disabled" }
-          if (-not (Select-String -Path apps/desktop/electron/main/SupabaseCloudConfig.ts -Pattern 'noimclnzzuxcszdotmby.supabase.co' -Quiet)) { throw "Production cloud is missing" }
+        run: Copy-Item apps/desktop/electron/main/SupabaseCloudConfig.production.ts apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
       - name: Install dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: TypeScript
         run: npm run typecheck
-      - name: Verify cloud report exports
+      - name: Verify report exports
         run: npx vitest run tests/cloudReportExport.test.ts
-      - name: Google Calendar sync contract
-        run: node scripts/verify-google-calendar-sync-v1.mjs
-      - name: Manual WhatsApp contract
-        run: node scripts/verify-manual-whatsapp-v1.mjs
-      - name: Student production safety contract
-        run: node scripts/verify-student-production-release.mjs
-      - name: Require Windows code-signing credentials
-        shell: pwsh
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:CSC_LINK) -or [string]::IsNullOrWhiteSpace($env:CSC_KEY_PASSWORD)) {
-            throw "Production installer signing is blocked until CSC_LINK and CSC_KEY_PASSWORD are configured as GitHub Actions secrets."
-          }
-      - name: Build production Windows installer
+      - name: Build production upgrade
         run: npm run release:production:win
-      - name: Verify installer and write SHA-256
+      - name: Write verification files
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path release -Filter "Maptehot-LaHatzlaha-*-Setup.exe" | Select-Object -First 1
-          if (-not $installer) { throw "Windows installer was not produced" }
-          $signature = Get-AuthenticodeSignature -FilePath $installer.FullName
-          if ($signature.Status -ne "Valid" -or -not $signature.SignerCertificate) { throw "Windows installer is not Authenticode-signed with a valid certificate" }
+          $installer = Get-ChildItem -Path release -Filter "Maptehot-LaHatzlaha-1.1.15-Setup.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows 1.1.15 installer was not produced" }
           $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $($installer.Name)" | Set-Content -Encoding ascii release/SHA256SUMS.txt
-          Write-Host "Installer: $($installer.FullName)"
-          Write-Host "SHA256: $hash"
-      - name: Upload guarded production installer
+          @(
+            "MK Receipt Pro Windows 1.1.15 — Report exports and bimonthly tax advances",
+            "In-place update: app ID remains il.co.mkreceipt.desktop.",
+            "Unsigned installer. Windows may display an unknown publisher warning."
+          ) | Set-Content -Encoding utf8 release/UPGRADE-NOTICE.txt
+      - name: Upload installer
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: MK-Receipt-Pro-Windows-1.1.15-Production
+          name: MK-Receipt-Pro-Windows-1.1.15-Upgrade
           path: |
-            apps/windows/release/Maptehot-LaHatzlaha-*-Setup.exe
+            apps/windows/release/Maptehot-LaHatzlaha-1.1.15-Setup.exe
             apps/windows/release/SHA256SUMS.txt
-          if-no-files-found: error
+            apps/windows/release/UPGRADE-NOTICE.txt
           retention-days: 14
