@@ -24,7 +24,7 @@ function monthKey(date:string):string { return date.slice(0,7); }
 function cleanFilePart(value:string):string { return value.replace(/[<>:"/\\|?*\x00-\x1F]/g,"-").replace(/\s+/g," ").trim().slice(0,80)||"מסמך"; }
 
 export class ReportService {
-  constructor(private readonly repository:ReportRepository) {}
+  constructor(private readonly repository:Pick<ReportRepository,"getRangeReport"|"getAnnualReport"|"getReceiptsForExport"|"getExpensesForExport">) {}
   getRange(filters:ReportFilters):DateRangeReport{return this.repository.getRangeReport(filters)}
   getAnnual(year:number):AnnualReport{return this.repository.getAnnualReport(year)}
   exportCsv(filters:ReportFilters,filePath:string):string { fs.mkdirSync(path.dirname(filePath),{recursive:true}); fs.writeFileSync(filePath,csvText(this.repository.getReceiptsForExport(filters)),"utf8"); return filePath; }
