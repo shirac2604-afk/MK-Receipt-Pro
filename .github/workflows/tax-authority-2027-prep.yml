@@ -13,6 +13,8 @@ on:
       - 'docs/TAX_AUTHORITY_API_2027_PREPARATION.md'
       - 'docs/tax-authority-2027-release-checklist.md'
       - '.github/workflows/tax-authority-2027-prep.yml'
+      - 'supabase/functions/tax-authority-oauth-2027/**'
+      - 'apps/windows/apps/desktop/electron/main/TaxAuthorityOAuth2027SecureStore.ts'
   workflow_dispatch:
 
 permissions:
@@ -41,6 +43,7 @@ jobs:
           packages/tax-open/src/TaxAuthorityApi2027.test.ts
           packages/tax-open/src/TaxAuthorityApi2027Client.test.ts
           packages/tax-open/src/TaxAuthorityOAuth2027.test.ts
+          packages/tax-open/src/TaxAuthorityOAuthBroker2027Client.test.ts
           packages/tax-open/src/TaxAuthority2027PreparationService.test.ts
           packages/database/src/repositories/TaxAuthorityTransmissionRepository.test.ts
       - name: Isolation and credential-safety gate
