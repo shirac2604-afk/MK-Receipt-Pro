@@ -5,6 +5,7 @@ on:
     paths:
       - 'apps/windows/packages/tax-open/src/TaxAuthorityApi2027*'
       - 'apps/windows/packages/tax-open/src/TaxAuthorityOAuth2027*'
+      - 'apps/windows/packages/tax-open/src/TaxAuthoritySandboxReadiness2027*'
       - 'apps/windows/vitest.tax-authority-2027.config.ts'
       - 'apps/windows/packages/tax-open/src/TaxAuthority2027PreparationService*'
       - 'apps/windows/packages/database/src/migrations/010_tax_authority_transmissions.ts'
