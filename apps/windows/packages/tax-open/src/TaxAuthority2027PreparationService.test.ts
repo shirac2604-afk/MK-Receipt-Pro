@@ -31,7 +31,7 @@ describe("TaxAuthority2027PreparationService",()=>{
   it("persists descriptors without credentials or signed URLs",async()=>{
     const persistence=new MemoryPersistence();
     const service=new TaxAuthority2027PreparationService({environment:"sandbox",api:api(),persistence,createId:(()=>{let n=0;return()=>`id-${++n}`})()});
-    const result=await service.prepare({caseNumber:39375365,startPeriod:"2027-01-01",endPeriod:"2027-01-31"});
+    const result=await service.prepare({caseNumber:"039375365",startPeriod:"2027-01-01",endPeriod:"2027-01-31"});
     expect(result.files).toHaveLength(2);
     expect(persistence.created.map(row=>row.fileKind)).toEqual(["INI","BKM"]);
     expect(JSON.stringify(persistence.created)).not.toContain("signUrl");
