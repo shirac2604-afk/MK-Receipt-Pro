@@ -18,13 +18,13 @@ describe("TaxAuthorityApi2027",()=>{
 
   it("validates the upload-link request",()=>{
     expect(validateTaxAuthorityUploadLinksRequest({
-      caseNumber:39375365,
+      caseNumber:"039375365",
       startPeriod:"2026-01-01",
       endPeriod:"2026-12-31",
     })).toEqual([]);
 
     expect(validateTaxAuthorityUploadLinksRequest({
-      caseNumber:123,
+      caseNumber:"123",
       startPeriod:"01/01/2026",
       endPeriod:"2025-12-31",
     }).length).toBeGreaterThan(0);
