@@ -8,12 +8,12 @@ function tokens(overrides:Partial<TaxAuthorityOAuthTokenSet>={}):TaxAuthorityOAu
 
 describe("TaxAuthorityOAuthBroker2027Client",()=>{
   it("exchanges code through authenticated server broker and stores tokens",async()=>{
-    let saved:TaxAuthorityOAuthTokenSet|null=null;
+    const saved:TaxAuthorityOAuthTokenSet[]=[];
     let authorization="";
     const client=new TaxAuthorityOAuthBroker2027Client({
       endpoint:"https://example.supabase.co/functions/v1/tax-authority-oauth-2027",
       supabaseAccessTokenProvider:{getAccessToken:async()=>"user-jwt"},
-      tokenStore:{load:async()=>null,save:async(v)=>{saved=v},clear:async()=>{}},
+      tokenStore:{load:async()=>null,save:async(v)=>{saved.push(v)},clear:async()=>{}},
       now:()=>new Date("2026-11-09T10:00:00.000Z"),
       transport:{fetch:async(_url,init)=>{
         authorization=String((init?.headers as Record<string,string>).Authorization??"");
@@ -22,16 +22,16 @@ describe("TaxAuthorityOAuthBroker2027Client",()=>{
     });
     expect((await client.exchangeAuthorizationCode("code")).accessToken).toBe("A");
     expect(authorization).toBe("Bearer user-jwt");
-    expect(saved?.refreshToken).toBe("R");
+    expect(saved[0]?.refreshToken).toBe("R");
   });
 
   it("rotates refresh token when current access token is expired",async()=>{
-    let saved:TaxAuthorityOAuthTokenSet|null=null;
+    const saved:TaxAuthorityOAuthTokenSet[]=[];
     let body="";
     const client=new TaxAuthorityOAuthBroker2027Client({
       endpoint:"https://example.supabase.co/functions/v1/tax-authority-oauth-2027",
       supabaseAccessTokenProvider:{getAccessToken:async()=>"user-jwt"},
-      tokenStore:{load:async()=>tokens({expiresIn:10}),save:async(v)=>{saved=v},clear:async()=>{}},
+      tokenStore:{load:async()=>tokens({expiresIn:10}),save:async(v)=>{saved.push(v)},clear:async()=>{}},
       now:()=>new Date("2026-11-09T10:01:00.000Z"),
       transport:{fetch:async(_url,init)=>{
         body=String(init?.body??"");
@@ -40,6 +40,6 @@ describe("TaxAuthorityOAuthBroker2027Client",()=>{
     });
     expect(await client.getAccessToken()).toBe("A2");
     expect(JSON.parse(body).refreshToken).toBe("old-refresh");
-    expect(saved?.refreshToken).toBe("R2");
+    expect(saved[0]?.refreshToken).toBe("R2");
   });
 });
