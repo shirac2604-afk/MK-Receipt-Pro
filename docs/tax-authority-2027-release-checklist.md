@@ -69,3 +69,14 @@ When the feature is eventually connected to the application, expose only busines
 - שגיאה — Error
 
 Do not expose OAuth tokens, signed URLs, raw authorization headers or internal credentials in the renderer.
+
+
+## אימות עדכני — 9.11.2026
+
+- המפרט הפומבי שנמצא באתר רשות המסים לשידור קובץ במבנה אחיד הוא מהדורה 1.0 / 3.2026.
+- דף המידע של רשות המסים מציג גם פרסום מיום 15.7.2026 בנושא "עדכון הוראות המנהל לגבי תחולת שידור קובץ במבנה אחיד באמצעות תוכנה"; יש לאמת את נוסחו המלא לפני פתיחת Production.
+- מסמך Tax Authority Open API מתאר OAuth2 Authorization Code: הזדהות בדפדפן, קבלת authorization code, החלפה ל-access token + refresh token, ולאחר מכן refresh token rotation.
+- עבור תוכנה מקומית ניתן לרשום redirect URI מסוג http://localhost בפורטל המפתחים.
+- client_secret אינו נשמר או מוטמע באפליקציית Windows. החלפת authorization code ורענון refresh token מבוצעים באמצעות server-side broker.
+- refresh token נשמר במחשב רק בתוך Electron safeStorage, מחוץ למסד העסקי; כל refresh token חדש מחליף את הקודם.
+- סביבת Production נשארת חסומה עד לאימות endpoint, scope, subscription והרשאות עדכניות מול רשות המסים.
