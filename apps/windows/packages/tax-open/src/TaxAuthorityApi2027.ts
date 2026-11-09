@@ -3,7 +3,7 @@ export type TaxAuthorityApiEnvironment="sandbox"|"production";
 export type TaxAuthorityFileStatus="Uploaded"|"Approved"|"Rejected"|"";
 
 export interface TaxAuthorityUploadLinksRequest {
-  caseNumber:number;
+  caseNumber:string;
   startPeriod:string;
   endPeriod:string;
   representorCompanyId?:number;
@@ -77,7 +77,7 @@ const DATE_PATTERN=/^\d{4}-\d{2}-\d{2}$/;
 
 export function validateTaxAuthorityUploadLinksRequest(input:TaxAuthorityUploadLinksRequest):string[] {
   const issues:string[]=[];
-  if(!/^\d{9}$/.test(String(input.caseNumber)))issues.push("caseNumber must contain exactly 9 digits");
+  if(!/^\d{9}$/.test(input.caseNumber))issues.push("caseNumber must contain exactly 9 digits");
   if(!DATE_PATTERN.test(input.startPeriod))issues.push("startPeriod must use YYYY-MM-DD");
   if(!DATE_PATTERN.test(input.endPeriod))issues.push("endPeriod must use YYYY-MM-DD");
   if(DATE_PATTERN.test(input.startPeriod)&&DATE_PATTERN.test(input.endPeriod)&&input.startPeriod>input.endPeriod)issues.push("startPeriod must not be later than endPeriod");
