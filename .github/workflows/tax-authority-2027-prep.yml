@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'apps/windows/packages/tax-open/src/TaxAuthorityApi2027*'
+      - 'apps/windows/packages/tax-open/src/TaxAuthorityOAuth2027*'
       - 'apps/windows/packages/tax-open/src/TaxAuthority2027PreparationService*'
       - 'apps/windows/packages/database/src/migrations/010_tax_authority_transmissions.ts'
       - 'apps/windows/packages/database/src/migrations/index.ts'
@@ -39,6 +40,7 @@ jobs:
           npx vitest run
           packages/tax-open/src/TaxAuthorityApi2027.test.ts
           packages/tax-open/src/TaxAuthorityApi2027Client.test.ts
+          packages/tax-open/src/TaxAuthorityOAuth2027.test.ts
           packages/tax-open/src/TaxAuthority2027PreparationService.test.ts
           packages/database/src/repositories/TaxAuthorityTransmissionRepository.test.ts
       - name: Isolation and credential-safety gate
