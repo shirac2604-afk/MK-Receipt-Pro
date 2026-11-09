@@ -86,7 +86,7 @@ export class TaxAuthority2027PreparationService {
       this.options.persistence.create({
         id:this.createId(),
         environment:this.options.environment,
-        caseNumber:String(input.caseNumber).padStart(9,"0"),
+        caseNumber:input.caseNumber,
         startPeriod:input.startPeriod,
         endPeriod:input.endPeriod,
         transmissionUniqueId:response.data.uniqueId,
