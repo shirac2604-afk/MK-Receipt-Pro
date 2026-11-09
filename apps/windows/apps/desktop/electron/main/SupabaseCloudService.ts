@@ -516,12 +516,13 @@ export class SupabaseCloudService {
   async getRangeReport(filters:{fromDate?:string;toDate?:string}):Promise<DateRangeReport>{
     await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_REPORTS");
-    let query=this.client.from("receipts").select("payment_date,amount_agorot,status").eq("business_id",businessId);
+    let query=this.client.from("receipts").select("payment_date,amount_agorot,status",{count:"exact"}).eq("business_id",businessId);
     if(filters.fromDate)query=query.gte("payment_date",filters.fromDate);
     if(filters.toDate)query=query.lte("payment_date",filters.toDate);
-    const {data,error}=await query.limit(10000);
+    const {data,error,count}=await query.limit(10000);
     if(error)throw new Error(`CLOUD_REPORT_RANGE_FAILED:${error.message}`);
-    const rows=(data??[]) as Array<{payment_date:string;amount_agorot:number;status:string}>;
+    if(!data||count===null||count!==data.length)throw new Error("CLOUD_REPORT_RANGE_INCOMPLETE");
+    const rows=data as Array<{payment_date:string;amount_agorot:number;status:string}>;
     const active=rows.filter(row=>row.status==="active"),cancelled=rows.filter(row=>row.status==="cancelled");
     const monthMap=new Map<string,MonthlyReportRow>();
     for(const row of rows){

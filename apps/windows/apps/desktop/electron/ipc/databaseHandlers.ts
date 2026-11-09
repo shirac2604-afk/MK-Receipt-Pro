@@ -142,6 +142,7 @@ function errorResult(error: unknown): ApiResult<never> {
   const code = error instanceof Error ? error.message : "UNKNOWN_ERROR";
   if (code === "UNTRUSTED_IPC_SENDER") return apiFailure("UNTRUSTED_IPC_SENDER", "הבקשה נחסמה מטעמי אבטחה.", false);
   if (code === "INVALID_INPUT" || code === "UNAPPROVED_FILE_PATH") return apiFailure("INVALID_INPUT", "אחד הפרטים או הקבצים אינו תקין. בחר את הקובץ מחדש דרך התוכנה ונסה שוב.");
+  if (code === "CLOUD_REPORT_RANGE_INCOMPLETE") return apiFailure("DATABASE_OPERATION_FAILED", "לא נטענו כל הקבלות לתקופה. לא ניתן להציג סכום חלקי.");
   if (code.startsWith("CLOUD_REPORT_EXPORT") || code.startsWith("REPORT_DOCUMENT") || code.startsWith("REPORT_INVALID")) return apiFailure("DATABASE_OPERATION_FAILED", "ייצוא הדוח נעצר כי לא ניתן היה לטעון את כל הנתונים או המסמכים מהענן. לא הופק דוח חדש. בדקו את החיבור ונסו שוב.");
   if (code === "CLOUD_CONNECTION_REQUIRED_FOR_REPORTS") return apiFailure("DATABASE_OPERATION_FAILED", "יש להתחבר לחשבון הענן לפני ייצוא הדוח.");
   if (code === "OPERATION_TIMEOUT") return apiFailure("OPERATION_TIMEOUT", "הפעולה ארכה זמן רב מדי והופסקה בבטחה.");
