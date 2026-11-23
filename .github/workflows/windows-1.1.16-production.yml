@@ -32,8 +32,43 @@ jobs:
         run: npm run typecheck
       - name: Verify report exports
         run: npx vitest run tests/cloudReportExport.test.ts
+      - name: Verify receipt and PDF flows
+        run: |
+          npm run test:receipt-core-smoke
+          npm run test:pdf-smoke
       - name: Build production upgrade
         run: npm run release:production:win
+      - name: Check installation over 1.1.15 with isolated data
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          git clone --depth 1 --branch main . previous-version
+          Copy-Item previous-version/apps/windows/apps/desktop/electron/main/SupabaseCloudConfig.production.ts previous-version/apps/windows/apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
+          Push-Location previous-version/apps/windows
+          try {
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run release:production:win
+          } finally {
+            Pop-Location
+          }
+          $previous = Join-Path $env:GITHUB_WORKSPACE "previous-version/apps/windows/release/Maptehot-LaHatzlaha-1.1.15-Setup.exe"
+          $current = Join-Path $env:GITHUB_WORKSPACE "apps/windows/release/Maptehot-LaHatzlaha-1.1.16-Setup.exe"
+          if (!(Test-Path -LiteralPath $previous) -or !(Test-Path -LiteralPath $current)) { throw "Installer missing" }
+          $installDir = Join-Path $env:RUNNER_TEMP "MK-Receipt-Upgrade-Test"
+          $userData = Join-Path $env:APPDATA "MK-Receipt-Pro-Student"
+          $sentinel = Join-Path $userData "upgrade-sentinel.txt"
+          New-Item -ItemType Directory -Path $userData -Force | Out-Null
+          Set-Content -LiteralPath $sentinel -Value "test-data-preserved" -Encoding ascii
+          foreach ($installer in @($previous, $current)) {
+            $process = Start-Process -FilePath $installer -ArgumentList @("/S", "/D=$installDir") -PassThru -Wait
+            if ($process.ExitCode -ne 0) { throw "Installer failed: $installer exit $($process.ExitCode)" }
+            if (!(Test-Path -LiteralPath $sentinel) -or (Get-Content -LiteralPath $sentinel -Raw).Trim() -ne "test-data-preserved") {
+              throw "Isolated user data was changed by installer"
+            }
+          }
+          $program = Get-ChildItem -LiteralPath $installDir -Filter "*.exe" -File | Where-Object Name -ne "Uninstall MK Receipt Pro.exe" | Select-Object -First 1
+          if (!$program) { throw "Upgraded application executable missing" }
+          Write-Output "Both installers succeeded; isolated user data preserved; upgraded executable exists"
       - name: Write verification files
         shell: pwsh
         run: |
