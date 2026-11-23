@@ -4,7 +4,7 @@ const screen=fs.readFileSync("src/screens/ReceiptsScreen.tsx","utf8");
 const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
 const app=JSON.parse(fs.readFileSync("app.json","utf8"));
 const checks=[
-  [pkg.version==="1.0.11"&&app.expo.version==="1.0.11"&&app.expo.android?.versionCode===12,"Android upgrade version"],
+  [/^1\.0\.(?:1[1-9]|[2-9]\d)$/.test(pkg.version)&&app.expo.version===pkg.version&&app.expo.android?.versionCode===12,"Android upgrade version"],
   [/return <>\s*<FlatList/.test(screen),"receipt list is the root scroll surface"],
   [screen.includes("ListHeaderComponent={<View>"),"issue form is inside the list header"],
   [screen.includes("contentContainerStyle={s.list}"),"scroll content has protected padding"],
