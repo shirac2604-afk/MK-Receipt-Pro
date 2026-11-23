@@ -38,11 +38,14 @@ jobs:
           npm run test:pdf-smoke
       - name: Build production upgrade
         run: npm run release:production:win
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 16808b09ae33353713ef132403ec14af04ea3638
+          path: previous-version
       - name: Check installation over 1.1.15 with isolated data
         shell: pwsh
         working-directory: ${{ github.workspace }}
         run: |
-          git clone --depth 1 --branch main . previous-version
           Copy-Item previous-version/apps/windows/apps/desktop/electron/main/SupabaseCloudConfig.production.ts previous-version/apps/windows/apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
           Push-Location previous-version/apps/windows
           try {
