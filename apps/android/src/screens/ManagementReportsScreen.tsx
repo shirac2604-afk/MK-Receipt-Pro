@@ -1,5 +1,7 @@
 import React,{useCallback,useEffect,useMemo,useState} from "react";
 import {Alert,Pressable,RefreshControl,ScrollView,StyleSheet,Text,View} from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {useNavigation} from "@react-navigation/native";
 import {useBusiness} from "../context/BusinessContext";
@@ -10,13 +12,67 @@ import {theme} from "../theme/theme";
 const monthNames=["ינו׳","פבר׳","מרץ","אפר׳","מאי","יוני","יולי","אוג׳","ספט׳","אוק׳","נוב׳","דצמ׳"];
 const money=(agorot:number)=>new Intl.NumberFormat("he-IL",{style:"currency",currency:"ILS",minimumFractionDigits:0,maximumFractionDigits:2}).format(agorot/100);
 
+
+function buildTaxReminder(now: Date): string {
+ const parts = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit",
+ }).formatToParts(now);
+ let year = Number(parts.find(part => part.type === "year")?.value);
+ let month = Number(parts.find(part => part.type === "month")?.value);
+ const day = Number(parts.find(part => part.type === "day")?.value);
+ if (month % 2 === 0) month += 1;
+ else if (day >= 10) month += 2;
+ if (month > 12) { year += 1; month = 1; }
+ const start = `${year}${String(month).padStart(2, "0")}10`;
+ const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+ return [
+  "BEGIN:VCALENDAR",
+  "VERSION:2.0",
+  "PRODID:-//MK Receipt Pro//Tax Reminders//EN",
+  "BEGIN:VEVENT",
+  "UID:tax-advance-bimonthly@mk-receipt-pro",
+  `DTSTAMP:${stamp}`,
+  `DTSTART;VALUE=DATE:${start}`,
+  "RRULE:FREQ=MONTHLY;INTERVAL=2",
+  "SUMMARY:בדיקת מקדמות מס הכנסה",
+  "DESCRIPTION:בדקי את התקופה באתר רשות המסים.",
+  "BEGIN:VALARM",
+  "ACTION:DISPLAY",
+  "TRIGGER:-P1D",
+  "DESCRIPTION:בדיקת מקדמות מס הכנסה",
+  "END:VALARM",
+  "END:VEVENT",
+  "END:VCALENDAR",
+  "",
+ ].join("\r\n");
+}
+
 export default function ManagementReportsScreen(){
  const navigation=useNavigation<any>(),{businessId}=useBusiness();
  const [year,setYear]=useState(new Date().getFullYear()),[report,setReport]=useState<ManagementReport|null>(null),[busy,setBusy]=useState(false),[exporting,setExporting]=useState(false);
+ const [sharingReminder, setSharingReminder] = useState(false);
  const years=useMemo(()=>Array.from({length:6},(_,index)=>new Date().getFullYear()-index),[]);
  const load=useCallback(async()=>{if(!businessId)return;setBusy(true);try{setReport(await getManagementReport(businessId,year));}catch(error){Alert.alert("טעינת הדוחות נכשלה",formatUnknownError(error));}finally{setBusy(false);}},[businessId,year]);
  useEffect(()=>{void load();},[load]);
  async function exportCsv(){if(!businessId)return;setExporting(true);try{const saved=await createAndShareYearlyReport(businessId,year);Alert.alert("דוח מוכן",`הדוח לשנת ${saved.year} כולל ${saved.activeReceiptCount} קבלות פעילות ו־${saved.expenseCount} הוצאות.`);}catch(error){Alert.alert("יצירת הדוח נכשלה",formatUnknownError(error));}finally{setExporting(false);}}
+ async function shareTaxReminder() {
+  setSharingReminder(true);
+  try {
+   const directory = FileSystem.cacheDirectory;
+   if (!directory || !await Sharing.isAvailableAsync()) {
+    throw new Error("שיתוף קובץ ליומן אינו זמין במכשיר.");
+   }
+   const uri = `${directory}MK-Tax-Advance-Reminder.ics`;
+   await FileSystem.writeAsStringAsync(uri, buildTaxReminder(new Date()), {
+    encoding: FileSystem.EncodingType.UTF8,
+   });
+   await Sharing.shareAsync(uri, {mimeType: "text/calendar", dialogTitle: "שיתוף תזכורת מקדמות ליומן"});
+  } catch (error) {
+   Alert.alert("ייצוא התזכורת נכשל", formatUnknownError(error));
+  } finally {
+   setSharingReminder(false);
+  }
+ }
  const max=Math.max(1,...(report?.months.map(item=>Math.max(item.incomeAgorot,item.expensesAgorot))??[1]));
  return <ScrollView style={s.root} contentContainerStyle={s.screen} refreshControl={<RefreshControl refreshing={busy} onRefresh={()=>void load()}/>}> 
   <View style={s.header}><Pressable hitSlop={10} onPress={()=>navigation.goBack()}><Ionicons name="arrow-forward" size={24} color="#fff"/></Pressable><View style={{flex:1}}><Text style={s.eyebrow}>ניהול העסק</Text><Text style={s.title}>דוחות</Text><Text style={s.subtitle}>תמונה כספית המבוססת על נתוני הענן המשותפים עם Windows.</Text></View></View>
@@ -29,8 +85,16 @@ export default function ManagementReportsScreen(){
    <View style={s.card}><View style={s.cardHeading}><Ionicons name="wallet-outline" size={21} color={theme.primary}/><Text style={s.cardTitle}>הוצאות לפי קטגוריה</Text></View>{report.expensesByCategory.length?<View style={s.categoryList}>{report.expensesByCategory.slice(0,5).map(item=><View style={s.categoryRow} key={item.category}><Text style={s.categoryAmount}>{money(item.amountAgorot)}</Text><Text style={s.categoryName}>{item.category}</Text></View>)}</View>:<Text style={s.note}>לא נרשמו הוצאות בשנה זו.</Text>}</View>
    <View style={[s.card,report.missingExpenseAttachmentCount?s.attentionCard:s.okCard]}><View style={s.cardHeading}><Ionicons name={report.missingExpenseAttachmentCount?"alert-circle-outline":"checkmark-circle-outline"} size={22} color={report.missingExpenseAttachmentCount?theme.danger:theme.primary}/><Text style={s.cardTitle}>בדיקת אסמכתאות</Text></View><Text style={s.note}>{report.missingExpenseAttachmentCount?`${report.missingExpenseAttachmentCount} הוצאות רשומות ללא אסמכתה מצורפת. אפשר להשלים אותן במסך ההוצאות.`:"לכל ההוצאות שנרשמו השנה מצורפת אסמכתה."}</Text></View>
    <View style={s.card}><Text style={s.cardTitle}>נתוני השנה</Text><View style={s.dataRow}><Text style={s.dataValue}>{report.cancelledReceiptCount}</Text><Text style={s.dataLabel}>קבלות מבוטלות</Text></View><View style={s.dataRow}><Text style={s.dataValue}>{money(report.netAgorot)}</Text><Text style={s.dataLabel}>הפרש הכנסות פחות הוצאות</Text></View></View>
-   <Pressable style={[s.exportButton,exporting&&s.disabled]} disabled={exporting||busy} onPress={()=>void exportCsv()}><Ionicons name="share-outline" size={20} color="#fff"/><Text style={s.exportText}>{exporting?"מכינה דוח…":`ייצוא דוח ${year} ל־CSV`}</Text></Pressable>
+   <Pressable style={[s.exportButton,exporting&&s.disabled]} disabled={exporting||busy||sharingReminder} onPress={()=>void exportCsv()}><Ionicons name="share-outline" size={20} color="#fff"/><Text style={s.exportText}>{exporting?"מכינה דוח…":`ייצוא דוח ${year} ל־CSV`}</Text></Pressable>
   </>}
+  <View style={s.card}>
+   <Text style={s.cardTitle}>תזכורת למקדמות מס הכנסה</Text>
+   <Text style={s.note}>ייבאי את הקובץ ליומן כדי להוסיף תזכורת אחת לחודשיים. התאריך מיועד לתזכורת בלבד.</Text>
+   <Pressable style={[s.exportButton,sharingReminder&&s.disabled]} disabled={sharingReminder||exporting} onPress={()=>void shareTaxReminder()}>
+    <Ionicons name="calendar-outline" size={20} color="#fff"/>
+    <Text style={s.exportText}>{sharingReminder?"מכינה תזכורת…":"ייצוא תזכורת ליומן"}</Text>
+   </Pressable>
+  </View>
  </ScrollView>;
 }
 
