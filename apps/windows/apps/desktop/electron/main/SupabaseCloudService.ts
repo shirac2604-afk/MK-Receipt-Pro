@@ -1,3 +1,5 @@
+import { ReportService } from "../../../../packages/application/src/reports/ReportService";
+import type { ReportReceiptRow, ReportExpenseRow, ReportFilters } from "../../../../packages/database/src/types";
 import { safeStorage } from "electron";
 import fs from "node:fs";
 import path from "node:path";
@@ -514,12 +516,13 @@ export class SupabaseCloudService {
   async getRangeReport(filters:{fromDate?:string;toDate?:string}):Promise<DateRangeReport>{
     await this.assertCurrentDeviceActive();
     const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_REPORTS");
-    let query=this.client.from("receipts").select("payment_date,amount_agorot,status").eq("business_id",businessId);
+    let query=this.client.from("receipts").select("payment_date,amount_agorot,status",{count:"exact"}).eq("business_id",businessId);
     if(filters.fromDate)query=query.gte("payment_date",filters.fromDate);
     if(filters.toDate)query=query.lte("payment_date",filters.toDate);
-    const {data,error}=await query.limit(10000);
+    const {data,error,count}=await query.limit(10000);
     if(error)throw new Error(`CLOUD_REPORT_RANGE_FAILED:${error.message}`);
-    const rows=(data??[]) as Array<{payment_date:string;amount_agorot:number;status:string}>;
+    if(!data||count===null||count!==data.length)throw new Error("CLOUD_REPORT_RANGE_INCOMPLETE");
+    const rows=data as Array<{payment_date:string;amount_agorot:number;status:string}>;
     const active=rows.filter(row=>row.status==="active"),cancelled=rows.filter(row=>row.status==="cancelled");
     const monthMap=new Map<string,MonthlyReportRow>();
     for(const row of rows){
@@ -530,6 +533,56 @@ export class SupabaseCloudService {
     }
     const income=active.reduce((sum,row)=>sum+Number(row.amount_agorot??0),0);
     return {fromDate:filters.fromDate??null,toDate:filters.toDate??null,incomeAgorot:income,activeReceiptCount:active.length,cancelledReceiptCount:cancelled.length,averageReceiptAgorot:active.length?Math.round(income/active.length):0,months:[...monthMap.values()].sort((a,b)=>a.month.localeCompare(b.month))};
+  }
+
+  async exportCloudReport(filters:ReportFilters,target:string,year?:number):Promise<string>{
+    await this.assertCurrentDeviceActive();
+    const businessId=this.requireBusinessId("CLOUD_CONNECTION_REQUIRED_FOR_REPORTS");
+    const read=async(table:string,dateColumn:string)=>{
+      const rows:any[]=[];
+      for(let offset=0;;){
+        let query=this.client.from(table).select("*").eq("business_id",businessId).order("id").range(offset,offset+499);
+        if(filters.fromDate)query=query.gte(dateColumn,filters.fromDate);
+        if(filters.toDate)query=query.lte(dateColumn,filters.toDate);
+        const {data,error}=await query;
+        if(error)throw new Error(`CLOUD_REPORT_EXPORT_FAILED:${error.message}`);
+        if(!data)throw new Error("CLOUD_REPORT_EXPORT_EMPTY_RESPONSE");
+        if(!data.length)break;
+        rows.push(...data);offset+=data.length;
+      }
+      return rows;
+    };
+    const receiptRows=await read("receipts","payment_date");
+    const expenseRows=year===undefined?[]:await read("expenses","expense_date");
+    const temp=fs.mkdtempSync(path.join(this.userDataPath,"report-export-"));
+    try{
+      const download=async(bucket:string,key:string|null|undefined,extension:string):Promise<string|null>=>{
+        if(!key)return null;
+        if(!key.startsWith(`${businessId}/`))throw new Error("REPORT_DOCUMENT_BUSINESS_MISMATCH");
+        const {data,error}=await this.client.storage.from(bucket).download(key);
+        if(error||!data)throw new Error("REPORT_DOCUMENT_DOWNLOAD_FAILED");
+        const file=path.join(temp,crypto.randomUUID()+extension);
+        fs.writeFileSync(file,Buffer.from(await data.arrayBuffer()));return file;
+      };
+      const receipts:ReportReceiptRow[]=[];
+      for(const row of receiptRows){
+        if(!["active","cancelled"].includes(row.status)||!Number.isSafeInteger(Number(row.amount_agorot)))throw new Error("REPORT_INVALID_RECEIPT");
+        receipts.push({receiptNumber:Number(row.receipt_number),paymentDate:row.payment_date,clientName:row.client_name,description:row.description,amountAgorot:Number(row.amount_agorot),paymentMethod:row.payment_method,referenceNumber:row.reference_number,status:row.status,originalPdfPath:year===undefined?null:await download("receipt-documents",row.pdf_storage_key,".pdf"),cancellationPdfPath:year===undefined?null:await download("receipt-documents",row.cancellation_pdf_storage_key,".pdf")});
+      }
+      const expenses:ReportExpenseRow[]=[];
+      for(const row of expenseRows){
+        if(!Number.isSafeInteger(Number(row.amount_agorot)))throw new Error("REPORT_INVALID_EXPENSE");
+        const ext=path.extname(row.attachment_original_name??"").toLowerCase();
+        expenses.push({id:row.id,expenseDate:row.expense_date,supplierName:row.supplier_name,category:row.category,amountAgorot:Number(row.amount_agorot),paymentMethod:row.payment_method,notes:row.notes,attachmentOriginalName:row.attachment_original_name,attachmentPath:await download("expense-attachments",row.attachment_storage_key,[".pdf",".png",".jpg",".jpeg",".webp"].includes(ext)?ext:".bin")});
+      }
+      const months:MonthlyReportRow[]=Array.from({length:12},(_,i)=>({month:`${year}-${String(i+1).padStart(2,"0")}`,incomeAgorot:0,activeReceiptCount:0,cancelledReceiptCount:0}));
+      for(const row of receipts){const month=months.find(m=>m.month===row.paymentDate.slice(0,7));if(month){if(row.status==="active"){month.incomeAgorot+=row.amountAgorot;month.activeReceiptCount++;}else month.cancelledReceiptCount++;}}
+      const active=receipts.filter(r=>r.status==="active");
+      const incomeAgorot=active.reduce((sum,r)=>sum+r.amountAgorot,0);
+      const annual:AnnualReport={year:year??0,fromDate:filters.fromDate??null,toDate:filters.toDate??null,incomeAgorot,activeReceiptCount:active.length,cancelledReceiptCount:receipts.length-active.length,averageReceiptAgorot:active.length?Math.round(incomeAgorot/active.length):0,months};
+      const service=new ReportService({getReceiptsForExport:()=>receipts,getExpensesForExport:()=>expenses,getAnnualReport:()=>annual,getRangeReport:()=>annual});
+      return year===undefined?service.exportCsv(filters,target):service.exportAccountantPackage(year,target);
+    }finally{fs.rmSync(temp,{recursive:true,force:true});}
   }
 
   async getAnnualReport(year:number):Promise<AnnualReport>{
