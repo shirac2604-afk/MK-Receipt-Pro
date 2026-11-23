@@ -8,18 +8,37 @@ export type ManagementReport={year:number;incomeAgorot:number;expensesAgorot:num
 const money=(agorot:number)=>String((agorot/100).toFixed(2));
 const cell=(value:unknown)=>`"${String(value??"").replaceAll('"','""')}"`;
 
+
+// Retrieve every page so financial totals do not stop at the cloud row limit.
+async function allReportRows(
+ queryPage: (start: number, end: number) => PromiseLike<{data: any[] | null; error: {message: string} | null}>,
+ errorCode: string,
+): Promise<any[]> {
+ const rows: any[] = [];
+ const pageSize = 500;
+ for (let start = 0; ; start += pageSize) {
+  const result = await queryPage(start, start + pageSize - 1);
+  if (result.error) throw new Error(`${errorCode}:${result.error.message}`);
+  const page = result.data ?? [];
+  rows.push(...page);
+  if (page.length < pageSize) return rows;
+ }
+}
+
 export async function getManagementReport(businessId:string,year=new Date().getFullYear(),period?:number):Promise<ManagementReport>{
  if(!businessId)throw new Error("REPORT_BUSINESS_REQUIRED");
  const {from,to}=period===undefined?{from:`${year}-01-01`,to:`${year}-12-31`}:getTaxAdvanceDateRange(year,period);
- const [receiptsResult,expensesResult]=await Promise.all([
-  supabase.from("receipts").select("payment_date,amount_agorot,status").eq("business_id",businessId).gte("payment_date",from).lte("payment_date",to),
-  supabase.from("expenses").select("expense_date,amount_agorot,category,attachment_storage_key").eq("business_id",businessId).gte("expense_date",from).lte("expense_date",to)
+ const [receipts, expenses] = await Promise.all([
+  allReportRows((start, end) => supabase.from("receipts")
+   .select("id,payment_date,amount_agorot,status").eq("business_id",businessId)
+   .gte("payment_date",from).lte("payment_date",to).order("id").range(start,end), "REPORT_RECEIPTS_FAILED"),
+  allReportRows((start, end) => supabase.from("expenses")
+   .select("id,expense_date,amount_agorot,category,attachment_storage_key").eq("business_id",businessId)
+   .gte("expense_date",from).lte("expense_date",to).order("id").range(start,end), "REPORT_EXPENSES_FAILED"),
  ]);
- if(receiptsResult.error)throw new Error(`REPORT_RECEIPTS_FAILED:${receiptsResult.error.message}`);
- if(expensesResult.error)throw new Error(`REPORT_EXPENSES_FAILED:${expensesResult.error.message}`);
  const months=Array.from({length:12},(_,index)=>({month:`${year}-${String(index+1).padStart(2,"0")}`,incomeAgorot:0,expensesAgorot:0,activeReceiptCount:0}));
  const monthMap=new Map(months.map(item=>[item.month,item])),categories=new Map<string,number>();
- const receipts=receiptsResult.data??[],expenses=expensesResult.data??[];
+
  const active=receipts.filter((row:any)=>row.status!=="cancelled");
  for(const receipt of active){const item=monthMap.get(receipt.payment_date.slice(0,7));if(item){item.incomeAgorot+=Number(receipt.amount_agorot||0);item.activeReceiptCount+=1;}}
  for(const expense of expenses){const amount=Number(expense.amount_agorot||0),item=monthMap.get(expense.expense_date.slice(0,7));if(item)item.expensesAgorot+=amount;const category=String(expense.category||"אחר");categories.set(category,(categories.get(category)??0)+amount);}
@@ -31,13 +50,16 @@ export async function getManagementReport(businessId:string,year=new Date().getF
 export async function createAndShareYearlyReport(businessId:string,year=new Date().getFullYear(),period?:number):Promise<MobileBusinessReport>{
  if(!businessId)throw new Error("REPORT_BUSINESS_REQUIRED");
  const {from,to}=period===undefined?{from:`${year}-01-01`,to:`${year}-12-31`}:getTaxAdvanceDateRange(year,period);
- const [receiptsResult,expensesResult]=await Promise.all([
-  supabase.from("receipts").select("receipt_number,payment_date,client_name,description,amount_agorot,payment_method,status").eq("business_id",businessId).gte("payment_date",from).lte("payment_date",to).order("payment_date",{ascending:true}),
-  supabase.from("expenses").select("expense_date,supplier_name,category,amount_agorot,payment_method,notes").eq("business_id",businessId).gte("expense_date",from).lte("expense_date",to).order("expense_date",{ascending:true})
+ const [receipts, expenses] = await Promise.all([
+  allReportRows((start, end) => supabase.from("receipts")
+   .select("id,receipt_number,payment_date,client_name,description,amount_agorot,payment_method,status")
+   .eq("business_id",businessId).gte("payment_date",from).lte("payment_date",to)
+   .order("payment_date").order("id").range(start,end), "REPORT_RECEIPTS_FAILED"),
+  allReportRows((start, end) => supabase.from("expenses")
+   .select("id,expense_date,supplier_name,category,amount_agorot,payment_method,notes")
+   .eq("business_id",businessId).gte("expense_date",from).lte("expense_date",to)
+   .order("expense_date").order("id").range(start,end), "REPORT_EXPENSES_FAILED"),
  ]);
- if(receiptsResult.error)throw new Error(`REPORT_RECEIPTS_FAILED:${receiptsResult.error.message}`);
- if(expensesResult.error)throw new Error(`REPORT_EXPENSES_FAILED:${expensesResult.error.message}`);
- const receipts=receiptsResult.data??[],expenses=expensesResult.data??[];
  const active=receipts.filter((row:any)=>row.status!=="cancelled");
  const incomeAgorot=active.reduce((sum:number,row:any)=>sum+Number(row.amount_agorot||0),0);
  const expensesAgorot=expenses.reduce((sum:number,row:any)=>sum+Number(row.amount_agorot||0),0);
