@@ -8,9 +8,9 @@ export type ManagementReport={year:number;incomeAgorot:number;expensesAgorot:num
 const money=(agorot:number)=>String((agorot/100).toFixed(2));
 const cell=(value:unknown)=>`"${String(value??"").replaceAll('"','""')}"`;
 
-export async function getManagementReport(businessId:string,year=new Date().getFullYear()):Promise<ManagementReport>{
+export async function getManagementReport(businessId:string,year=new Date().getFullYear(),period?:number):Promise<ManagementReport>{
  if(!businessId)throw new Error("REPORT_BUSINESS_REQUIRED");
- const from=`${year}-01-01`,to=`${year}-12-31`;
+ const {from,to}=period===undefined?{from:`${year}-01-01`,to:`${year}-12-31`}:getTaxAdvanceDateRange(year,period);
  const [receiptsResult,expensesResult]=await Promise.all([
   supabase.from("receipts").select("payment_date,amount_agorot,status").eq("business_id",businessId).gte("payment_date",from).lte("payment_date",to),
   supabase.from("expenses").select("expense_date,amount_agorot,category,attachment_storage_key").eq("business_id",businessId).gte("expense_date",from).lte("expense_date",to)
@@ -28,9 +28,9 @@ export async function getManagementReport(businessId:string,year=new Date().getF
  return {year,incomeAgorot,expensesAgorot,netAgorot:incomeAgorot-expensesAgorot,activeReceiptCount:active.length,cancelledReceiptCount:receipts.length-active.length,expenseCount:expenses.length,missingExpenseAttachmentCount:expenses.filter((row:any)=>!row.attachment_storage_key).length,months,expensesByCategory:Array.from(categories,([category,amountAgorot])=>({category,amountAgorot})).sort((a,b)=>b.amountAgorot-a.amountAgorot)};
 }
 
-export async function createAndShareYearlyReport(businessId:string,year=new Date().getFullYear()):Promise<MobileBusinessReport>{
+export async function createAndShareYearlyReport(businessId:string,year=new Date().getFullYear(),period?:number):Promise<MobileBusinessReport>{
  if(!businessId)throw new Error("REPORT_BUSINESS_REQUIRED");
- const from=`${year}-01-01`,to=`${year}-12-31`;
+ const {from,to}=period===undefined?{from:`${year}-01-01`,to:`${year}-12-31`}:getTaxAdvanceDateRange(year,period);
  const [receiptsResult,expensesResult]=await Promise.all([
   supabase.from("receipts").select("receipt_number,payment_date,client_name,description,amount_agorot,payment_method,status").eq("business_id",businessId).gte("payment_date",from).lte("payment_date",to).order("payment_date",{ascending:true}),
   supabase.from("expenses").select("expense_date,supplier_name,category,amount_agorot,payment_method,notes").eq("business_id",businessId).gte("expense_date",from).lte("expense_date",to).order("expense_date",{ascending:true})
@@ -47,10 +47,23 @@ export async function createAndShareYearlyReport(businessId:string,year=new Date
   ...expenses.map((row:any)=>["הוצאה",row.expense_date,"",row.supplier_name,row.category,row.payment_method,money(Number(row.amount_agorot||0)),row.notes??""])
  ];
  const directory=FileSystem.documentDirectory;if(!directory)throw new Error("REPORT_STORAGE_UNAVAILABLE");
- const csvUri=`${directory}MK-Receipt-Pro-Report-${year}.csv`;
+ const reportName=period===undefined?String(year):`${from}_${to}`;
+ const csvUri=`${directory}MK-Receipt-Pro-Report-${reportName}.csv`;
  await FileSystem.writeAsStringAsync(csvUri,`\ufeff${rows.map(row=>row.map(cell).join(",")).join("\n")}`,{encoding:FileSystem.EncodingType.UTF8});
  const info=await FileSystem.getInfoAsync(csvUri);if(!info.exists||!info.size)throw new Error("REPORT_WRITE_FAILED");
  if(!await Sharing.isAvailableAsync())throw new Error("REPORT_SHARING_UNAVAILABLE");
- await Sharing.shareAsync(csvUri,{mimeType:"text/csv",dialogTitle:`דוח MK Receipt Pro לשנת ${year}`,UTI:"public.comma-separated-values-text"});
+ await Sharing.shareAsync(csvUri,{mimeType:"text/csv",dialogTitle:`דוח MK Receipt Pro ${reportName}`,UTI:"public.comma-separated-values-text"});
  return{year,incomeAgorot,expensesAgorot,netAgorot:incomeAgorot-expensesAgorot,activeReceiptCount:active.length,cancelledReceiptCount:receipts.length-active.length,expenseCount:expenses.length,csvUri};
+}
+
+export function getTaxAdvanceDateRange(year: number, period: number) {
+ if (!Number.isInteger(year) || year < 1000 || year > 9999 || !Number.isInteger(period) || period < 0 || period > 5) {
+  throw new Error("REPORT_INVALID_PERIOD");
+ }
+ const endMonth = (period + 1) * 2;
+ const month = (value: number) => String(value).padStart(2, "0");
+ return {
+  from: `${year}-${month(endMonth - 1)}-01`,
+  to: `${year}-${month(endMonth)}-${new Date(Date.UTC(year, endMonth, 0)).getUTCDate()}`,
+ };
 }
