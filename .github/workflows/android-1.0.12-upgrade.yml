@@ -1,0 +1,89 @@
+name: Android 1.0.12 upgrade APK
+
+on:
+  push:
+    branches: [release/android-1.0.12]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-1.0.12-upgrade
+  cancel-in-progress: false
+
+jobs:
+  verify-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    defaults:
+      run:
+        working-directory: apps/android
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_NO_VCS: "1"
+      CI: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: release/android-1.0.12
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.13.1"
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Align Expo SDK patch versions
+        run: npx expo install --fix
+      - name: Commit dependency alignment for reproducible APK
+        shell: bash
+        run: |
+          git -C "$GITHUB_WORKSPACE" add apps/android/package.json apps/android/package-lock.json
+          if ! git -C "$GITHUB_WORKSPACE" diff --cached --quiet; then
+            git -C "$GITHUB_WORKSPACE" config user.name "github-actions[bot]"
+            git -C "$GITHUB_WORKSPACE" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$GITHUB_WORKSPACE" commit -m "chore(android): align Expo SDK 57 patch dependencies"
+            git -C "$GITHUB_WORKSPACE" push origin HEAD:release/android-1.0.12
+          fi
+      - name: Verify Expo dependencies
+        run: npx expo-doctor
+      - name: Verify Android release and TypeScript
+        run: npm run release:check
+      - name: Require existing Expo signing credentials
+        shell: bash
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN is missing; no signed upgrade APK can be built."
+            exit 1
+          fi
+      - name: Initialize existing Expo project
+        run: npx eas-cli@22.2.0 init --account shirac --non-interactive
+      - name: Build signed upgrade APK and wait for result
+        run: npx eas-cli@22.2.0 build --platform android --profile production-apk --non-interactive --wait --json > build-result.json
+      - name: Download completed APK and calculate SHA-256
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('build-result.json', 'utf8'));
+          const build = Array.isArray(data) ? data[0] : data;
+          const url = build?.artifacts?.buildUrl;
+          if (build?.status !== 'FINISHED' || !url || !/^https:\/\//.test(url)) {
+            throw new Error('EAS did not return a completed APK build URL');
+          }
+          fs.writeFileSync('apk-url.txt', url);
+          console.log('EAS build ID:', build.id, 'versionCode:', build.appBuildVersion);
+          NODE
+          mkdir -p dist
+          curl --fail --location --silent --show-error "$(cat apk-url.txt)" --output dist/MK-Receipt-Pro-Android-1.0.12.apk
+          test "$(wc -c < dist/MK-Receipt-Pro-Android-1.0.12.apk)" -gt 10000000
+          file dist/MK-Receipt-Pro-Android-1.0.12.apk
+          sha256sum dist/MK-Receipt-Pro-Android-1.0.12.apk > dist/SHA256SUMS.txt
+      - name: Upload signed APK and checksum
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: MK-Receipt-Pro-Android-1.0.12
+          path: |
+            apps/android/dist/MK-Receipt-Pro-Android-1.0.12.apk
+            apps/android/dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
