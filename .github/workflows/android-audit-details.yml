@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit-details:
@@ -17,10 +17,27 @@ jobs:
         working-directory: apps/android
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: feat/tax-calendar-reminders
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22.13.1"
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Apply compatible dependency patches
+        run: |
+          npm audit fix --omit=dev --no-audit --no-fund
+          npx expo install --fix
+          npx expo-doctor
+      - name: Commit dependency patches
+        shell: bash
+        run: |
+          git -C "$GITHUB_WORKSPACE" add apps/android/package.json apps/android/package-lock.json
+          if ! git -C "$GITHUB_WORKSPACE" diff --cached --quiet; then
+            git -C "$GITHUB_WORKSPACE" config user.name "github-actions[bot]"
+            git -C "$GITHUB_WORKSPACE" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C "$GITHUB_WORKSPACE" commit -m "fix(android): patch audited production dependencies"
+            git -C "$GITHUB_WORKSPACE" push origin HEAD:feat/tax-calendar-reminders
+          fi
       - name: Summarize production advisories
         run: |
           npm audit --omit=dev --json > audit.json || true
