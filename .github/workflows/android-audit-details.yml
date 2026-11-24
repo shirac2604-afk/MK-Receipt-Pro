@@ -25,9 +25,13 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Apply compatible dependency patches
         run: |
-          npm audit fix --omit=dev --no-audit --no-fund
+          npm audit fix --omit=dev --no-audit --no-fund || true
+          npm pkg set 'overrides.@expo/fingerprint.minimatch=^11.0.1'
+          npm install --no-audit --no-fund
           npx expo install --fix
           npx expo-doctor
+          node scripts/verify-npm-audit-policy.mjs
+          npm run release:check
       - name: Commit dependency patches
         shell: bash
         run: |
