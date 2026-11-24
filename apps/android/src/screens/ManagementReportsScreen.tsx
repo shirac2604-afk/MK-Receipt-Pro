@@ -1,5 +1,7 @@
 import React,{useCallback,useEffect,useMemo,useState} from "react";
-import {Alert,Pressable,RefreshControl,ScrollView,StyleSheet,Text,View} from "react-native";
+import {Alert,Pressable,RefreshControl,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import {useNavigation} from "@react-navigation/native";
 import {useBusiness} from "../context/BusinessContext";
@@ -7,16 +9,102 @@ import {createAndShareYearlyReport,getManagementReport,type ManagementReport} fr
 import {formatUnknownError} from "../services/ErrorFormatter";
 import {theme} from "../theme/theme";
 
+const taxPeriods = ["ינואר–פברואר", "מרץ–אפריל", "מאי–יוני", "יולי–אוגוסט", "ספטמבר–אוקטובר", "נובמבר–דצמבר"];
 const monthNames=["ינו׳","פבר׳","מרץ","אפר׳","מאי","יוני","יולי","אוג׳","ספט׳","אוק׳","נוב׳","דצמ׳"];
 const money=(agorot:number)=>new Intl.NumberFormat("he-IL",{style:"currency",currency:"ILS",minimumFractionDigits:0,maximumFractionDigits:2}).format(agorot/100);
+
+
+function buildTaxReminder(now: Date): string {
+ const parts = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit",
+ }).formatToParts(now);
+ let year = Number(parts.find(part => part.type === "year")?.value);
+ let month = Number(parts.find(part => part.type === "month")?.value);
+ const day = Number(parts.find(part => part.type === "day")?.value);
+ if (month % 2 === 0) month += 1;
+ else if (day >= 10) month += 2;
+ if (month > 12) { year += 1; month = 1; }
+ const start = `${year}${String(month).padStart(2, "0")}10`;
+ const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+ return [
+  "BEGIN:VCALENDAR",
+  "VERSION:2.0",
+  "PRODID:-//MK Receipt Pro//Tax Reminders//EN",
+  "BEGIN:VEVENT",
+  "UID:tax-advance-bimonthly@mk-receipt-pro",
+  `DTSTAMP:${stamp}`,
+  `DTSTART;VALUE=DATE:${start}`,
+  "RRULE:FREQ=MONTHLY;INTERVAL=2",
+  "SUMMARY:בדיקת מקדמות מס הכנסה",
+  "DESCRIPTION:בדקי את התקופה באתר רשות המסים.",
+  "BEGIN:VALARM",
+  "ACTION:DISPLAY",
+  "TRIGGER:-P1D",
+  "DESCRIPTION:בדיקת מקדמות מס הכנסה",
+  "END:VALARM",
+  "END:VEVENT",
+  "END:VCALENDAR",
+  "",
+ ].join("\r\n");
+}
 
 export default function ManagementReportsScreen(){
  const navigation=useNavigation<any>(),{businessId}=useBusiness();
  const [year,setYear]=useState(new Date().getFullYear()),[report,setReport]=useState<ManagementReport|null>(null),[busy,setBusy]=useState(false),[exporting,setExporting]=useState(false);
+ const [sharingReminder, setSharingReminder] = useState(false);
+ const [period, setPeriod] = useState<number|null>(null);
+ const [periodResult, setPeriodResult] = useState<{key:string; report:ManagementReport}|null>(null);
+ const [periodError, setPeriodError] = useState("");
+ const [advanceRate, setAdvanceRate] = useState("");
+ const normalizedRate = advanceRate.trim().replace(",", ".");
+ const validRate = /^\d{1,3}(\.\d{1,4})?$/.test(normalizedRate) && Number(normalizedRate) <= 100;
+ const periodKey = businessId && period !== null ? `${businessId}:${year}:${period}` : null;
+ const selectedReport = periodResult?.key === periodKey ? periodResult?.report : null;
  const years=useMemo(()=>Array.from({length:6},(_,index)=>new Date().getFullYear()-index),[]);
  const load=useCallback(async()=>{if(!businessId)return;setBusy(true);try{setReport(await getManagementReport(businessId,year));}catch(error){Alert.alert("טעינת הדוחות נכשלה",formatUnknownError(error));}finally{setBusy(false);}},[businessId,year]);
  useEffect(()=>{void load();},[load]);
+ useEffect(() => {
+  if (!businessId || period === null || !periodKey) return;
+  let active = true;
+  setPeriodResult(null);
+  setPeriodError("");
+  void getManagementReport(businessId, year, period).then(
+   report => { if (active) setPeriodResult({key: periodKey, report}); },
+   error => { if (active) setPeriodError(formatUnknownError(error)); },
+  );
+  return () => { active = false; };
+ }, [businessId, year, period, periodKey]);
+
+ async function exportPeriod() {
+  if (!businessId || period === null || !selectedReport) return;
+  setExporting(true);
+  try {
+   await createAndShareYearlyReport(businessId, year, period);
+  } catch (error) {
+   Alert.alert("ייצוא פירוט התקופה נכשל", formatUnknownError(error));
+  } finally {
+   setExporting(false);
+  }
+ }
  async function exportCsv(){if(!businessId)return;setExporting(true);try{const saved=await createAndShareYearlyReport(businessId,year);Alert.alert("דוח מוכן",`הדוח לשנת ${saved.year} כולל ${saved.activeReceiptCount} קבלות פעילות ו־${saved.expenseCount} הוצאות.`);}catch(error){Alert.alert("יצירת הדוח נכשלה",formatUnknownError(error));}finally{setExporting(false);}}
+ async function shareTaxReminder() {
+  setSharingReminder(true);
+  try {
+   const directory = FileSystem.cacheDirectory;
+   if (!directory || !await Sharing.isAvailableAsync()) {
+    throw new Error("שיתוף קובץ ליומן אינו זמין במכשיר.");
+   }
+   const uri = `${directory}MK-Tax-Advance-Reminder.ics`;
+   await FileSystem.writeAsStringAsync(uri, buildTaxReminder(new Date()), {
+    encoding: FileSystem.EncodingType.UTF8,
+   });
+   await Sharing.shareAsync(uri, {mimeType: "text/calendar", dialogTitle: "שיתוף תזכורת מקדמות ליומן"});
+  } catch (error) {
+   Alert.alert("ייצוא התזכורת נכשל", formatUnknownError(error));
+  } finally {
+   setSharingReminder(false);
+  }
+ }
  const max=Math.max(1,...(report?.months.map(item=>Math.max(item.incomeAgorot,item.expensesAgorot))??[1]));
  return <ScrollView style={s.root} contentContainerStyle={s.screen} refreshControl={<RefreshControl refreshing={busy} onRefresh={()=>void load()}/>}> 
   <View style={s.header}><Pressable hitSlop={10} onPress={()=>navigation.goBack()}><Ionicons name="arrow-forward" size={24} color="#fff"/></Pressable><View style={{flex:1}}><Text style={s.eyebrow}>ניהול העסק</Text><Text style={s.title}>דוחות</Text><Text style={s.subtitle}>תמונה כספית המבוססת על נתוני הענן המשותפים עם Windows.</Text></View></View>
@@ -29,9 +117,32 @@ export default function ManagementReportsScreen(){
    <View style={s.card}><View style={s.cardHeading}><Ionicons name="wallet-outline" size={21} color={theme.primary}/><Text style={s.cardTitle}>הוצאות לפי קטגוריה</Text></View>{report.expensesByCategory.length?<View style={s.categoryList}>{report.expensesByCategory.slice(0,5).map(item=><View style={s.categoryRow} key={item.category}><Text style={s.categoryAmount}>{money(item.amountAgorot)}</Text><Text style={s.categoryName}>{item.category}</Text></View>)}</View>:<Text style={s.note}>לא נרשמו הוצאות בשנה זו.</Text>}</View>
    <View style={[s.card,report.missingExpenseAttachmentCount?s.attentionCard:s.okCard]}><View style={s.cardHeading}><Ionicons name={report.missingExpenseAttachmentCount?"alert-circle-outline":"checkmark-circle-outline"} size={22} color={report.missingExpenseAttachmentCount?theme.danger:theme.primary}/><Text style={s.cardTitle}>בדיקת אסמכתאות</Text></View><Text style={s.note}>{report.missingExpenseAttachmentCount?`${report.missingExpenseAttachmentCount} הוצאות רשומות ללא אסמכתה מצורפת. אפשר להשלים אותן במסך ההוצאות.`:"לכל ההוצאות שנרשמו השנה מצורפת אסמכתה."}</Text></View>
    <View style={s.card}><Text style={s.cardTitle}>נתוני השנה</Text><View style={s.dataRow}><Text style={s.dataValue}>{report.cancelledReceiptCount}</Text><Text style={s.dataLabel}>קבלות מבוטלות</Text></View><View style={s.dataRow}><Text style={s.dataValue}>{money(report.netAgorot)}</Text><Text style={s.dataLabel}>הפרש הכנסות פחות הוצאות</Text></View></View>
-   <Pressable style={[s.exportButton,exporting&&s.disabled]} disabled={exporting||busy} onPress={()=>void exportCsv()}><Ionicons name="share-outline" size={20} color="#fff"/><Text style={s.exportText}>{exporting?"מכינה דוח…":`ייצוא דוח ${year} ל־CSV`}</Text></Pressable>
+   <Pressable style={[s.exportButton,exporting&&s.disabled]} disabled={exporting||busy||sharingReminder} onPress={()=>void exportCsv()}><Ionicons name="share-outline" size={20} color="#fff"/><Text style={s.exportText}>{exporting?"מכינה דוח…":`ייצוא דוח ${year} ל־CSV`}</Text></Pressable>
   </>}
+  <View style={s.card}>
+   <Text style={s.cardTitle}>מקדמות מס הכנסה</Text>
+   <Text style={s.note}>בחרי תקופה דו־חודשית לשנת {year}.</Text>
+   <View style={s.periodRow}>
+    {taxPeriods.map((label, value) => <Pressable key={label} disabled={exporting} onPress={()=>setPeriod(value)} accessibilityRole="button" accessibilityState={{selected:period===value}} style={[s.yearButton,period===value&&s.yearButtonActive]}>
+     <Text style={[s.yearText,period===value&&s.yearTextActive]}>{label}</Text>
+    </Pressable>)}
+   </View>
+   {period!==null && businessId && (selectedReport ? <>
+    <Text style={s.note}>מחזור לפי קבלות פעילות: {money(selectedReport.incomeAgorot)} · {selectedReport.activeReceiptCount} קבלות</Text>
+    <TextInput style={s.rateInput} value={advanceRate} onChangeText={setAdvanceRate} keyboardType="decimal-pad" placeholder="שיעור מקדמה בתיק (%)" accessibilityLabel="שיעור מקדמה בתיק באחוזים" maxLength={8}/>
+    {advanceRate.trim() !== "" && <Text style={s.note}>{validRate ? `מקדמה משוערת: ${money(Math.round(selectedReport.incomeAgorot * Number(normalizedRate) / 100))}` : "יש להזין שיעור בין 0 ל־100 אחוז."}</Text>}
+    <Pressable style={[s.exportButton,(exporting||sharingReminder)&&s.disabled]} disabled={exporting||sharingReminder} onPress={()=>void exportPeriod()}>
+     <Text style={s.exportText}>ייצוא פירוט התקופה ל־CSV</Text>
+    </Pressable>
+   </> : <Text style={s.note}>{periodError||"טוענת נתוני תקופה מהענן…"}</Text>)}
+   <Text style={s.note}>תזכורת למקדמות מס הכנסה</Text>
+   <Text style={s.note}>ייבאי את הקובץ ליומן כדי להוסיף תזכורת אחת לחודשיים. התאריך מיועד לתזכורת בלבד.</Text>
+   <Pressable style={[s.exportButton,sharingReminder&&s.disabled]} disabled={sharingReminder||exporting} onPress={()=>void shareTaxReminder()}>
+    <Ionicons name="calendar-outline" size={20} color="#fff"/>
+    <Text style={s.exportText}>{sharingReminder?"מכינה תזכורת…":"ייצוא תזכורת ליומן"}</Text>
+   </Pressable>
+  </View>
  </ScrollView>;
 }
 
-const s=StyleSheet.create({root:{flex:1,backgroundColor:theme.background},screen:{paddingBottom:42,direction:"rtl"},header:{backgroundColor:theme.navy,padding:18,paddingTop:26,paddingBottom:26,flexDirection:"row",gap:13,alignItems:"flex-start"},eyebrow:{color:"#B9D8FC",fontSize:12,fontWeight:"800",textAlign:"right"},title:{color:"#fff",fontSize:29,fontWeight:"900",textAlign:"right",marginTop:2},subtitle:{color:"#DCEBFF",fontSize:13,lineHeight:19,textAlign:"right",marginTop:4},yearRow:{gap:8,padding:16,paddingBottom:9,direction:"rtl"},yearButton:{borderWidth:1,borderColor:theme.border,borderRadius:99,paddingHorizontal:16,paddingVertical:9,backgroundColor:"#fff"},yearButtonActive:{backgroundColor:theme.primary,borderColor:theme.primary},yearText:{color:theme.text,fontWeight:"800"},yearTextActive:{color:"#fff"},disclaimer:{fontSize:11,color:theme.muted,textAlign:"right",lineHeight:16,paddingHorizontal:18,marginBottom:10},empty:{margin:18,padding:22,alignItems:"center",backgroundColor:"#fff",borderRadius:16},summary:{marginHorizontal:18,backgroundColor:"#fff",borderRadius:18,borderWidth:1,borderColor:theme.border,padding:16,flexDirection:"row-reverse",alignItems:"stretch"},summaryItem:{flex:1,alignItems:"flex-end"},summaryDivider:{width:1,backgroundColor:theme.border,marginHorizontal:12},summaryLabel:{color:theme.muted,fontSize:12,fontWeight:"700"},summaryValue:{color:theme.text,fontSize:21,fontWeight:"900",marginTop:4},summaryMeta:{color:theme.muted,fontSize:11,marginTop:3},netCard:{margin:18,marginTop:12,backgroundColor:theme.primary,borderRadius:18,padding:18,flexDirection:"row-reverse",justifyContent:"space-between",alignItems:"center"},netLabel:{color:"#DCEBFF",fontSize:13,fontWeight:"700",textAlign:"right"},netValue:{color:"#fff",fontSize:28,fontWeight:"900",textAlign:"right",marginTop:3},card:{backgroundColor:"#fff",borderRadius:18,borderWidth:1,borderColor:theme.border,padding:16,marginHorizontal:18,marginBottom:12},cardHeading:{flexDirection:"row-reverse",alignItems:"center",gap:7},cardTitle:{fontSize:17,color:theme.text,fontWeight:"900",textAlign:"right"},note:{color:theme.muted,fontSize:12,lineHeight:18,textAlign:"right",marginTop:5},chart:{height:174,marginTop:17,flexDirection:"row-reverse",justifyContent:"space-between",alignItems:"flex-end",gap:3},barColumn:{height:"100%",flex:1,alignItems:"center",justifyContent:"flex-end"},bars:{height:145,width:"100%",flexDirection:"row-reverse",alignItems:"flex-end",justifyContent:"center",gap:2},barIncome:{width:"40%",backgroundColor:theme.primary,borderRadius:4},barExpense:{width:"32%",backgroundColor:"#CAD5E3",borderRadius:4},monthLabel:{fontSize:9,color:theme.muted,marginTop:6},categoryList:{gap:8,marginTop:12},categoryRow:{flexDirection:"row-reverse",justifyContent:"space-between",paddingVertical:9,borderTopWidth:1,borderTopColor:"#EDF1F5"},categoryName:{color:theme.text,fontWeight:"700"},categoryAmount:{color:theme.primary,fontWeight:"800"},attentionCard:{borderColor:"#F2C6C5",backgroundColor:"#FFF9F9"},okCard:{borderColor:"#C9E2DE",backgroundColor:"#FAFFFE"},dataRow:{flexDirection:"row-reverse",justifyContent:"space-between",paddingTop:12,marginTop:8,borderTopWidth:1,borderTopColor:theme.border},dataLabel:{color:theme.muted,textAlign:"right"},dataValue:{color:theme.text,fontWeight:"900"},exportButton:{marginHorizontal:18,marginTop:4,backgroundColor:theme.primary,borderRadius:14,padding:15,alignItems:"center",justifyContent:"center",flexDirection:"row-reverse",gap:8},exportText:{color:"#fff",fontWeight:"900"},disabled:{opacity:.6}});
+const s=StyleSheet.create({rateInput:{borderWidth:1,borderColor:theme.border,borderRadius:10,padding:10,marginTop:12,textAlign:"right",color:theme.text},periodRow:{flexDirection:"row",flexWrap:"wrap",gap:8,marginVertical:10},root:{flex:1,backgroundColor:theme.background},screen:{paddingBottom:42,direction:"rtl"},header:{backgroundColor:theme.navy,padding:18,paddingTop:26,paddingBottom:26,flexDirection:"row",gap:13,alignItems:"flex-start"},eyebrow:{color:"#B9D8FC",fontSize:12,fontWeight:"800",textAlign:"right"},title:{color:"#fff",fontSize:29,fontWeight:"900",textAlign:"right",marginTop:2},subtitle:{color:"#DCEBFF",fontSize:13,lineHeight:19,textAlign:"right",marginTop:4},yearRow:{gap:8,padding:16,paddingBottom:9,direction:"rtl"},yearButton:{borderWidth:1,borderColor:theme.border,borderRadius:99,paddingHorizontal:16,paddingVertical:9,backgroundColor:"#fff"},yearButtonActive:{backgroundColor:theme.primary,borderColor:theme.primary},yearText:{color:theme.text,fontWeight:"800"},yearTextActive:{color:"#fff"},disclaimer:{fontSize:11,color:theme.muted,textAlign:"right",lineHeight:16,paddingHorizontal:18,marginBottom:10},empty:{margin:18,padding:22,alignItems:"center",backgroundColor:"#fff",borderRadius:16},summary:{marginHorizontal:18,backgroundColor:"#fff",borderRadius:18,borderWidth:1,borderColor:theme.border,padding:16,flexDirection:"row-reverse",alignItems:"stretch"},summaryItem:{flex:1,alignItems:"flex-end"},summaryDivider:{width:1,backgroundColor:theme.border,marginHorizontal:12},summaryLabel:{color:theme.muted,fontSize:12,fontWeight:"700"},summaryValue:{color:theme.text,fontSize:21,fontWeight:"900",marginTop:4},summaryMeta:{color:theme.muted,fontSize:11,marginTop:3},netCard:{margin:18,marginTop:12,backgroundColor:theme.primary,borderRadius:18,padding:18,flexDirection:"row-reverse",justifyContent:"space-between",alignItems:"center"},netLabel:{color:"#DCEBFF",fontSize:13,fontWeight:"700",textAlign:"right"},netValue:{color:"#fff",fontSize:28,fontWeight:"900",textAlign:"right",marginTop:3},card:{backgroundColor:"#fff",borderRadius:18,borderWidth:1,borderColor:theme.border,padding:16,marginHorizontal:18,marginBottom:12},cardHeading:{flexDirection:"row-reverse",alignItems:"center",gap:7},cardTitle:{fontSize:17,color:theme.text,fontWeight:"900",textAlign:"right"},note:{color:theme.muted,fontSize:12,lineHeight:18,textAlign:"right",marginTop:5},chart:{height:174,marginTop:17,flexDirection:"row-reverse",justifyContent:"space-between",alignItems:"flex-end",gap:3},barColumn:{height:"100%",flex:1,alignItems:"center",justifyContent:"flex-end"},bars:{height:145,width:"100%",flexDirection:"row-reverse",alignItems:"flex-end",justifyContent:"center",gap:2},barIncome:{width:"40%",backgroundColor:theme.primary,borderRadius:4},barExpense:{width:"32%",backgroundColor:"#CAD5E3",borderRadius:4},monthLabel:{fontSize:9,color:theme.muted,marginTop:6},categoryList:{gap:8,marginTop:12},categoryRow:{flexDirection:"row-reverse",justifyContent:"space-between",paddingVertical:9,borderTopWidth:1,borderTopColor:"#EDF1F5"},categoryName:{color:theme.text,fontWeight:"700"},categoryAmount:{color:theme.primary,fontWeight:"800"},attentionCard:{borderColor:"#F2C6C5",backgroundColor:"#FFF9F9"},okCard:{borderColor:"#C9E2DE",backgroundColor:"#FAFFFE"},dataRow:{flexDirection:"row-reverse",justifyContent:"space-between",paddingTop:12,marginTop:8,borderTopWidth:1,borderTopColor:theme.border},dataLabel:{color:theme.muted,textAlign:"right"},dataValue:{color:theme.text,fontWeight:"900"},exportButton:{marginHorizontal:18,marginTop:4,backgroundColor:theme.primary,borderRadius:14,padding:15,alignItems:"center",justifyContent:"center",flexDirection:"row-reverse",gap:8},exportText:{color:"#fff",fontWeight:"900"},disabled:{opacity:.6}});

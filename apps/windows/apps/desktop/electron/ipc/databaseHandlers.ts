@@ -392,6 +392,22 @@ export function registerDatabaseHandlers(databaseService: DatabaseService, cloud
 
   ipcMain.handle("reports:get-range", (event,input) => handle(event, () => {const filters={fromDate:typeof input?.fromDate==="string"?input.fromDate:undefined,toDate:typeof input?.toDate==="string"?input.toDate:undefined};return supabaseCloud.getStatus().connected?supabaseCloud.getRangeReport(filters):databaseService.getRangeReport(filters)}, input));
   ipcMain.handle("reports:get-annual", (event,input) => handle(event, () => {const year=Number(input?.year)||new Date().getFullYear();return supabaseCloud.getStatus().connected?supabaseCloud.getAnnualReport(year):databaseService.getAnnualReport(year)}, input));
+  ipcMain.handle("reports:export-reminder", (event) => handle(event, async () => {
+    const result=await dialog.showSaveDialog({title:"שמירת תזכורת מקדמות ליומן",defaultPath:"MK-Tax-Advance-Reminder.ics",filters:[{name:"Calendar",extensions:["ics"]}]});
+    if(result.canceled||!result.filePath)return null;
+    const now=new Date();
+    const local=new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Jerusalem",year:"numeric",month:"2-digit",day:"2-digit"}).format(now);
+    let year=Number(local.slice(0,4)),month=Number(local.slice(5,7));
+    if(month%2===0)month++;
+    else if(Number(local.slice(8,10))>=10)month+=2;
+    if(month>12){year++;month=1;}
+    const start=String(year)+String(month).padStart(2,"0")+"10";
+    const stamp=now.toISOString().replace(/[-:]/g,"").replace(/\.\d+Z$/,"Z");
+    const calendar=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//MK Receipt Pro//Tax Reminders//EN","BEGIN:VEVENT","UID:tax-advance-bimonthly@mk-receipt-pro","DTSTAMP:"+stamp,"DTSTART;VALUE=DATE:"+start,"RRULE:FREQ=MONTHLY;INTERVAL=2","SUMMARY:בדיקת מקדמות מס הכנסה","DESCRIPTION:בדקי את התקופה באתר רשות המסים.","BEGIN:VALARM","ACTION:DISPLAY","TRIGGER:-P1D","DESCRIPTION:בדיקת מקדמות מס הכנסה","END:VALARM","END:VEVENT","END:VCALENDAR",""].join("\r\n");
+    const file=result.filePath.toLowerCase().endsWith(".ics")?result.filePath:result.filePath+".ics";
+    fs.writeFileSync(file,calendar,"utf8");
+    return file;
+  }));
   ipcMain.handle("reports:export-csv", (event,input) => handle(event, async () => { const result=await dialog.showSaveDialog({title:"ייצוא דוח CSV",defaultPath:`MK-Receipt-Pro-Report-${new Date().toISOString().slice(0,10)}.csv`,filters:[{name:"CSV",extensions:["csv"]}]}); if(result.canceled||!result.filePath)return null; return supabaseCloud.exportCloudReport({fromDate:typeof input?.fromDate==="string"?input.fromDate:undefined,toDate:typeof input?.toDate==="string"?input.toDate:undefined},result.filePath); }, input));
   ipcMain.handle("reports:export-accountant", (event,input) => handle(event, async () => { const result=await dialog.showOpenDialog({title:"בחר תיקייה לחבילת רואה החשבון",properties:["openDirectory","createDirectory"]}); if(result.canceled||!result.filePaths[0])return null; const folder=await supabaseCloud.exportCloudReport({fromDate:`${Number(input?.year)||new Date().getFullYear()}-01-01`,toDate:`${Number(input?.year)||new Date().getFullYear()}-12-31`},result.filePaths[0],Number(input?.year)||new Date().getFullYear()); const message=await shell.openPath(folder); if(message)throw new Error("ACCOUNTANT_PACKAGE_OPEN_FAILED"); return folder; }, input));
 

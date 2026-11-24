@@ -20,6 +20,7 @@ export function TaxAdvancePanel(){
  const [confirmation,setConfirmation]=useState("");
  const [filed,setFiled]=useState("");
  const [busy,setBusy]=useState(false);
+ const [reminderMessage,setReminderMessage]=useState("");
  const endMonth=(period+1)*2;
  const fromDate=year+"-"+month(endMonth-1)+"-01";
  const toDate=year+"-"+month(endMonth)+"-"+new Date(Date.UTC(year,endMonth,0)).getUTCDate();
@@ -58,6 +59,15 @@ export function TaxAdvancePanel(){
   try{const result=await window.mkApi.reports.exportCsv({fromDate,toDate});if(!result.success)throw new Error(result.error.message);}
   catch(e){setError(e instanceof Error?e.message:"ייצוא הפירוט נכשל.");}finally{setBusy(false);}
  }
+ async function saveReminder(){
+  setBusy(true);setError("");setReminderMessage("");
+  try{
+   const result=await window.mkApi.reports.exportReminder();
+   if(!result.success)throw new Error(result.error.message);
+   if(result.data)setReminderMessage("הקובץ נשמר. ייבאי אותו ליומן ובדקי שההתראה מופעלת.");
+  }catch(e){setError(e instanceof Error?e.message:"שמירת התזכורת נכשלה.");}
+  finally{setBusy(false);}
+ }
  function recordFiling(){
   if(!scope||!closed||!confirmation.trim())return;
   try{localStorage.setItem(scope+fromDate,confirmation.trim());setFiled(confirmation.trim());setConfirmation("");}
@@ -71,6 +81,8 @@ export function TaxAdvancePanel(){
    <label>תקופה<select disabled={busy} value={period} onChange={e=>setPeriod(Number(e.target.value))}>{labels.map((label,i)=><option key={label} value={i}>{label}</option>)}</select></label>
    <label>שיעור מקדמה בתיק (%)<input disabled={!loaded} inputMode="decimal" maxLength={8} value={rate} onChange={e=>setRate(e.target.value)} onBlur={()=>{try{if(scope&&validRate)localStorage.setItem(scope+"rate:"+year,normalized);else if(scope&&!rate.trim())localStorage.removeItem(scope+"rate:"+year);}catch{setError("לא ניתן לשמור את שיעור המקדמה במחשב.");}}}/></label>
   </div>
+  <p><button type="button" disabled={busy} onClick={()=>void saveReminder()}>ייצוא תזכורת ליומן</button>{" "}תזכורת כל חודשיים ב־10 בחודש, לאחר ייבוא ליומן. זהו תאריך תזכורת, לא מועד הגשה.</p>
+  {reminderMessage&&<p role="status">{reminderMessage}</p>}
   {error&&<p role="alert">{error}</p>}
   {!loaded&&!error&&<p role="status">טוענת נתוני תקופה מהענן…</p>}
   <button type="button" disabled={busy} onClick={()=>setRefresh(value=>value+1)}>רענון נתונים</button>
