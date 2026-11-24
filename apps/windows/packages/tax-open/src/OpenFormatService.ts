@@ -186,7 +186,6 @@ export class OpenFormatService {
     if(rows.length===0)warnings.push("לא נמצאו קבלות בטווח שנבחר."); if(rows.length*2+2<2000)warnings.push("הקובץ כולל פחות מ־2,000 רשומות ואינו מתאים עדיין לבדיקת הסימולטור לצורך הגשת רישום.");
     const productionIssues:string[]=[];
     const normalizedBusinessNumber=business.businessNumber.replace(/\D/g,"");
-    if(normalizedBusinessNumber!=="039375365")productionIssues.push("מספר העוסק בהפקה אינו 039375365. יש לבדוק את פרטי העסק לפני בדיקת הסימולטור.");
     if(!business.businessName.trim()||/עסק בדיקה|test business/i.test(business.businessName))productionIssues.push("שם העסק חסר או מכיל ערך בדיקה.");
     if(!business.ownerName.trim())productionIssues.push("שם העוסק חסר.");
     if(rows.some(row=>/לקוח בדיקה|test customer/i.test(row.client_name)))productionIssues.push("נמצאו קבלות עם שמות לקוח של נתוני דמה.");

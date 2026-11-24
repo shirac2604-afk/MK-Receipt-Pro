@@ -7,7 +7,7 @@ const outputRoot = path.join(root, "test-output", "tax-open-simulator-fixture");
 fs.rmSync(outputRoot, { recursive: true, force: true });
 fs.mkdirSync(outputRoot, { recursive: true });
 
-const BUSINESS = "039375365";
+const BUSINESS = "999999999"; // Synthetic fixture identifier; never use for a real business export.
 const EXPORT_ID = "314159265358979";
 const OF_CONSTANT = "&OF1.31&";
 const REGISTRATION_TEST_VALUE = "00000001"; // Simulator fixture only; never final submission.
@@ -210,7 +210,7 @@ function a000(total, folder) {
     {id:1007,start:64,length:20,type:"str",value:"MK-Receipt-Pro"},
     {id:1008,start:84,length:20,type:"str",value:"1.0.0-rc.17.45-b100"},
     {id:1009,start:104,length:9,type:"num",value:BUSINESS},
-    {id:1010,start:113,length:20,type:"str",value:"כהן שירה"},
+    {id:1010,start:113,length:20,type:"str",value:"יצרן בדיקה"},
     {id:1011,start:133,length:1,type:"num",value:2},
     {id:1012,start:134,length:50,type:"str",value:folder},
     {id:1013,start:184,length:1,type:"num",value:2},
@@ -218,11 +218,11 @@ function a000(total, folder) {
     {id:1015,start:186,length:9,type:"num",value:0},
     {id:1016,start:195,length:9,type:"num",value:0},
     {id:1017,start:204,length:10,type:"str",value:""},
-    {id:1018,start:214,length:50,type:"str",value:"מפתחות להצלחה"},
-    {id:1019,start:264,length:50,type:"str",value:"נחל דליות"},
-    {id:1020,start:314,length:10,type:"str",value:"39"},
-    {id:1021,start:324,length:30,type:"str",value:"באר שבע"},
-    {id:1022,start:354,length:8,type:"str",value:"8486275"},
+    {id:1018,start:214,length:50,type:"str",value:"עסק בדיקה"},
+    {id:1019,start:264,length:50,type:"str",value:"רחוב בדיקה"},
+    {id:1020,start:314,length:10,type:"str",value:"0"},
+    {id:1021,start:324,length:30,type:"str",value:"עיר בדיקה"},
+    {id:1022,start:354,length:8,type:"str",value:"0000000"},
     {id:1023,start:362,length:4,type:"num",value:0},
     {id:1024,start:366,length:8,type:"num",value:"20240101"},
     {id:1025,start:374,length:8,type:"num",value:"20260802"},
