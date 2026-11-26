@@ -1,0 +1,101 @@
+name: Windows 1.1.17 In-Place Upgrade
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["release/windows-1.1.17"]
+
+permissions:
+  contents: read
+
+jobs:
+  production-windows-upgrade:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/windows
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/windows/package-lock.json
+      - name: Select dedicated Production cloud configuration
+        shell: pwsh
+        run: Copy-Item apps/desktop/electron/main/SupabaseCloudConfig.production.ts apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Verify report exports
+        run: npx vitest run tests/cloudReportExport.test.ts
+      - name: Verify isolated Open Format export
+        run: |
+          npm run check:tax-production-export
+          npx vitest run tests/taxOpenIsolatedExport.test.ts
+      - name: Verify receipt and PDF flows
+        run: |
+          npm run test:receipt-core-smoke
+          npm run test:pdf-smoke
+      - name: Build production upgrade
+        run: npm run release:production:win
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: f423c71423cc941797d2716d2f2c5cd0cf92843e
+          path: previous-version
+      - name: Check installation over 1.1.16 with isolated data
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          Copy-Item previous-version/apps/windows/apps/desktop/electron/main/SupabaseCloudConfig.production.ts previous-version/apps/windows/apps/desktop/electron/main/SupabaseCloudConfig.ts -Force
+          Push-Location previous-version/apps/windows
+          try {
+            npm ci --ignore-scripts --no-audit --no-fund
+            npm run release:production:win
+          } finally {
+            Pop-Location
+          }
+          $previous = Join-Path $env:GITHUB_WORKSPACE "previous-version/apps/windows/release/Maptehot-LaHatzlaha-1.1.16-Setup.exe"
+          $current = Join-Path $env:GITHUB_WORKSPACE "apps/windows/release/Maptehot-LaHatzlaha-1.1.17-Setup.exe"
+          if (!(Test-Path -LiteralPath $previous) -or !(Test-Path -LiteralPath $current)) { throw "Installer missing" }
+          $installDir = Join-Path $env:RUNNER_TEMP "MK-Receipt-Upgrade-Test"
+          $userData = Join-Path $env:APPDATA "MK-Receipt-Pro-Student"
+          $sentinel = Join-Path $userData "upgrade-sentinel.txt"
+          New-Item -ItemType Directory -Path $userData -Force | Out-Null
+          Set-Content -LiteralPath $sentinel -Value "test-data-preserved" -Encoding ascii
+          foreach ($installer in @($previous, $current)) {
+            $process = Start-Process -FilePath $installer -WindowStyle Hidden -ArgumentList @("/S", "/D=$installDir") -PassThru -Wait
+            if ($process.ExitCode -ne 0) { throw "Installer failed: $installer exit $($process.ExitCode)" }
+            if (!(Test-Path -LiteralPath $sentinel) -or (Get-Content -LiteralPath $sentinel -Raw).Trim() -ne "test-data-preserved") {
+              throw "Isolated user data was changed by installer"
+            }
+          }
+          $program = Get-ChildItem -LiteralPath $installDir -Filter "*.exe" -File | Where-Object Name -ne "Uninstall MK Receipt Pro.exe" | Select-Object -First 1
+          if (!$program) { throw "Upgraded application executable missing" }
+          Write-Output "Both installers succeeded; isolated user data preserved; upgraded executable exists"
+      - name: Write verification files
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path release -Filter "Maptehot-LaHatzlaha-1.1.17-Setup.exe" | Select-Object -First 1
+          if (-not $installer) { throw "Windows 1.1.17 installer was not produced" }
+          $hash = (Get-FileHash -Path $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($installer.Name)" | Set-Content -Encoding ascii release/SHA256SUMS.txt
+          @(
+            "MK Receipt Pro Windows 1.1.17 — Internal upgrade, reports and corrected tax export metadata",
+            "In-place update from 1.1.16: app ID remains il.co.mkreceipt.desktop.",
+            "Tax Authority submission is not enabled until the current edition is registered and validated.",
+            "Unsigned installer. Windows may display an unknown publisher warning."
+          ) | Set-Content -Encoding utf8 release/UPGRADE-NOTICE.txt
+      - name: Upload installer
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: MK-Receipt-Pro-Windows-1.1.17-Upgrade
+          path: |
+            apps/windows/release/Maptehot-LaHatzlaha-1.1.17-Setup.exe
+            apps/windows/release/SHA256SUMS.txt
+            apps/windows/release/UPGRADE-NOTICE.txt
+          if-no-files-found: error
+          retention-days: 14
