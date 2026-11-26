@@ -62,12 +62,19 @@ describe("open format application export with isolated synthetic data", () => {
       expect(ini.subarray(0, 4).toString("ascii")).toBe("A000");
       expect(ini.subarray(24, 33).toString("ascii")).toBe(business.businessNumber);
       expect(ini.subarray(56, 64).toString("ascii")).toBe("00000000");
+      const packageVersion = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).version;
+      expect(ini.subarray(84, 104).toString("ascii").trim()).toBe(packageVersion);
+      expect(ini.subarray(184, 185).toString("ascii")).toBe("0"); // No bookkeeping ledger in this receipt-only export.
+      expect(ini.subarray(185, 186).toString("ascii")).toBe("0");
       expect(data.subarray(0, 4).toString("ascii")).toBe("A100");
       expect(data.length).toBeLessThan(4 * 1024 * 1024);
       expect(fs.readFileSync(result.report26Path, "utf8")).toContain("תוכנה: חשבוניות MK-Receipt-Pro");
       expect(fs.readFileSync(result.report54Path, "utf8")).toContain("תוכנה: חשבוניות MK-Receipt-Pro");
+      expect(fs.readFileSync(result.report26Path, "utf8")).toContain(`מהדורה ${packageVersion}`);
+      expect(fs.readFileSync(result.report54Path, "utf8")).toContain(`מהדורה ${packageVersion}`);
       const audit = JSON.parse(fs.readFileSync(path.join(result.folderPath, "OPEN-FORMAT-PRODUCTION-AUDIT.json"), "utf8"));
       expect(audit.submissionReady).toBe(false);
+      expect(audit.editionRegistrationConfirmed).toBe(false);
       expect(audit.issues).toContain("שם העסק חסר או מכיל ערך בדיקה.");
     } finally {
       if (originalRegistration === undefined) delete process.env.MK_TAX_SOFTWARE_REGISTRATION_NUMBER;
