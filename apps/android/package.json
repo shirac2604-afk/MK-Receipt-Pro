@@ -63,7 +63,8 @@
     "verify:release-1.0.6": "node scripts/verify-release-1.0.6.mjs",
     "verify:release-1.0.7": "node scripts/verify-release-1.0.7.mjs",
     "verify:android-boundary-hardening": "node scripts/verify-android-boundary-hardening-106.mjs",
-    "verify:build-asset-safety": "node scripts/verify-build-asset-safety.mjs"
+    "verify:build-asset-safety": "node scripts/verify-build-asset-safety.mjs",
+    "verify:tax-authority-2027": "node scripts/verify-tax-authority-2027.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
