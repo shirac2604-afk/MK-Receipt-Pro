@@ -21,7 +21,7 @@ const OF_CONSTANT="&OF1.31&";
 const DOCUMENT_TYPE_RECEIPT="400";
 const TAX_REGISTERED_SOFTWARE_NAME="MK-Receipt-Pro";
 const TAX_REGISTERED_SOFTWARE_DISPLAY_NAME="חשבוניות MK-Receipt-Pro";
-const TAX_SOFTWARE_EDITION="1.1.16";
+const TAX_SOFTWARE_EDITION="1.1.17";
 const TAX_LAST_REGISTERED_EDITION="1.0.0-rc.17.45-b100";
 
 function asciiOnly(value:string):string { return value.replace(/[\u200e\u200f]/g,"").replace(/[“”]/g,'"').replace(/[’‘]/g,"'"); }
